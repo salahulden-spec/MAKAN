@@ -305,14 +305,18 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       <div class="form-group"><label>رقم الهاتف</label><input type="tel" id="reg-phone" placeholder="+968 9X XXX XXX" dir="ltr"></div>
       <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="reg-email" placeholder="you@example.com" dir="ltr" autocomplete="email"></div>
       <div class="form-group"><label>كلمة المرور</label><input type="password" id="reg-pass" placeholder="6 أحرف على الأقل" dir="ltr" autocomplete="new-password"></div>
-      <button class="btn btn-primary btn-full" onclick="doRegisterStep1()"><span id="reg-btn-text">التالي — إدخال رمز التفعيل</span></button>
+      <button class="btn btn-primary btn-full" onclick="doRegisterDirect()"><span id="reg-btn-text">إنشاء الحساب مجاناً</span></button>
       <div class="auth-switch">عندك حساب؟ <a onclick="showLogin()">سجّل دخول</a></div>
     </div>
 
-    <!-- REGISTER STEP 2: CODE -->
+    <!-- UPGRADE CODE FORM -->
     <div id="code-form" style="display:none">
-      <div class="auth-title">رمز التفعيل</div>
-      <p style="font-size:.85rem;color:var(--muted);margin-bottom:4px">أدخل الرمز المكوّن من 6 أرقام الذي تحصل عليه من مدير المنصة</p>
+      <div class="auth-title">🔓 رمز ترقية الحساب</div>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px">للاستمرار بعد 5 حجوزات، أدخل رمز التفعيل من إدارة مكان</p>
+      <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;font-size:.84rem;text-align:center">
+        تواصل معنا للحصول على الرمز<br>
+        <b style="font-size:1rem;direction:ltr;display:block;margin-top:4px">+968 94313327</b>
+      </div>
       <div class="error-msg" id="code-error"></div>
       <div class="code-inputs" id="code-inputs">
         <input type="tel" maxlength="1" oninput="codeNext(this,0)">
@@ -322,8 +326,8 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
         <input type="tel" maxlength="1" oninput="codeNext(this,4)">
         <input type="tel" maxlength="1" oninput="codeNext(this,5)">
       </div>
-      <button class="btn btn-primary btn-full" onclick="doRegisterStep2()"><span id="code-btn-text">إنشاء الحساب</span></button>
-      <div class="auth-switch"><a onclick="showRegister()">← رجوع</a></div>
+      <button class="btn btn-primary btn-full" onclick="doUpgradeAccount()"><span id="code-btn-text">تفعيل الحساب</span></button>
+      <div class="auth-switch"><a onclick="showForm('login-form')">← رجوع</a></div>
     </div>
   </div>
 </div>
@@ -440,6 +444,15 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       <div id="notifications-content"></div>
     </div>
 
+    <!-- FULL REPORT -->
+    <div class="page" id="page-fullreport">
+      <div class="page-header">
+        <div class="page-header-text"><h1>التقرير الكامل</h1><p>ملخص شامل لجميع الحجوزات والمدفوعات</p></div>
+        <button class="btn btn-primary" onclick="printFullReport()">🖨️ طباعة التقرير</button>
+      </div>
+      <div id="fullreport-content"></div>
+    </div>
+
     <!-- ADMIN -->
     <div class="page" id="page-admin">
       <div class="page-header"><div class="page-header-text"><h1>لوحة الإدارة</h1><p>إدارة ملاك المباني المسجّلين</p></div></div>
@@ -450,13 +463,23 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
           <div class="stat-sub">مالك مسجّل في المنصة</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">رمز التفعيل الحالي</div>
+          <div class="stat-label">رمز الترقية الحالي</div>
           <div class="stat-value" id="admin-code" style="font-size:1.5rem;letter-spacing:4px;direction:ltr">——————</div>
-          <div class="stat-sub">أعطِه للمالك الجديد عند التسجيل</div>
+          <div class="stat-sub">للمالك الذي تجاوز 5 حجوزات</div>
         </div>
       </div>
-      <div style="margin-bottom:16px">
-        <button class="btn btn-primary" onclick="generateNewCode()">🔄 توليد رمز جديد</button>
+      <div class="quick-actions" style="margin-bottom:24px">
+        <button class="btn btn-primary" onclick="generateNewCode()">🔄 توليد رمز ترقية جديد</button>
+      </div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🔑 إعادة تعيين كلمة مرور مالك</span></div>
+        <p style="font-size:.84rem;color:var(--muted);margin-bottom:14px">أدخل البريد الإلكتروني للمالك وسيتم إرسال رابط إعادة التعيين تلقائياً</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <input type="email" id="admin-reset-email" placeholder="landlord@example.com" dir="ltr"
+            style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:.9rem;background:var(--paper);outline:none;min-width:200px">
+          <button class="btn btn-secondary" onclick="adminResetPassword()">📧 إرسال رابط إعادة التعيين</button>
+        </div>
+        <div id="admin-reset-msg" style="margin-top:10px;font-size:.84rem;display:none"></div>
       </div>
       <div id="admin-landlords-list"></div>
     </div>
@@ -516,6 +539,11 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
         <input type="text" id="b-total-rent" placeholder="يُحسب تلقائياً" dir="ltr" readonly style="background:var(--warm);font-weight:700">
       </div>
     </div>
+    <div class="form-group">
+      <label>دفعة مقدمة (OMR) — اختياري</label>
+      <input type="number" id="b-advance" placeholder="0.000" step="0.001" min="0" dir="ltr" oninput="calcRent()">
+      <div class="hint">تُخصم من الإجمالي وتظهر في العقد والفاتورة</div>
+    </div>
     <div class="form-group"><label>ملاحظات (تظهر في العقد)</label><textarea id="b-notes" placeholder="أي شروط إضافية..."></textarea></div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-booking')">إلغاء</button>
@@ -552,8 +580,6 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       <button class="btn btn-success" id="btn-checkin-tenant" onclick="markCheckedIn()" style="display:none">✅ دخل المستأجر</button>
       <button class="btn btn-danger" id="btn-checkout-tenant" onclick="markCheckedOut()" style="display:none">🚪 غادر المستأجر</button>
       <button class="btn btn-secondary" onclick="editBookingFromDetail()">✏️ تعديل</button>
-      <button class="btn btn-secondary" onclick="printReport()">📊 تقرير</button>
-      <button class="btn btn-primary" onclick="printContract()">🖨️ العقد</button>
       <button class="btn btn-danger btn-sm" onclick="confirmDeleteBooking()" style="margin-right:auto">🗑️ حذف</button>
     </div>
   </div>
@@ -594,7 +620,7 @@ let activeBookingId=null;
 
 // ── EXPOSE ────────────────────────────────────────────────────────────
 const exp = {
-  doLogin, doRegister:doRegisterStep1, doRegisterStep1, doRegisterStep2, doLogout,
+  doLogin, doRegisterDirect, doRegisterStep1:doRegisterDirect, doRegisterStep2:doUpgradeAccount, doLogout,
   showLogin:()=>{showForm('login-form')}, showRegister:()=>{showForm('register-form')},
   showPage, openModal, closeModal,
   saveTenant, saveBooking, saveExpense,
@@ -604,6 +630,8 @@ const exp = {
   codeNext, generateNewCode, previewApartments,
   updateAptType, printInvoiceDirect, printContractDirect, markCheckedOut,
   confirmDeleteBooking, deleteBooking, updateNotifBadge,
+  adminResetPassword, showUpgradePrompt, doRegisterDirect, doUpgradeAccount, updatePlanBanner,
+  togglePaid, renderFullReportPage, printFullReport,
   calPrev:()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar()},
   calNext:()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar()},
   toggleSidebar
@@ -651,7 +679,7 @@ function previewApartments(){
   preview.style.display='block';
 }
 
-async function doRegisterStep1(){
+async function doRegisterDirect(){
   const name=v('reg-name'), building=v('reg-building'),
         floors=parseInt(document.getElementById('reg-floors').value)||0,
         perFloor=parseInt(document.getElementById('reg-per-floor').value)||0,
@@ -661,9 +689,39 @@ async function doRegisterStep1(){
   if(!name||!building||!floors||!perFloor||!email||!pass){ showErr(err,'يرجى تعبئة جميع الحقول'); return; }
   if(floors<1||floors>30){ showErr(err,'عدد الطوابق يجب أن يكون بين 1 و 30'); return; }
   if(perFloor<1||perFloor>20){ showErr(err,'الشقق في كل طابق يجب أن تكون بين 1 و 20'); return; }
-  const aptList=generateAptList(floors,perFloor);
-  pendingRegData={name,building,floors,perFloor,apartments:aptList,phone,email,pass};
-  showForm('code-form');
+  const btn=document.getElementById('reg-btn-text');
+  btn.innerHTML='<span class="spinner"></span>';
+  try{
+    const aptList=generateAptList(floors,perFloor);
+    const cred=await createUserWithEmailAndPassword(auth,email,pass);
+    await setDoc(doc(db,'users',cred.user.uid),{
+      name,building,floors,perFloor,apartments:aptList,units:aptList.length,phone,email,
+      role:'landlord',plan:'free',bookingCount:0,createdAt:serverTimestamp()
+    });
+    showToast('تم إنشاء الحساب بنجاح 🎉 — لديك 5 حجوزات مجانية','success');
+  }catch(e){ showErr(err,translateAuthError(e.code)); btn.textContent='إنشاء الحساب مجاناً'; }
+}
+
+async function doUpgradeAccount(){
+  const inputs=[...document.querySelectorAll('#code-inputs input')];
+  const code=inputs.map(i=>i.value).join('');
+  const err=document.getElementById('code-error');
+  const btn=document.getElementById('code-btn-text');
+  err.classList.remove('show');
+  if(code.length!==6){ showErr(err,'أدخل الرمز كاملاً — 6 أرقام'); return; }
+  btn.innerHTML='<span class="spinner"></span>';
+  try{
+    const snap=await getDoc(doc(db,'config','registration'));
+    if(!snap.exists()||!snap.data().code){ showErr(err,'لا يوجد رمز نشط — تواصل مع إدارة مكان'); btn.textContent='تفعيل الحساب'; return; }
+    if(code!==snap.data().code){ showErr(err,'الرمز غير صحيح'); btn.textContent='تفعيل الحساب'; return; }
+    await updateDoc(doc(db,'users',currentUser.uid),{plan:'unlimited'});
+    await updateDoc(doc(db,'config','registration'),{code:''});
+    userProfile.plan='unlimited';
+    showToast('تم ترقية حسابك ✓ — حجوزات غير محدودة','success');
+    showForm('login-form');
+    showScreen('app');
+    updatePlanBanner();
+  }catch(e){ showErr(err,translateAuthError(e.code)); btn.textContent='تفعيل الحساب'; }
 }
 
 async function doRegisterStep2(){
@@ -725,6 +783,7 @@ function renderSidebar(isAdmin){
     {id:'page-invoices',ic:'receipt',label:'الفواتير'},
     {id:'page-contracts',ic:'contract',label:'العقود'},
     {id:'page-notifications',ic:'bell',label:'التنبيهات',badge:true},
+    {id:'page-fullreport',ic:'bar-chart',label:'التقرير الكامل'},
   ];
   document.getElementById('sidebar-nav').innerHTML=items.map(i=>
     `<div class="nav-item" data-page="${i.id}" onclick="showPage('${i.id}')">${icon(i.ic)}<span>${i.label}</span>${i.badge?`<span class="nav-badge" id="notif-badge" style="display:none">0</span>`:''}</div>`
@@ -747,6 +806,7 @@ async function loadLandlordData(){
   const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
   renderCalendar();
   updateNotifBadge();
+  updatePlanBanner();
 }
 
 async function loadAdminData(){
@@ -887,10 +947,15 @@ function renderCalendar(){
 // ── RENT CALC ─────────────────────────────────────────────────────────
 function calcRent(){
   const ci=v('b-checkin'), co=v('b-checkout'), rate=parseFloat(v('b-daily-rate'))||0;
+  const advance=parseFloat(v('b-advance'))||0;
   if(!ci||!co||!rate){document.getElementById('b-total-rent').value='';return;}
   const nights=calcNights(ci,co);
   if(nights<=0){document.getElementById('b-total-rent').value='تاريخ غير صحيح';return;}
-  document.getElementById('b-total-rent').value=fmt(nights*rate)+' OMR ('+nights+' ليلة)';
+  const total=nights*rate;
+  const remaining=total-advance;
+  let display=fmt(total)+' OMR ('+nights+' ليلة)';
+  if(advance>0) display+=' — متبقي: '+fmt(remaining)+' OMR';
+  document.getElementById('b-total-rent').value=display;
 }
 
 function calcNights(checkIn,checkOut){
@@ -937,8 +1002,18 @@ async function saveBooking(){
   const apt=v('b-apt'), tenantId=v('b-tenant');
   const checkIn=v('b-checkin'), checkOut=v('b-checkout');
   const dailyRate=parseFloat(v('b-daily-rate'));
+  const advance=parseFloat(v('b-advance'))||0;
   const notes=v('b-notes'), editId=v('b-edit-id');
   if(!apt||!tenantId||!checkIn||!checkOut||isNaN(dailyRate)){showToast('يرجى تعبئة جميع الحقول','error');return;}
+  // Free plan limit check (only for new bookings, not edits)
+  if(!editId && userProfile.plan!=='unlimited'){
+    const count=allBookings.length;
+    if(count>=5){
+      closeModal('modal-booking');
+      showUpgradePrompt();
+      return;
+    }
+  }
   if(new Date(checkOut)<=new Date(checkIn)){showToast('تاريخ الخروج يجب أن يكون بعد الدخول','error');return;}
   const nights=calcNights(checkIn,checkOut);
   const totalRent=parseFloat((nights*dailyRate).toFixed(3));
@@ -968,22 +1043,23 @@ async function saveBooking(){
     historyEntry.note=changes.join(' | ')||'تعديل بدون تغييرات';
     await updateDoc(doc(db,'bookings',editId),{
       apartment:apt,tenantId,tenantName:tenant?.name||'',tenantIdNumber:tenant?.idNumber||'',
-      checkIn,checkOut,dailyRate,totalRent,notes,
-      history:arrayUnion(historyEntry),updatedAt:serverTimestamp()
+      checkIn,checkOut,dailyRate,totalRent,advance,remaining:parseFloat((totalRent-advance).toFixed(3)),
+      notes,history:arrayUnion(historyEntry),updatedAt:serverTimestamp()
     });
     showToast('تم تعديل الحجز ✓','success');
   } else {
     await addDoc(collection(db,'bookings'),{
       uid:currentUser.uid,apartment:apt,tenantId,tenantName:tenant?.name||'',
       tenantIdNumber:tenant?.idNumber||'',checkIn,checkOut,dailyRate,totalRent,
-      notes,checkedIn:false,
+      advance,remaining:parseFloat((totalRent-advance).toFixed(3)),
+      notes,checkedIn:false,paid:false,
       landlordName:userProfile.name,landlordBuilding:userProfile.building,
       history:[historyEntry],createdAt:serverTimestamp()
     });
     showToast('تم حفظ الحجز ✓','success');
   }
   closeModal('modal-booking');
-  clear(['b-apt','b-checkin','b-checkout','b-daily-rate','b-notes','b-edit-id']);
+  clear(['b-apt','b-checkin','b-checkout','b-daily-rate','b-advance','b-notes','b-edit-id']);
   document.getElementById('b-total-rent').value='';
   document.getElementById('b-tenant').value='';
   document.getElementById('apt-availability-hint').textContent='';
@@ -1024,8 +1100,20 @@ function viewBooking(id){
       <div class="stat-card" style="padding:14px"><div class="stat-label">عدد الليالي</div><div class="stat-value">${nights}</div></div>
       <div class="stat-card" style="padding:14px"><div class="stat-label">الإجمالي</div><div class="stat-value income">${fmt(b.totalRent||b.rent||0)} OMR</div></div>
     </div>
-    ${b.notes?`<div style="background:var(--paper);border-radius:8px;padding:12px;font-size:.85rem;margin-bottom:12px"><b>ملاحظات:</b> ${b.notes}</div>`:''}
-    ${b.checkedIn?`<div style="background:rgba(58,125,90,.1);border-radius:8px;padding:10px;font-size:.84rem;color:var(--success);margin-bottom:12px">✅ المستأجر دخل الشقة — ${b.checkedInAt?new Date(b.checkedInAt).toLocaleString('ar-OM'):''}</div>`:''}`;
+    ${b.advance>0?`<div style="background:rgba(193,127,62,.08);border-radius:8px;padding:12px;font-size:.85rem;margin-bottom:8px;display:flex;justify-content:space-between">
+      <span><b>دفعة مقدمة:</b> ${fmt(b.advance)} OMR</span>
+      <span><b>المتبقي:</b> <span style="color:var(--danger)">${fmt(b.remaining||0)} OMR</span></span>
+    </div>`:''}
+    ${b.notes?`<div style="background:var(--paper);border-radius:8px;padding:12px;font-size:.85rem;margin-bottom:8px"><b>ملاحظات:</b> ${b.notes}</div>`:''}
+    <div style="background:var(--paper);border-radius:8px;padding:10px 12px;font-size:.84rem;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+      <span><b>حالة الدفع:</b></span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="badge ${b.paid?'badge-active':'badge-ended'}">${b.paid?'مدفوع':'غير مدفوع'}</span>
+        <button class="btn btn-ghost btn-sm" onclick="togglePaid('${b.id}')">${b.paid?'تعيين: غير مدفوع':'تعيين: مدفوع'}</button>
+      </div>
+    </div>
+    ${b.checkedIn?`<div style="background:rgba(58,125,90,.1);border-radius:8px;padding:10px;font-size:.84rem;color:var(--success);margin-bottom:8px">✅ المستأجر دخل الشقة — ${b.checkedInAt?new Date(b.checkedInAt).toLocaleString('ar-OM'):''}</div>`:''}
+    ${b.checkedOut?`<div style="background:rgba(192,57,43,.08);border-radius:8px;padding:10px;font-size:.84rem;color:var(--danger);margin-bottom:8px">🚪 المستأجر غادر — ${b.checkedOutAt?new Date(b.checkedOutAt).toLocaleString('ar-OM'):''}</div>`:''}`;
   const history=b.history||[];
   document.getElementById('booking-history').innerHTML=history.length
     ?[...history].reverse().map(h=>`
@@ -1051,6 +1139,7 @@ function editBookingFromDetail(){
     document.getElementById('b-apt').value=b.apartment;
     document.getElementById('b-tenant').value=b.tenantId;
     document.getElementById('b-daily-rate').value=b.dailyRate||'';
+    document.getElementById('b-advance').value=b.advance||'';
     document.getElementById('b-notes').value=b.notes||'';
     calcRent();
     openModal('modal-booking');
@@ -1069,7 +1158,7 @@ async function markCheckedIn(){
   if(idx>-1){ allBookings[idx].checkedIn=true; allBookings[idx].checkedInAt=new Date().toISOString(); }
   showToast('تم تسجيل دخول المستأجر ✓','success');
   closeModal('modal-booking-detail');
-  renderDashboard(); renderBookings(); renderCalendar();
+  renderDashboard(); renderBookings(); renderCalendar(); renderApartmentsPage();
   setTimeout(()=>printInvoice(bid),300);
 }
 
@@ -1098,7 +1187,9 @@ function printContract(){
       <div class="doc-row"><span class="doc-label">تاريخ الخروج:</span><span class="doc-value" dir="ltr">${fmtDateFull(b.checkOut,'12:00')}</span></div>
       <div class="doc-row"><span class="doc-label">عدد الليالي:</span><span class="doc-value">${nights} ليلة</span></div>
       <div class="doc-row"><span class="doc-label">السعر اليومي:</span><span class="doc-value" dir="ltr">${fmt(b.dailyRate||0)} OMR</span></div>
-      <div class="doc-row"><span class="doc-label">الإجمالي:</span><span class="doc-value" dir="ltr"><b>${fmt(b.totalRent||b.rent||0)} OMR</b></span></div>
+      <div class="doc-row"><span class="doc-label">إجمالي الإيجار:</span><span class="doc-value" dir="ltr"><b>${fmt(b.totalRent||b.rent||0)} OMR</b></span></div>
+      ${b.advance>0?`<div class="doc-row"><span class="doc-label">دفعة مقدمة:</span><span class="doc-value" dir="ltr" style="color:green">- ${fmt(b.advance)} OMR</span></div>
+      <div class="doc-row"><span class="doc-label">المبلغ المتبقي:</span><span class="doc-value" dir="ltr"><b>${fmt(b.remaining||0)} OMR</b></span></div>`:''}
     </div>
     <div class="doc-section doc-terms">
       <h3>الشروط والأحكام</h3>
@@ -1153,12 +1244,17 @@ function printInvoice(id){
       <thead><tr><th>البيان</th><th>التفاصيل</th><th>المبلغ (OMR)</th></tr></thead>
       <tbody>
         <tr><td>إيجار شقة رقم ${b.apartment}</td><td>${nights} ليلة × ${fmt(b.dailyRate||0)} OMR</td><td dir="ltr">${fmt(b.totalRent||b.rent||0)}</td></tr>
+        ${b.advance>0?`<tr><td>دفعة مقدمة</td><td>مدفوعة مسبقاً</td><td dir="ltr" style="color:green">- ${fmt(b.advance)}</td></tr>`:''}
         ${b.notes?`<tr><td colspan="2">ملاحظات: ${b.notes}</td><td>—</td></tr>`:''}
       </tbody>
       <tfoot>
-        <tr><td colspan="2"><b>الإجمالي المدفوع</b></td><td dir="ltr"><b>${fmt(b.totalRent||b.rent||0)} OMR</b></td></tr>
+        ${b.advance>0?`<tr><td colspan="2">المبلغ الإجمالي</td><td dir="ltr">${fmt(b.totalRent||0)} OMR</td></tr>`:''}
+        <tr><td colspan="2"><b>${b.advance>0?'المتبقي للدفع':'الإجمالي المدفوع'}</b></td><td dir="ltr"><b>${fmt(b.advance>0?(b.remaining||0):(b.totalRent||0))} OMR</b></td></tr>
       </tfoot>
     </table>
+    <div style="margin-top:8px;font-size:.8rem">
+      <span class="badge ${b.paid?'badge-active':'badge-ended'}" style="font-size:.8rem">${b.paid?'✓ تم الدفع كاملاً':'⏳ في انتظار الدفع'}</span>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px;font-size:.82rem">
       <div><b>فترة الإقامة:</b><br>من: ${fmtDateFull(b.checkIn,'2:00 م')}<br>إلى: ${fmtDateFull(b.checkOut,'12:00 م')}</div>
       <div style="text-align:left"><b>طريقة الدفع:</b><br>نقداً / كاش</div>
@@ -1189,7 +1285,9 @@ function printReport(){
       <div class="doc-row"><span class="doc-label">الخروج:</span><span class="doc-value">${fmtDateFull(b.checkOut,'12:00 م')}</span></div>
       <div class="doc-row"><span class="doc-label">عدد الليالي:</span><span class="doc-value">${nights}</span></div>
       <div class="doc-row"><span class="doc-label">السعر اليومي:</span><span class="doc-value" dir="ltr">${fmt(b.dailyRate||0)} OMR</span></div>
-      <div class="doc-row"><span class="doc-label">الإجمالي:</span><span class="doc-value" dir="ltr"><b>${fmt(b.totalRent||b.rent||0)} OMR</b></span></div>
+      <div class="doc-row"><span class="doc-label">إجمالي الإيجار:</span><span class="doc-value" dir="ltr"><b>${fmt(b.totalRent||b.rent||0)} OMR</b></span></div>
+      ${b.advance>0?`<div class="doc-row"><span class="doc-label">دفعة مقدمة:</span><span class="doc-value" dir="ltr" style="color:green">- ${fmt(b.advance)} OMR</span></div>
+      <div class="doc-row"><span class="doc-label">المبلغ المتبقي:</span><span class="doc-value" dir="ltr"><b>${fmt(b.remaining||0)} OMR</b></span></div>`:''}
       <div class="doc-row"><span class="doc-label">الحالة:</span><span class="doc-value">${b.checkedIn?'دخل المستأجر ✓':'لم يدخل بعد'}</span></div>
       ${b.notes?`<div class="doc-row"><span class="doc-label">ملاحظات:</span><span class="doc-value">${b.notes}</span></div>`:''}
     </div>
@@ -1227,19 +1325,37 @@ function renderApartmentsPage(){
   const apts=userProfile.apartments||[];
   if(!apts.length){el.innerHTML='<div class="empty-state"><div class="icon">🏢</div><p>لا توجد شقق مسجّلة</p></div>';return;}
   const aptData=userProfile.apartmentData||{};
+  // Determine which apartments are currently occupied (checked-in, not checked-out)
+  const occupiedApts=new Set(
+    allBookings
+      .filter(b=>b.checkedIn&&!b.checkedOut)
+      .map(b=>b.apartment)
+  );
+  const vacantCount=apts.filter(a=>!occupiedApts.has(a)).length;
+  const occupiedCount=occupiedApts.size;
   el.innerHTML=`
-    <div class="card-header"><span class="card-title">شقق المبنى (${apts.length})</span></div>
+    <div class="card-header">
+      <span class="card-title">شقق المبنى (${apts.length})</span>
+      <div style="display:flex;gap:8px">
+        <span class="badge badge-active">شاغرة: ${vacantCount}</span>
+        <span class="badge badge-checkedin">مشغولة: ${occupiedCount}</span>
+      </div>
+    </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;padding-top:4px">
       ${apts.map(a=>{
         const data=aptData[a]||{};
         const type=data.type||'daily';
         const typeAr={daily:'يومي',monthly:'شهري',annual:'سنوي'}[type];
-        return `<div class="stat-card" style="padding:16px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        const occupied=occupiedApts.has(a);
+        const activeBooking=allBookings.find(b=>b.apartment===a&&b.checkedIn&&!b.checkedOut);
+        return `<div class="stat-card" style="padding:16px;border:2px solid ${occupied?'var(--success)':'var(--border)'}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <div style="font-size:1.3rem;font-weight:900">${a}</div>
-            <span class="badge ${type==='daily'?'badge-upcoming':type==='monthly'?'badge-active':'badge-ended'}">${typeAr}</span>
+            <span class="badge ${occupied?'badge-checkedin':'badge-active'}">${occupied?'مشغولة':'شاغرة'}</span>
           </div>
-          <select onchange="updateAptType('${a}',this.value)" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.82rem;background:var(--paper);color:var(--ink);outline:none">
+          ${occupied&&activeBooking?`<div style="font-size:.76rem;color:var(--muted);margin-bottom:8px">${activeBooking.tenantName}</div>`:''}
+          <span class="badge ${type==='daily'?'badge-upcoming':type==='monthly'?'badge-active':'badge-ended'}" style="margin-bottom:8px;display:inline-block">${typeAr}</span>
+          <select onchange="updateAptType('${a}',this.value)" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.82rem;background:var(--paper);color:var(--ink);outline:none;margin-top:4px">
             <option value="daily" ${type==='daily'?'selected':''}>يومي / سياحي</option>
             <option value="monthly" ${type==='monthly'?'selected':''}>شهري</option>
             <option value="annual" ${type==='annual'?'selected':''}>سنوي</option>
@@ -1264,14 +1380,20 @@ function renderInvoicesPage(){
   const completed=allBookings.filter(b=>b.checkedIn);
   if(!completed.length){el.innerHTML='<div class="empty-state"><div class="icon">🧾</div><p>لا توجد فواتير بعد — تظهر عند تسجيل دخول المستأجر</p></div>';return;}
   const sorted=[...completed].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn));
-  el.innerHTML=`<table><thead><tr><th>الشقة</th><th>المستأجر</th><th>الدخول</th><th>الخروج</th><th>الإجمالي</th><th></th></tr></thead><tbody>
+  el.innerHTML=`<table><thead><tr><th>الشقة</th><th>المستأجر</th><th>الدخول</th><th>الخروج</th><th>مقدم</th><th>متبقي</th><th>الإجمالي</th><th>الدفع</th><th></th></tr></thead><tbody>
     ${sorted.map(b=>`<tr>
       <td><b>${b.apartment}</b></td>
       <td>${b.tenantName}</td>
       <td dir="ltr">${fmtDate(b.checkIn)}</td>
       <td dir="ltr">${fmtDate(b.checkOut)}</td>
+      <td dir="ltr">${b.advance>0?fmt(b.advance):'—'}</td>
+      <td dir="ltr">${b.remaining>0?'<span style="color:var(--danger)">'+fmt(b.remaining)+'</span>':'—'}</td>
       <td dir="ltr"><b>${fmt(b.totalRent||b.rent||0)} OMR</b></td>
-      <td><button class="btn btn-primary btn-sm" onclick="printInvoiceDirect('${b.id}')">🖨️ طباعة الفاتورة</button></td>
+      <td><span class="badge ${b.paid?'badge-active':'badge-ended'}">${b.paid?'مدفوع ✓':'غير مدفوع'}</span></td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="printInvoiceDirect('${b.id}')">🖨️ فاتورة</button>
+        <button class="btn btn-ghost btn-sm" onclick="togglePaid('${b.id}')">${b.paid?'إلغاء':'تأكيد دفع'}</button>
+      </td>
     </tr>`).join('')}
   </tbody></table>`;
 }
@@ -1416,6 +1538,178 @@ function renderNotificationsPage(){
     section('مغادرون قريباً','🟢',leaving,'#3a7d5a');
 }
 
+// ── ADMIN PASSWORD RESET ─────────────────────────────────────────────
+async function adminResetPassword(){
+  const email=document.getElementById('admin-reset-email').value.trim();
+  const msg=document.getElementById('admin-reset-msg');
+  if(!email){ msg.style.display='block';msg.style.color='var(--danger)';msg.textContent='أدخل البريد الإلكتروني';return; }
+  try{
+    const {sendPasswordResetEmail}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+    await sendPasswordResetEmail(auth,email);
+    msg.style.display='block';msg.style.color='var(--success)';
+    msg.textContent='✓ تم إرسال رابط إعادة التعيين إلى '+email;
+    document.getElementById('admin-reset-email').value='';
+  }catch(e){
+    msg.style.display='block';msg.style.color='var(--danger)';
+    msg.textContent='خطأ: '+translateAuthError(e.code);
+  }
+}
+
+// ── PLAN / UPGRADE ────────────────────────────────────────────────────
+function updatePlanBanner(){
+  const isAdmin=currentUser&&currentUser.email===ADMIN_EMAIL;
+  if(isAdmin) return;
+  const plan=userProfile.plan||'free';
+  const count=allBookings.length;
+  const remaining=Math.max(0,5-count);
+  let banner=document.getElementById('plan-banner');
+  if(!banner){
+    banner=document.createElement('div');
+    banner.id='plan-banner';
+    banner.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:300;transition:transform .3s';
+    document.body.appendChild(banner);
+  }
+  if(plan==='unlimited'){ banner.style.transform='translateY(100%)'; return; }
+  if(remaining>0){
+    banner.style.transform='translateY(0)';
+    banner.innerHTML=`<div style="background:var(--ink);color:var(--paper);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.84rem">
+      <span>🆓 خطة مجانية — متبقي <b>${remaining}</b> حجز${remaining===1?'':'ات'} من أصل 5</span>
+      <button onclick="showUpgradePrompt()" style="background:var(--accent);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer">ترقية الحساب</button>
+    </div>`;
+  } else {
+    banner.style.transform='translateY(0)';
+    banner.innerHTML=`<div style="background:var(--danger);color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.84rem">
+      <span>🔒 وصلت للحد الأقصى للخطة المجانية — 5 حجوزات</span>
+      <button onclick="showUpgradePrompt()" style="background:#fff;color:var(--danger);border:none;padding:7px 16px;border-radius:6px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer">ترقية الحساب الآن</button>
+    </div>`;
+  }
+}
+
+function showUpgradePrompt(){
+  // Clear code inputs and show upgrade form
+  document.querySelectorAll('#code-inputs input').forEach(i=>i.value='');
+  document.getElementById('code-error').classList.remove('show');
+  showScreen('auth');
+  showForm('code-form');
+}
+
+// ── TOGGLE PAID ──────────────────────────────────────────────────────
+async function togglePaid(id){
+  const b=allBookings.find(x=>x.id===id);
+  if(!b) return;
+  const newPaid=!b.paid;
+  await updateDoc(doc(db,'bookings',id),{paid:newPaid});
+  b.paid=newPaid;
+  showToast(newPaid?'تم تعيين الحجز كمدفوع ✓':'تم تعيين الحجز كغير مدفوع','success');
+  viewBooking(id);
+  renderInvoicesPage();
+}
+
+// ── FULL REPORT ───────────────────────────────────────────────────────
+function renderFullReportPage(){
+  const el=document.getElementById('fullreport-content');
+  const totalIncome=allBookings.reduce((s,b)=>s+(b.totalRent||0),0);
+  const totalPaid=allBookings.filter(b=>b.paid).reduce((s,b)=>s+(b.totalRent||0),0);
+  const totalUnpaid=allBookings.filter(b=>!b.paid).reduce((s,b)=>s+(b.totalRent||0),0);
+  const totalAdvance=allBookings.reduce((s,b)=>s+(b.advance||0),0);
+  const totalRemaining=allBookings.reduce((s,b)=>s+(b.remaining||0),0);
+  const totalExpense=allExpenses.reduce((s,e)=>s+(e.amount||0),0);
+  const net=totalIncome-totalExpense;
+  const sorted=[...allBookings].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn));
+  el.innerHTML=`
+    <div class="stats-grid" style="margin-bottom:20px">
+      <div class="stat-card"><div class="stat-label">إجمالي الإيرادات</div><div class="stat-value income">${fmt(totalIncome)}</div><div class="stat-sub">OMR</div></div>
+      <div class="stat-card"><div class="stat-label">إجمالي المصروفات</div><div class="stat-value expense">${fmt(totalExpense)}</div><div class="stat-sub">OMR</div></div>
+      <div class="stat-card"><div class="stat-label">صافي الربح</div><div class="stat-value ${net>=0?'net-pos':'net-neg'}">${fmt(Math.abs(net))}</div><div class="stat-sub">${net>=0?'▲ ربح':'▼ خسارة'}</div></div>
+      <div class="stat-card"><div class="stat-label">مدفوع</div><div class="stat-value income">${fmt(totalPaid)}</div><div class="stat-sub">OMR محصّل</div></div>
+      <div class="stat-card"><div class="stat-label">غير مدفوع</div><div class="stat-value expense">${fmt(totalUnpaid)}</div><div class="stat-sub">OMR متبقي</div></div>
+      <div class="stat-card"><div class="stat-label">إجمالي المقدم</div><div class="stat-value">${fmt(totalAdvance)}</div><div class="stat-sub">OMR دفعات مقدمة</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">تفاصيل جميع الحجوزات (${sorted.length})</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>الشقة</th><th>المستأجر</th><th>الدخول</th><th>الخروج</th><th>ليالي</th><th>اليومي</th><th>مقدم</th><th>متبقي</th><th>الإجمالي</th><th>الدفع</th><th>الحالة</th></tr></thead>
+          <tbody>
+            ${sorted.map(b=>{
+              const s=bookingStatus(b);
+              const sAr=bookingStatusAr(s);
+              const nights=calcNights(b.checkIn,b.checkOut);
+              return `<tr>
+                <td><b>${b.apartment}</b></td>
+                <td>${b.tenantName}</td>
+                <td dir="ltr">${fmtDate(b.checkIn)}</td>
+                <td dir="ltr">${fmtDate(b.checkOut)}</td>
+                <td>${nights}</td>
+                <td dir="ltr">${fmt(b.dailyRate||0)}</td>
+                <td dir="ltr">${b.advance>0?fmt(b.advance):'—'}</td>
+                <td dir="ltr">${b.remaining>0?'<span style="color:var(--danger)">'+fmt(b.remaining)+'</span>':'—'}</td>
+                <td dir="ltr"><b>${fmt(b.totalRent||0)}</b></td>
+                <td><span class="badge ${b.paid?'badge-active':'badge-ended'}">${b.paid?'مدفوع':'غير مدفوع'}</span></td>
+                <td><span class="badge badge-${s}">${sAr}</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    ${allExpenses.length?`<div class="card">
+      <div class="card-header"><span class="card-title">المصروفات (${allExpenses.length})</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>التاريخ</th><th>التفاصيل</th><th>المبلغ (OMR)</th></tr></thead>
+        <tbody>${[...allExpenses].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(e=>`
+          <tr><td dir="ltr">${e.date}</td><td>${e.description}</td><td dir="ltr"><b>${fmt(e.amount)}</b></td></tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>`:''}`;
+}
+
+function printFullReport(){
+  const totalIncome=allBookings.reduce((s,b)=>s+(b.totalRent||0),0);
+  const totalExpense=allExpenses.reduce((s,e)=>s+(e.amount||0),0);
+  const net=totalIncome-totalExpense;
+  const sorted=[...allBookings].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn));
+  const html=`<div class="print-doc">
+    <h1>التقرير المالي الكامل</h1>
+    <div class="doc-subtitle">${userProfile.building} · ${new Date().toLocaleDateString('ar-OM')}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;text-align:center">
+      <div style="background:#f5f5f5;border-radius:8px;padding:12px"><div style="font-size:.75rem;color:#888;margin-bottom:4px">إجمالي الإيرادات</div><div style="font-size:1.2rem;font-weight:900;color:#3a7d5a">${fmt(totalIncome)} OMR</div></div>
+      <div style="background:#f5f5f5;border-radius:8px;padding:12px"><div style="font-size:.75rem;color:#888;margin-bottom:4px">إجمالي المصروفات</div><div style="font-size:1.2rem;font-weight:900;color:#c0392b">${fmt(totalExpense)} OMR</div></div>
+      <div style="background:#f5f5f5;border-radius:8px;padding:12px"><div style="font-size:.75rem;color:#888;margin-bottom:4px">صافي الربح</div><div style="font-size:1.2rem;font-weight:900;color:${net>=0?'#3a7d5a':'#c0392b'}">${fmt(Math.abs(net))} OMR</div></div>
+    </div>
+    <div class="doc-section"><h3>جميع الحجوزات</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:.75rem">
+        <thead><tr style="background:#0f0f0f;color:#fff">${['الشقة','المستأجر','الدخول','الخروج','ليالي','الإجمالي','مقدم','متبقي','الدفع','الحالة'].map(h=>`<th style="padding:6px 8px;text-align:right">${h}</th>`).join('')}</tr></thead>
+        <tbody>${sorted.map((b,i)=>{
+          const s=bookingStatus(b);
+          return `<tr style="background:${i%2?'#f9f9f9':'#fff'};border-bottom:1px solid #eee">
+            <td style="padding:5px 8px"><b>${b.apartment}</b></td>
+            <td style="padding:5px 8px">${b.tenantName}</td>
+            <td style="padding:5px 8px;direction:ltr">${fmtDate(b.checkIn)}</td>
+            <td style="padding:5px 8px;direction:ltr">${fmtDate(b.checkOut)}</td>
+            <td style="padding:5px 8px">${calcNights(b.checkIn,b.checkOut)}</td>
+            <td style="padding:5px 8px;direction:ltr"><b>${fmt(b.totalRent||0)}</b></td>
+            <td style="padding:5px 8px;direction:ltr">${b.advance>0?fmt(b.advance):'—'}</td>
+            <td style="padding:5px 8px;direction:ltr">${b.remaining>0?fmt(b.remaining):'—'}</td>
+            <td style="padding:5px 8px">${b.paid?'مدفوع':'غير مدفوع'}</td>
+            <td style="padding:5px 8px">${bookingStatusAr(s)}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+    ${allExpenses.length?`<div class="doc-section"><h3>المصروفات</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:.75rem">
+        <thead><tr style="background:#0f0f0f;color:#fff"><th style="padding:6px 8px;text-align:right">التاريخ</th><th style="padding:6px 8px;text-align:right">التفاصيل</th><th style="padding:6px 8px;text-align:right">المبلغ</th></tr></thead>
+        <tbody>${[...allExpenses].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((e,i)=>`
+          <tr style="background:${i%2?'#f9f9f9':'#fff'}"><td style="padding:5px 8px;direction:ltr">${e.date}</td><td style="padding:5px 8px">${e.description}</td><td style="padding:5px 8px;direction:ltr">${fmt(e.amount)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`:''}
+    <div style="text-align:center;margin-top:16px;font-size:.7rem;color:#aaa">مكان لإدارة العقارات · ${new Date().toLocaleString('ar-OM')}</div>
+  </div>`;
+  triggerPrint(html);
+}
+
 // ── UI HELPERS ────────────────────────────────────────────────────────
 function showScreen(s){
   document.getElementById('auth-screen').classList.toggle('active',s==='auth');
@@ -1432,6 +1726,7 @@ function showPage(pageId){
   if(pageId==='page-invoices') renderInvoicesPage();
   if(pageId==='page-contracts') renderContractsPage();
   if(pageId==='page-notifications') renderNotificationsPage();
+  if(pageId==='page-fullreport') renderFullReportPage();
 }
 
 function openModal(id){
@@ -1498,6 +1793,7 @@ function icon(name){
     'receipt':'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 2v20l3-3 3 3 3-3 3 3 3-3V2z"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>',
     'contract':'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>',
     'bell':'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
+    'bar-chart':'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>',
   };
   return ic[name]||'';
 }
