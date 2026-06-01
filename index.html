@@ -344,6 +344,12 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       <div class="sub">Makan</div>
     </div>
     <nav class="sidebar-nav" id="sidebar-nav"></nav>
+    <div style="padding:10px 20px;border-top:1px solid rgba(255,255,255,.08)">
+      <button id="lang-toggle-btn" onclick="toggleLang()"
+        style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 12px;color:rgba(255,255,255,.8);font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .2s">
+        🌐 <span id="lang-toggle-label">English</span>
+      </button>
+    </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar-init">م</div>
       <div class="user-info">
@@ -510,7 +516,7 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
     <div class="form-group"><label>رقم الهاتف (اختياري)</label><input type="tel" id="t-phone" placeholder="+968 9X XXX XXX" dir="ltr"></div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-tenant')">إلغاء</button>
-      <button class="btn btn-primary" onclick="saveTenant()">حفظ المستأجر</button>
+      <button class="btn btn-primary" onclick="saveTenant()" data-t="save_tenant">حفظ المستأجر</button>
     </div>
   </div>
 </div>
@@ -522,35 +528,35 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
     <input type="hidden" id="b-edit-id">
     <div class="form-row">
       <div class="form-group">
-        <label>تاريخ الدخول (2:00 م)</label>
+        <label id="lbl-checkin"></label>
         <input type="date" id="b-checkin" dir="ltr" onchange="calcRent()">
       </div>
       <div class="form-group">
-        <label>تاريخ الخروج (12:00 م)</label>
+        <label id="lbl-checkout"></label>
         <input type="date" id="b-checkout" dir="ltr" onchange="calcRent()">
       </div>
     </div>
     <div class="form-group">
-      <label>رقم الشقة</label>
+      <label id="lbl-apt"></label>
       <select id="b-apt" onchange="checkAptAvailability()"><option value="">— اختر شقة —</option></select>
       <div class="hint" id="apt-availability-hint"></div>
     </div>
     <div class="form-group">
-      <label>المستأجر</label>
+      <label id="lbl-tenant"></label>
       <select id="b-tenant"><option value="">— اختر مستأجر —</option></select>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>السعر اليومي (OMR)</label>
+        <label id="lbl-daily"></label>
         <input type="number" id="b-daily-rate" placeholder="20.000" step="0.001" min="0" dir="ltr" oninput="calcRent()">
       </div>
       <div class="form-group">
-        <label>الإجمالي (OMR)</label>
+        <label id="lbl-total"></label>
         <input type="text" id="b-total-rent" placeholder="يُحسب تلقائياً" dir="ltr" readonly style="background:var(--warm);font-weight:700">
       </div>
     </div>
     <div class="form-group">
-      <label>دفعة مقدمة (OMR) — Advance Payment (optional)</label>
+      <label id="lbl-advance"></label>
       <input type="number" id="b-advance" placeholder="0.000" step="0.001" min="0" dir="ltr" oninput="calcRent();toggleAdvanceMethod()">
       <div class="hint">تُخصم من الإجمالي وتظهر في العقد والفاتورة · Deducted from total, shown on contract & invoice</div>
     </div>
@@ -568,7 +574,7 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
     <div class="form-group"><label>ملاحظات (تظهر في العقد)</label><textarea id="b-notes" placeholder="أي شروط إضافية..."></textarea></div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-booking')">إلغاء</button>
-      <button class="btn btn-primary" onclick="saveBooking()">حفظ الحجز</button>
+      <button class="btn btn-primary" onclick="saveBooking()" data-t="save_booking">حفظ الحجز</button>
     </div>
   </div>
 </div>
@@ -582,7 +588,7 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
     <div class="form-group"><label>المبلغ (OMR)</label><input type="number" id="e-amount" placeholder="25.000" step="0.001" min="0" dir="ltr"></div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-expense')">إلغاء</button>
-      <button class="btn btn-primary" onclick="saveExpense()">حفظ المصروف</button>
+      <button class="btn btn-primary" onclick="saveExpense()" data-t="save_expense">حفظ المصروف</button>
     </div>
   </div>
 </div>
@@ -697,6 +703,184 @@ let calYear, calMonth;
 let pendingRegData=null;
 let activeBookingId=null;
 
+// ── LANGUAGE SYSTEM ──────────────────────────────────────────────────
+let currentLang = localStorage.getItem('makan_lang') || 'ar';
+
+const T = {
+  ar: {
+    // Sidebar nav
+    nav_dashboard: 'لوحة التحكم', nav_tenants: 'المستأجرون', nav_bookings: 'الحجوزات',
+    nav_apartments: 'الشقق', nav_calendar: 'التقويم', nav_expenses: 'المصروفات',
+    nav_invoices: 'الفواتير', nav_contracts: 'العقود', nav_notifications: 'التنبيهات',
+    nav_report: 'التقرير الكامل', nav_admin: 'إدارة الملاك',
+    // Page headers
+    ph_dashboard: 'لوحة التحكم', ph_dashboard_sub: 'نظرة عامة على المبنى والأداء المالي',
+    ph_tenants: 'المستأجرون', ph_tenants_sub: 'قائمة المستأجرين المسجّلين',
+    ph_bookings: 'الحجوزات', ph_bookings_sub: 'جميع حجوزات الشقق',
+    ph_apartments: 'الشقق', ph_apartments_sub: 'إدارة شقق المبنى وأنواع الإيجار',
+    ph_calendar: 'التقويم', ph_calendar_sub: 'جدول الحجوزات الشهري',
+    ph_expenses: 'المصروفات', ph_expenses_sub: 'متابعة نفقات المبنى',
+    ph_invoices: 'الفواتير', ph_invoices_sub: 'جميع فواتير الحجوزات',
+    ph_contracts: 'العقود', ph_contracts_sub: 'جميع عقود الإيجار',
+    ph_notifications: 'التنبيهات', ph_notifications_sub: 'مستأجرون قادمون ومغادرون قريباً',
+    ph_report: 'التقرير الكامل', ph_report_sub: 'ملخص شامل لجميع الحجوزات والمدفوعات',
+    // Buttons
+    btn_new_booking: '＋ حجز جديد', btn_new_expense: '＋ مصروف جديد',
+    btn_manage_tenants: 'إدارة المستأجرين', btn_add_tenant: '＋ إضافة مستأجر',
+    btn_print_report: '🖨️ طباعة التقرير', btn_view_all: 'عرض الكل',
+    btn_close: 'إغلاق', btn_cancel: 'إلغاء', btn_save: 'حفظ', btn_delete: '🗑️ حذف',
+    btn_edit: '✏️ تعديل', btn_move: '🔄 نقل', btn_contract: '🖨️ العقد',
+    btn_whatsapp: '💬 واتساب', btn_checkin: '✅ دخل المستأجر', btn_checkout: '🚪 غادر المستأجر',
+    btn_pay: '💳 دفع', btn_invoice: '🖨️ فاتورة', btn_print_contract: '🖨️ طباعة العقد',
+    // Stats
+    stat_income: 'إجمالي الدخل', stat_expenses: 'إجمالي المصروفات',
+    stat_net: 'صافي الربح / الخسارة', stat_active: 'مستأجرون داخل',
+    // Table headers
+    th_apt: 'الشقة', th_tenant: 'المستأجر', th_checkin: 'الدخول', th_checkout: 'الخروج',
+    th_nights: 'الليالي', th_total: 'الإجمالي', th_status: 'الحالة', th_actions: '',
+    th_advance: 'مقدم', th_remaining: 'متبقي', th_payment: 'الدفع',
+    th_date: 'التاريخ', th_details: 'التفاصيل', th_amount: 'المبلغ (OMR)',
+    // Status
+    s_upcoming: 'قادم', s_active: 'نشط', s_checkedin: 'داخل', s_ended: 'منتهي',
+    s_vacant: 'شاغرة', s_occupied: 'مشغولة',
+    s_paid: '✅ مدفوع بالكامل', s_advance_only: '🔶 مقدم فقط', s_unpaid: '⏳ غير مدفوع',
+    // Form labels
+    f_name: 'الاسم الكامل', f_id: 'رقم الهوية', f_phone: 'رقم الهاتف (اختياري)',
+    f_building: 'اسم المبنى', f_floors: 'عدد الطوابق', f_perfloor: 'شقق في كل طابق',
+    f_checkin_lbl: 'تاريخ الدخول (2:00 م)', f_checkout_lbl: 'تاريخ الخروج (12:00 م)',
+    f_apt_lbl: 'رقم الشقة', f_tenant_lbl: 'المستأجر', f_daily: 'السعر اليومي (OMR)',
+    f_total_lbl: 'الإجمالي (OMR)', f_advance_lbl: 'دفعة مقدمة (OMR) — اختياري',
+    f_notes: 'ملاحظات (تظهر في العقد)',
+    f_date: 'التاريخ', f_desc: 'التفاصيل', f_amount: 'المبلغ (OMR)',
+    // Misc
+    recent_bookings: 'آخر الحجوزات', save_tenant: 'حفظ المستأجر', save_booking: 'حفظ الحجز',
+    save_expense: 'حفظ المصروف', booking_detail: 'تفاصيل الحجز',
+    edit_history: '📋 سجل التعديلات', role_landlord: 'مالك', role_admin: 'مدير المنصة',
+    profit: '▲ ربح', loss: '▼ خسارة', lang_switch: 'English',
+    empty_bookings: 'لا توجد حجوزات بعد', empty_tenants: 'لا يوجد مستأجرون مسجّلون',
+    empty_expenses: 'لا توجد مصروفات مسجّلة', empty_invoices: 'لا توجد فواتير بعد',
+  },
+  en: {
+    nav_dashboard: 'Dashboard', nav_tenants: 'Tenants', nav_bookings: 'Bookings',
+    nav_apartments: 'Apartments', nav_calendar: 'Calendar', nav_expenses: 'Expenses',
+    nav_invoices: 'Invoices', nav_contracts: 'Contracts', nav_notifications: 'Alerts',
+    nav_report: 'Full Report', nav_admin: 'Admin Panel',
+    ph_dashboard: 'Dashboard', ph_dashboard_sub: 'Building overview and financial performance',
+    ph_tenants: 'Tenants', ph_tenants_sub: 'Registered tenants list',
+    ph_bookings: 'Bookings', ph_bookings_sub: 'All apartment bookings',
+    ph_apartments: 'Apartments', ph_apartments_sub: 'Manage units and rental types',
+    ph_calendar: 'Calendar', ph_calendar_sub: 'Monthly booking schedule',
+    ph_expenses: 'Expenses', ph_expenses_sub: 'Track building costs',
+    ph_invoices: 'Invoices', ph_invoices_sub: 'All booking invoices',
+    ph_contracts: 'Contracts', ph_contracts_sub: 'All rental contracts',
+    ph_notifications: 'Alerts', ph_notifications_sub: 'Tenants arriving or leaving soon',
+    ph_report: 'Full Report', ph_report_sub: 'Complete summary of all bookings and payments',
+    btn_new_booking: '＋ New Booking', btn_new_expense: '＋ New Expense',
+    btn_manage_tenants: 'Manage Tenants', btn_add_tenant: '＋ Add Tenant',
+    btn_print_report: '🖨️ Print Report', btn_view_all: 'View All',
+    btn_close: 'Close', btn_cancel: 'Cancel', btn_save: 'Save', btn_delete: '🗑️ Delete',
+    btn_edit: '✏️ Edit', btn_move: '🔄 Move', btn_contract: '🖨️ Contract',
+    btn_whatsapp: '💬 WhatsApp', btn_checkin: '✅ Tenant Checked In', btn_checkout: '🚪 Tenant Checked Out',
+    btn_pay: '💳 Payment', btn_invoice: '🖨️ Invoice', btn_print_contract: '🖨️ Print Contract',
+    stat_income: 'Total Income', stat_expenses: 'Total Expenses',
+    stat_net: 'Net Profit / Loss', stat_active: 'Tenants Inside',
+    th_apt: 'Unit', th_tenant: 'Tenant', th_checkin: 'Check-in', th_checkout: 'Check-out',
+    th_nights: 'Nights', th_total: 'Total', th_status: 'Status', th_actions: '',
+    th_advance: 'Advance', th_remaining: 'Balance', th_payment: 'Payment',
+    th_date: 'Date', th_details: 'Details', th_amount: 'Amount (OMR)',
+    s_upcoming: 'Upcoming', s_active: 'Active', s_checkedin: 'Inside', s_ended: 'Ended',
+    s_vacant: 'Vacant', s_occupied: 'Occupied',
+    s_paid: '✅ Fully Paid', s_advance_only: '🔶 Advance Only', s_unpaid: '⏳ Unpaid',
+    f_name: 'Full Name', f_id: 'ID Number', f_phone: 'Phone (optional)',
+    f_building: 'Building Name', f_floors: 'Number of Floors', f_perfloor: 'Units per Floor',
+    f_checkin_lbl: 'Check-in Date (2:00 PM)', f_checkout_lbl: 'Check-out Date (12:00 PM)',
+    f_apt_lbl: 'Apartment', f_tenant_lbl: 'Tenant', f_daily: 'Daily Rate (OMR)',
+    f_total_lbl: 'Total (OMR)', f_advance_lbl: 'Advance Payment (OMR) — optional',
+    f_notes: 'Notes (shown on contract)',
+    f_date: 'Date', f_desc: 'Description', f_amount: 'Amount (OMR)',
+    recent_bookings: 'Recent Bookings', save_tenant: 'Save Tenant', save_booking: 'Save Booking',
+    save_expense: 'Save Expense', booking_detail: 'Booking Details',
+    edit_history: '📋 Edit History', role_landlord: 'Landlord', role_admin: 'Platform Admin',
+    profit: '▲ Profit', loss: '▼ Loss', lang_switch: 'العربية',
+    empty_bookings: 'No bookings yet', empty_tenants: 'No tenants registered',
+    empty_expenses: 'No expenses recorded', empty_invoices: 'No invoices yet',
+  }
+};
+
+function t(key){ return (T[currentLang]||T.ar)[key] || key; }
+
+function toggleLang(){
+  currentLang = currentLang==='ar'?'en':'ar';
+  localStorage.setItem('makan_lang', currentLang);
+  applyLang();
+}
+
+function applyLang(){
+  const isAr = currentLang==='ar';
+  // HTML direction
+  document.documentElement.setAttribute('lang', currentLang);
+  document.documentElement.setAttribute('dir', isAr?'rtl':'ltr');
+  // Toggle button label
+  const lbl=document.getElementById('lang-toggle-label');
+  if(lbl) lbl.textContent=t('lang_switch');
+  // Sidebar nav labels (re-render)
+  const isAdmin=currentUser&&currentUser.email===ADMIN_EMAIL;
+  renderSidebar(isAdmin);
+  // Page headers
+  const phMap={
+    'page-dashboard':['ph_dashboard','ph_dashboard_sub'],
+    'page-tenants':['ph_tenants','ph_tenants_sub'],
+    'page-bookings':['ph_bookings','ph_bookings_sub'],
+    'page-apartments':['ph_apartments','ph_apartments_sub'],
+    'page-calendar':['ph_calendar','ph_calendar_sub'],
+    'page-expenses':['ph_expenses','ph_expenses_sub'],
+    'page-invoices':['ph_invoices','ph_invoices_sub'],
+    'page-contracts':['ph_contracts','ph_contracts_sub'],
+    'page-notifications':['ph_notifications','ph_notifications_sub'],
+    'page-fullreport':['ph_report','ph_report_sub'],
+  };
+  Object.entries(phMap).forEach(([pid,[hk,sk]])=>{
+    const page=document.getElementById(pid);
+    if(!page) return;
+    const h1=page.querySelector('.page-header-text h1');
+    const p=page.querySelector('.page-header-text p');
+    if(h1) h1.textContent=t(hk);
+    if(p) p.textContent=t(sk);
+  });
+  // Quick action buttons on dashboard
+  const qBtns=document.querySelectorAll('.quick-actions .btn');
+  const qLabels=['btn_new_booking','btn_new_expense','btn_manage_tenants'];
+  qBtns.forEach((btn,i)=>{ if(qLabels[i]) btn.textContent=t(qLabels[i]); });
+  // Update form labels
+  const fLabelMap={
+    'lbl-checkin':'f_checkin_lbl','lbl-checkout':'f_checkout_lbl',
+    'lbl-apt':'f_apt_lbl','lbl-tenant':'f_tenant_lbl',
+    'lbl-daily':'f_daily','lbl-total':'f_total_lbl','lbl-advance':'f_advance_lbl',
+  };
+  Object.entries(fLabelMap).forEach(([id,key])=>{
+    const el=document.getElementById(id); if(el) el.textContent=t(key);
+  });
+  // Update modal buttons
+  const modalBtns={
+    'booking-modal-title': document.getElementById('b-edit-id')?.value ? t('btn_edit') : t('btn_new_booking'),
+  };
+  // Update save buttons text
+  document.querySelectorAll('[data-t]').forEach(el=>{
+    el.textContent=t(el.dataset.t);
+  });
+  // Re-render all data tables (they use t() calls)
+  renderDashboard();
+  renderTenants();
+  renderBookings();
+  renderExpenses();
+  renderInvoicesPage();
+  renderContractsPage();
+  renderCalendar();
+  // Role label
+  const roleEl=document.getElementById('sidebar-role');
+  if(roleEl) roleEl.textContent=isAdmin?t('role_admin'):((userProfile?.building)||t('role_landlord'));
+}
+
 // ── EXPOSE ────────────────────────────────────────────────────────────
 const exp = {
   doLogin, doRegisterDirect, doRegisterStep1:doRegisterDirect, doRegisterStep2:doUpgradeAccount, doLogout,
@@ -712,7 +896,7 @@ const exp = {
   adminResetPassword, showUpgradePrompt, doRegisterDirect, doUpgradeAccount, updatePlanBanner,
   togglePaid, renderFullReportPage, printFullReport,
   shareContractWhatsApp, submitUpgradeCode, upgradeCodeNext, renderVacancyChart,
-  enforcePlanGate, unlockApp,
+  enforcePlanGate, unlockApp, toggleLang, applyLang,
   openMoveTenant, confirmMoveTenant, runVacancySearch, confirmPayment, tryClosePlanModal,
   showAddAptForm, addNewApartments, renameApartment,
   toggleAdvanceMethod:function(){
@@ -832,6 +1016,9 @@ async function loadProfile(){
 
 function initApp(){
   showScreen('app');
+  // Apply saved language
+  const saved=localStorage.getItem('makan_lang'); if(saved) currentLang=saved;
+  const lbl=document.getElementById('lang-toggle-label'); if(lbl) lbl.textContent=t('lang_switch');
   const isAdmin=currentUser.email===ADMIN_EMAIL;
   renderSidebar(isAdmin);
   document.getElementById('sidebar-username').textContent=userProfile.name||currentUser.email;
@@ -842,17 +1029,17 @@ function initApp(){
 }
 
 function renderSidebar(isAdmin){
-  const items=isAdmin?[{id:'page-admin',ic:'shield',label:'إدارة الملاك'}]:[
-    {id:'page-dashboard',ic:'grid',label:'لوحة التحكم'},
-    {id:'page-tenants',ic:'users',label:'المستأجرون'},
-    {id:'page-bookings',ic:'file-text',label:'الحجوزات'},
-    {id:'page-apartments',ic:'building',label:'الشقق'},
-    {id:'page-calendar',ic:'calendar',label:'التقويم'},
-    {id:'page-expenses',ic:'trending-down',label:'المصروفات'},
-    {id:'page-invoices',ic:'receipt',label:'الفواتير'},
-    {id:'page-contracts',ic:'contract',label:'العقود'},
-    {id:'page-notifications',ic:'bell',label:'التنبيهات',badge:true},
-    {id:'page-fullreport',ic:'bar-chart',label:'التقرير الكامل'},
+  const items=isAdmin?[{id:'page-admin',ic:'shield',label:t('nav_admin')}]:[
+    {id:'page-dashboard',ic:'grid',label:t('nav_dashboard')},
+    {id:'page-tenants',ic:'users',label:t('nav_tenants')},
+    {id:'page-bookings',ic:'file-text',label:t('nav_bookings')},
+    {id:'page-apartments',ic:'building',label:t('nav_apartments')},
+    {id:'page-calendar',ic:'calendar',label:t('nav_calendar')},
+    {id:'page-expenses',ic:'trending-down',label:t('nav_expenses')},
+    {id:'page-invoices',ic:'receipt',label:t('nav_invoices')},
+    {id:'page-contracts',ic:'contract',label:t('nav_contracts')},
+    {id:'page-notifications',ic:'bell',label:t('nav_notifications'),badge:true},
+    {id:'page-fullreport',ic:'bar-chart',label:t('nav_report')},
   ];
   document.getElementById('sidebar-nav').innerHTML=items.map(i=>
     `<div class="nav-item" data-page="${i.id}" onclick="showPage('${i.id}')">${icon(i.ic)}<span>${i.label}</span>${i.badge?`<span class="nav-badge" id="notif-badge" style="display:none">0</span>`:''}</div>`
@@ -915,19 +1102,19 @@ function renderDashboard(){
   const active=allBookings.filter(b=>bookingStatus(b)==='checkedin').length;
   const upcoming=allBookings.filter(b=>bookingStatus(b)==='upcoming').length;
   document.getElementById('dashboard-stats').innerHTML=`
-    <div class="stat-card"><div class="stat-label">إجمالي الدخل</div><div class="stat-value income">${fmt(totalIncome)}</div><div class="stat-sub">OMR من الحجوزات</div></div>
-    <div class="stat-card"><div class="stat-label">إجمالي المصروفات</div><div class="stat-value expense">${fmt(totalExpense)}</div><div class="stat-sub">OMR نفقات المبنى</div></div>
-    <div class="stat-card"><div class="stat-label">صافي الربح / الخسارة</div><div class="stat-value ${net>=0?'net-pos':'net-neg'}">${fmt(Math.abs(net))}</div><div class="stat-sub">${net>=0?'▲ ربح':'▼ خسارة'}</div></div>
-    <div class="stat-card"><div class="stat-label">مستأجرون داخل</div><div class="stat-value">${active}</div><div class="stat-sub">${upcoming} قادم · ${allBookings.length} إجمالي</div></div>`;
+    <div class="stat-card"><div class="stat-label">${t('stat_income')}</div><div class="stat-value income">${fmt(totalIncome)}</div><div class="stat-sub">OMR</div></div>
+    <div class="stat-card"><div class="stat-label">${t('stat_expenses')}</div><div class="stat-value expense">${fmt(totalExpense)}</div><div class="stat-sub">OMR</div></div>
+    <div class="stat-card"><div class="stat-label">${t('stat_net')}</div><div class="stat-value ${net>=0?'net-pos':'net-neg'}">${fmt(Math.abs(net))}</div><div class="stat-sub">${net>=0?t('profit'):t('loss')}</div></div>
+    <div class="stat-card"><div class="stat-label">${t('stat_active')}</div><div class="stat-value">${active}</div><div class="stat-sub">${upcoming} ${t('s_upcoming')} · ${allBookings.length}</div></div>`;
   const recent=[...allBookings].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).slice(0,5);
   document.getElementById('recent-bookings-table').innerHTML=recent.length?bookingsTable(recent)
-    :'<div class="empty-state"><div class="icon">📋</div><p>لا توجد حجوزات بعد</p></div>';
+    :`<div class='empty-state'><div class='icon'>📋</div><p>${t('empty_bookings')}</p></div>`;
 }
 
 function renderTenants(){
   const el=document.getElementById('tenants-table');
-  if(!allTenants.length){el.innerHTML='<div class="empty-state"><div class="icon">👥</div><p>لا يوجد مستأجرون مسجّلون</p></div>';return;}
-  el.innerHTML=`<table><thead><tr><th>الاسم</th><th>رقم الهوية</th><th>الهاتف</th></tr></thead><tbody>
+  if(!allTenants.length){el.innerHTML=`<div class='empty-state'><div class='icon'>👥</div><p>${t('empty_tenants')}</p></div>`;return;}
+  el.innerHTML=`<table><thead><tr><th>${t('f_name')}</th><th>${t('f_id')}</th><th>${t('f_phone')}</th></tr></thead><tbody>
     ${allTenants.map(t=>`<tr><td>${t.name}</td><td dir="ltr">${t.idNumber}</td><td dir="ltr">${t.phone||'—'}</td></tr>`).join('')}
   </tbody></table>`;
 }
@@ -935,7 +1122,7 @@ function renderTenants(){
 function renderBookings(){
   const el=document.getElementById('bookings-table');
   el.innerHTML=allBookings.length?bookingsTable(allBookings)
-    :'<div class="empty-state"><div class="icon">🏠</div><p>لا توجد حجوزات بعد</p></div>';
+    :`<div class='empty-state'><div class='icon'>🏠</div><p>${t('empty_bookings')}</p></div>`;
 }
 
 // ── SHARED STATUS HELPER ─────────────────────────────────────────────
@@ -949,11 +1136,11 @@ function bookingStatus(b){
   if(now > co) return 'ended';
   return 'active';
 }
-function bookingStatusAr(s){ return {upcoming:'قادم',active:'نشط',ended:'منتهي',checkedin:'داخل'}[s]||s; }
+function bookingStatusAr(s){ return {upcoming:t('s_upcoming'),active:t('s_active'),ended:t('s_ended'),checkedin:t('s_checkedin')}[s]||s; }
 
 function bookingsTable(list){
   const sorted=[...list].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn));
-  return `<table><thead><tr><th>الشقة</th><th>المستأجر</th><th>الدخول</th><th>الخروج</th><th>الليالي</th><th>الإجمالي</th><th>الحالة</th><th></th></tr></thead><tbody>
+  return `<table><thead><tr><th>${t('th_apt')}</th><th>${t('th_tenant')}</th><th>${t('th_checkin')}</th><th>${t('th_checkout')}</th><th>${t('th_nights')}</th><th>${t('th_total')}</th><th>${t('th_status')}</th><th></th></tr></thead><tbody>
     ${sorted.map(b=>{
       const s=bookingStatus(b);
       const sAr=bookingStatusAr(s);
@@ -979,7 +1166,7 @@ function renderExpenses(){
   const total=allExpenses.reduce((s,e)=>s+(e.amount||0),0);
   el.innerHTML=`
     <div style="background:rgba(224,60,60,.08);border-radius:8px;padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:.85rem;font-weight:700;color:var(--muted)">إجمالي المصروفات / Total Expenses</span>
+      <span style="font-size:.85rem;font-weight:700;color:var(--muted)">${t('stat_expenses')}</span>
       <span style="font-size:1.3rem;font-weight:900;color:var(--danger);direction:ltr">${fmt(total)} OMR</span>
     </div>
     <table><thead><tr><th>التاريخ / Date</th><th>التفاصيل / Details</th><th>المبلغ / Amount (OMR)</th></tr></thead><tbody>
@@ -1573,7 +1760,7 @@ function renderInvoicesPage(){
   const completed=allBookings.filter(b=>b.checkedIn);
   if(!completed.length){el.innerHTML='<div class="empty-state"><div class="icon">🧾</div><p>لا توجد فواتير بعد — تظهر عند تسجيل دخول المستأجر</p></div>';return;}
   const sorted=[...completed].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn));
-  el.innerHTML=`<table><thead><tr><th>الشقة</th><th>المستأجر</th><th>الدخول</th><th>الخروج</th><th>مقدم</th><th>متبقي</th><th>الإجمالي</th><th>الدفع</th><th></th></tr></thead><tbody>
+  el.innerHTML=`<table><thead><tr><th>${t('th_apt')}</th><th>${t('th_tenant')}</th><th>${t('th_checkin')}</th><th>${t('th_checkout')}</th><th>${t('th_advance')}</th><th>${t('th_remaining')}</th><th>${t('th_total')}</th><th>${t('th_payment')}</th><th></th></tr></thead><tbody>
     ${sorted.map(b=>`<tr>
       <td><b>${b.apartment}</b></td>
       <td>${b.tenantName}</td>
@@ -1603,7 +1790,7 @@ function renderContractsPage(){
   const el=document.getElementById('contracts-table');
   if(!allBookings.length){el.innerHTML='<div class="empty-state"><div class="icon">📋</div><p>لا توجد عقود بعد</p></div>';return;}
   const sorted=[...allBookings].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn));
-  el.innerHTML=`<table><thead><tr><th>الشقة</th><th>المستأجر</th><th>الدخول</th><th>الخروج</th><th>الإجمالي</th><th>الحالة</th><th></th></tr></thead><tbody>
+  el.innerHTML=`<table><thead><tr><th>${t('th_apt')}</th><th>${t('th_tenant')}</th><th>${t('th_checkin')}</th><th>${t('th_checkout')}</th><th>${t('th_total')}</th><th>${t('th_status')}</th><th></th></tr></thead><tbody>
     ${sorted.map(b=>{
       const s=bookingStatus(b);
       const sAr=bookingStatusAr(s);
