@@ -978,10 +978,12 @@ function viewBooking(id){
   if(!b) return;
   const nights=calcNights(b.checkIn,b.checkOut);
   const now=Date.now(), ci=new Date(b.checkIn).getTime(), co=new Date(b.checkOut).getTime();
-  const isActive=now>=ci&&now<=co&&!b.checkedIn;
-  const isCheckedIn=b.checkedIn&&!b.checkedOut&&now<=co;
-  document.getElementById('btn-checkin-tenant').style.display=isActive?'inline-flex':'none';
-  document.getElementById('btn-checkout-tenant').style.display=isCheckedIn?'inline-flex':'none';
+  // Show check-in if not yet checked in and booking not ended
+  const notEnded = now <= co + (24*60*60*1000); // grace: 1 day after checkout
+  const showCheckin = !b.checkedIn && notEnded;
+  const showCheckout = b.checkedIn && !b.checkedOut;
+  document.getElementById('btn-checkin-tenant').style.display=showCheckin?'inline-flex':'none';
+  document.getElementById('btn-checkout-tenant').style.display=showCheckout?'inline-flex':'none';
   document.getElementById('booking-detail-content').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
       <div class="stat-card" style="padding:14px"><div class="stat-label">الشقة</div><div style="font-size:1.4rem;font-weight:900">${b.apartment}</div></div>
