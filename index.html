@@ -797,8 +797,8 @@ function bookingsTable(list){
   const sorted=[...list].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn));
   return `<table><thead><tr><th>الشقة</th><th>المستأجر</th><th>الدخول</th><th>الخروج</th><th>الليالي</th><th>الإجمالي</th><th>الحالة</th><th></th></tr></thead><tbody>
     ${sorted.map(b=>{
-      const now=Date.now(),ci=new Date(b.checkIn).getTime(),co=new Date(b.checkOut).getTime();
-      const s=now<ci?'upcoming':now>co?'ended':b.checkedIn?'checkedin':'active';
+      const now=Date.now(),co=new Date(b.checkOut+'T12:00:00').getTime(),ci=new Date(b.checkIn+'T14:00:00').getTime();
+      const s=b.checkedOut?'ended':b.checkedIn?'checkedin':now<ci?'upcoming':now>co?'ended':'active';
       const sAr={upcoming:'قادم',active:'نشط',ended:'منتهي',checkedin:'داخل'}[s];
       const nights=calcNights(b.checkIn,b.checkOut);
       return `<tr>
@@ -1254,8 +1254,8 @@ function renderContractsPage(){
   const sorted=[...allBookings].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn));
   el.innerHTML=`<table><thead><tr><th>الشقة</th><th>المستأجر</th><th>الدخول</th><th>الخروج</th><th>الإجمالي</th><th>الحالة</th><th></th></tr></thead><tbody>
     ${sorted.map(b=>{
-      const now=Date.now(),ci=new Date(b.checkIn).getTime(),co=new Date(b.checkOut).getTime();
-      const s=now<ci?'upcoming':now>co?'ended':b.checkedIn?'checkedin':'active';
+      const now=Date.now(),co=new Date(b.checkOut+'T12:00:00').getTime(),ci=new Date(b.checkIn+'T14:00:00').getTime();
+      const s=b.checkedOut?'ended':b.checkedIn?'checkedin':now<ci?'upcoming':now>co?'ended':'active';
       const sAr={upcoming:'قادم',active:'نشط',ended:'منتهي',checkedin:'داخل'}[s];
       return `<tr>
         <td><b>${b.apartment}</b></td>
