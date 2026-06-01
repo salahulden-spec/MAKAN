@@ -1158,25 +1158,49 @@ async function doRegisterDirect(){
 }
 
 async function doUpgradeAccount(){
-  const inputs=[...document.querySelectorAll('#code-inputs input')];
+  // Unified upgrade handler — works from both auth code-form and upgrade modal
+  // Detect which form is active
+  const fromModal = document.getElementById('modal-upgrade').classList.contains('open');
+  const inputSelector = fromModal ? '#upgrade-code-inputs input' : '#code-inputs input';
+  const errId = fromModal ? 'upgrade-error' : 'code-error';
+  const btnId = fromModal ? 'upgrade-btn-text' : 'code-btn-text';
+
+  const inputs=[...document.querySelectorAll(inputSelector)];
   const code=inputs.map(i=>i.value).join('');
-  const err=document.getElementById('code-error');
-  const btn=document.getElementById('code-btn-text');
+  const err=document.getElementById(errId);
+  const btn=document.getElementById(btnId);
+  if(!err||!btn) return;
   err.classList.remove('show');
-  if(code.length!==6){ showErr(err,'أدخل الرمز كاملاً — 6 أرقام'); return; }
+  if(code.length!==6){ showErr(err,'الرمز 6 أرقام — 6-digit code required'); return; }
   btn.innerHTML='<span class="spinner"></span>';
   try{
     const snap=await getDoc(doc(db,'config','registration'));
-    if(!snap.exists()||!snap.data().code){ showErr(err,'لا يوجد رمز نشط — تواصل مع إدارة مكان'); btn.textContent='تفعيل الحساب'; return; }
-    if(code!==snap.data().code){ showErr(err,'الرمز غير صحيح'); btn.textContent='تفعيل الحساب'; return; }
-    await updateDoc(doc(db,'users',currentUser.uid),{plan:'unlimited'});
-    await updateDoc(doc(db,'config','registration'),{code:''});
-    userProfile.plan='unlimited';
-    showToast('تم ترقية حسابك ✓ — حجوزات غير محدودة','success');
-    showForm('login-form');
-    showScreen('app');
-    updatePlanBanner();
-  }catch(e){ showErr(err,translateAuthError(e.code)); btn.textContent='تفعيل الحساب'; }
+    if(!snap.exists()||!snap.data().code){
+      showErr(err,'لا يوجد رمز نشط — No active code. Contact +968 94313327');
+      btn.textContent='تفعيل الحساب'; return;
+    }
+    if(code.trim()!==snap.data().code.trim()){
+      showErr(err,'الرمز غير صحيح — Wrong code');
+      btn.textContent='تفعيل الحساب'; return;
+    }
+    // Code correct — upgrade plan
+    if(currentUser){
+      await updateDoc(doc(db,'users',currentUser.uid),{plan:'unlimited'});
+      await updateDoc(doc(db,'config','registration'),{code:''});
+      userProfile.plan='unlimited';
+      closeModal('modal-upgrade');
+      unlockApp();
+      updatePlanBanner();
+      showToast('🎉 تم ترقية حسابك — Unlimited bookings unlocked','success');
+    } else {
+      // Called before login (shouldn't happen anymore but safety fallback)
+      await updateDoc(doc(db,'config','registration'),{code:''});
+      showToast('تم التحقق ✓','success');
+    }
+  }catch(e){
+    showErr(err, e.code ? translateAuthError(e.code) : (e.message||'خطأ غير معروف'));
+    btn.textContent='تفعيل الحساب';
+  }
 }
 
 
@@ -2187,34 +2211,8 @@ function upgradeCodeNext(input,idx){
 }
 
 async function submitUpgradeCode(){
-  const inputs=[...document.querySelectorAll('#upgrade-code-inputs input')];
-  const code=inputs.map(i=>i.value).join('');
-  const err=document.getElementById('upgrade-error');
-  const btn=document.getElementById('upgrade-btn-text');
-  err.classList.remove('show');
-  if(code.length!==6){ showErr(err,'أدخل الرمز كاملاً — 6 أرقام'); return; }
-  btn.innerHTML='<span class="spinner"></span>';
-  try{
-    const snap=await getDoc(doc(db,'config','registration'));
-    if(!snap.exists()||!snap.data().code){
-      showErr(err,'لا يوجد رمز نشط — تواصل مع إدارة مكان على +968 94313327');
-      btn.textContent='تفعيل الحساب'; return;
-    }
-    if(code!==snap.data().code){
-      showErr(err,'الرمز غير صحيح — تواصل مع إدارة مكان');
-      btn.textContent='تفعيل الحساب'; return;
-    }
-    await updateDoc(doc(db,'users',currentUser.uid),{plan:'unlimited'});
-    await updateDoc(doc(db,'config','registration'),{code:''});
-    userProfile.plan='unlimited';
-    closeModal('modal-upgrade');
-    showToast('🎉 تم ترقية حسابك — حجوزات غير محدودة','success');
-    unlockApp();
-    updatePlanBanner();
-  }catch(e){
-    showErr(err,translateAuthError(e.code));
-    btn.textContent='تفعيل الحساب';
-  }
+  // Just delegate to the unified handler
+  await doUpgradeAccount();
 }
 
 // ── WHATSAPP CONTRACT SHARE ──────────────────────────────────────────
