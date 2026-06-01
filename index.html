@@ -17,7 +17,10 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:var(--font);background:var(--paper);color:var(--ink);min-height:100vh;font-size:15px;line-height:1.6;overflow-x:hidden}
+body{font-family:var(--font);background:var(--paper);color:var(--ink);min-height:100vh;font-size:15px;line-height:1.6;overflow-x:hidden;text-align:right}
+/* Force English numerals everywhere */
+*{font-variant-numeric:lining-nums;-webkit-font-feature-settings:"lnum";font-feature-settings:"lnum"}
+[dir="rtl"],[lang="ar"]{unicode-bidi:embed}
 
 /* ── LOADER ── */
 #loader{position:fixed;inset:0;background:var(--ink);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .5s ease}
@@ -109,7 +112,7 @@ body{font-family:var(--font);background:var(--paper);color:var(--ink);min-height
 .stat-card::after{content:'';position:absolute;top:-20px;left:-20px;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,rgba(193,127,62,.07),transparent 70%);pointer-events:none}
 .stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
 .stat-label{font-size:.74rem;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:8px;text-transform:uppercase}
-.stat-value{font-size:1.9rem;font-weight:900;color:var(--ink);font-family:var(--serif);line-height:1}
+.stat-value{font-size:1.9rem;font-weight:900;color:var(--ink);font-family:var(--serif);line-height:1;direction:ltr;text-align:center}
 .stat-value.income{color:var(--success)}
 .stat-value.expense{color:var(--danger)}
 .stat-value.net-pos{color:var(--success)}
@@ -575,13 +578,38 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       <div style="font-weight:700;margin-bottom:10px;font-size:.9rem">سجل التعديلات</div>
       <div id="booking-history"></div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
       <button class="btn btn-secondary" onclick="closeModal('modal-booking-detail')">إغلاق</button>
       <button class="btn btn-success" id="btn-checkin-tenant" onclick="markCheckedIn()" style="display:none">✅ دخل المستأجر</button>
       <button class="btn btn-danger" id="btn-checkout-tenant" onclick="markCheckedOut()" style="display:none">🚪 غادر المستأجر</button>
       <button class="btn btn-secondary" onclick="editBookingFromDetail()">✏️ تعديل</button>
+      <button class="btn btn-primary" onclick="printContract()">🖨️ العقد</button>
+      <button class="btn btn-success btn-sm" onclick="shareContractWhatsApp()" style="background:#25D366">💬 واتساب</button>
       <button class="btn btn-danger btn-sm" onclick="confirmDeleteBooking()" style="margin-right:auto">🗑️ حذف</button>
     </div>
+  </div>
+</div>
+
+<!-- UPGRADE MODAL -->
+<div class="modal-overlay" id="modal-upgrade">
+  <div class="modal" style="max-width:420px;text-align:center">
+    <h2>🔓 ترقية الحساب</h2>
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:16px">وصلت للحد الأقصى للخطة المجانية (5 حجوزات).<br>للاستمرار تواصل معنا للحصول على رمز التفعيل.</p>
+    <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:14px;margin-bottom:20px">
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:4px">تواصل عبر واتساب</div>
+      <div style="font-size:1.2rem;font-weight:900;direction:ltr">+968 94313327</div>
+    </div>
+    <div class="error-msg" id="upgrade-error"></div>
+    <div class="code-inputs" id="upgrade-code-inputs">
+      <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,0)">
+      <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,1)">
+      <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,2)">
+      <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,3)">
+      <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,4)">
+      <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,5)">
+    </div>
+    <button class="btn btn-primary btn-full" style="margin-top:16px" onclick="submitUpgradeCode()"><span id="upgrade-btn-text">تفعيل الحساب</span></button>
+    <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="closeModal('modal-upgrade')">لاحقاً</button>
   </div>
 </div>
 
@@ -632,6 +660,7 @@ const exp = {
   confirmDeleteBooking, deleteBooking, updateNotifBadge,
   adminResetPassword, showUpgradePrompt, doRegisterDirect, doUpgradeAccount, updatePlanBanner,
   togglePaid, renderFullReportPage, printFullReport,
+  shareContractWhatsApp, submitUpgradeCode, upgradeCodeNext, renderVacancyChart,
   calPrev:()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar()},
   calNext:()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar()},
   toggleSidebar
@@ -724,31 +753,6 @@ async function doUpgradeAccount(){
   }catch(e){ showErr(err,translateAuthError(e.code)); btn.textContent='تفعيل الحساب'; }
 }
 
-async function doRegisterStep2(){
-  const inputs=[...document.querySelectorAll('#code-inputs input')];
-  const code=inputs.map(i=>i.value).join('');
-  const err=document.getElementById('code-error');
-  const btn=document.getElementById('code-btn-text');
-  err.classList.remove('show');
-  if(code.length!==6){ showErr(err,'أدخل الرمز كاملاً — 6 أرقام'); return; }
-  btn.innerHTML='<span class="spinner"></span>';
-  try{
-    const snap=await getDoc(doc(db,'config','registration'));
-    if(!snap.exists()||!snap.data().code){ showErr(err,'لا يوجد رمز تفعيل نشط — تواصل مع مدير المنصة'); btn.textContent='إنشاء الحساب'; return; }
-    const validCode=snap.data().code;
-    if(code!==validCode){ showErr(err,'الرمز غير صحيح — تواصل مع مدير المنصة'); btn.textContent='إنشاء الحساب'; return; }
-    const {name,building,apartments,floors,perFloor,phone,email,pass}=pendingRegData;
-    const cred=await createUserWithEmailAndPassword(auth,email,pass);
-    await setDoc(doc(db,'users',cred.user.uid),{
-      name,building,apartments,floors:floors||1,perFloor:perFloor||apartments.length,
-      units:apartments.length,phone,email,
-      role:'landlord',createdAt:serverTimestamp()
-    });
-    // Invalidate code AFTER account created (user is now authenticated)
-    await updateDoc(doc(db,'config','registration'),{code:''});
-    showToast('تم إنشاء الحساب بنجاح 🎉','success');
-  }catch(e){ showErr(err,translateAuthError(e.code)); btn.textContent='إنشاء الحساب'; }
-}
 
 async function doLogout(){
   await signOut(auth);
@@ -1586,11 +1590,72 @@ function updatePlanBanner(){
 }
 
 function showUpgradePrompt(){
-  // Clear code inputs and show upgrade form
-  document.querySelectorAll('#code-inputs input').forEach(i=>i.value='');
-  document.getElementById('code-error').classList.remove('show');
-  showScreen('auth');
-  showForm('code-form');
+  document.querySelectorAll('#upgrade-code-inputs input').forEach(i=>i.value='');
+  document.getElementById('upgrade-error').classList.remove('show');
+  document.getElementById('upgrade-btn-text').textContent='تفعيل الحساب';
+  openModal('modal-upgrade');
+}
+
+function upgradeCodeNext(input,idx){
+  input.value=input.value.replace(/\D/g,'');
+  if(input.value&&idx<5) document.querySelectorAll('#upgrade-code-inputs input')[idx+1].focus();
+}
+
+async function submitUpgradeCode(){
+  const inputs=[...document.querySelectorAll('#upgrade-code-inputs input')];
+  const code=inputs.map(i=>i.value).join('');
+  const err=document.getElementById('upgrade-error');
+  const btn=document.getElementById('upgrade-btn-text');
+  err.classList.remove('show');
+  if(code.length!==6){ showErr(err,'أدخل الرمز كاملاً — 6 أرقام'); return; }
+  btn.innerHTML='<span class="spinner"></span>';
+  try{
+    const snap=await getDoc(doc(db,'config','registration'));
+    if(!snap.exists()||!snap.data().code){
+      showErr(err,'لا يوجد رمز نشط — تواصل مع إدارة مكان على +968 94313327');
+      btn.textContent='تفعيل الحساب'; return;
+    }
+    if(code!==snap.data().code){
+      showErr(err,'الرمز غير صحيح — تواصل مع إدارة مكان');
+      btn.textContent='تفعيل الحساب'; return;
+    }
+    await updateDoc(doc(db,'users',currentUser.uid),{plan:'unlimited'});
+    await updateDoc(doc(db,'config','registration'),{code:''});
+    userProfile.plan='unlimited';
+    closeModal('modal-upgrade');
+    showToast('🎉 تم ترقية حسابك — حجوزات غير محدودة','success');
+    updatePlanBanner();
+  }catch(e){
+    showErr(err,translateAuthError(e.code));
+    btn.textContent='تفعيل الحساب';
+  }
+}
+
+// ── WHATSAPP CONTRACT SHARE ──────────────────────────────────────────
+function shareContractWhatsApp(){
+  const b=allBookings.find(x=>x.id===activeBookingId);
+  if(!b) return;
+  const nights=calcNights(b.checkIn,b.checkOut);
+  const msg=
+`*عقد إيجار — ${b.landlordBuilding||userProfile.building}*
+
+*المستأجر:* ${b.tenantName}
+*رقم الهوية:* ${b.tenantIdNumber}
+*الشقة:* ${b.apartment}
+
+*الدخول:* ${fmtDate(b.checkIn)} — 2:00 م
+*الخروج:* ${fmtDate(b.checkOut)} — 12:00 م
+*عدد الليالي:* ${nights}
+
+*إجمالي الإيجار:* ${fmt(b.totalRent||0)} OMR${b.advance>0?`
+*الدفعة المقدمة:* ${fmt(b.advance)} OMR
+*المتبقي:* ${fmt(b.remaining||0)} OMR`:''}
+
+${b.notes?`*ملاحظات:* ${b.notes}
+`:''}
+_العقد موقّع وجاهز — مكان لإدارة العقارات_`;
+  const url='https://wa.me/?text='+encodeURIComponent(msg);
+  window.open(url,'_blank');
 }
 
 // ── TOGGLE PAID ──────────────────────────────────────────────────────
@@ -1661,7 +1726,57 @@ function renderFullReportPage(){
           <tr><td dir="ltr">${e.date}</td><td>${e.description}</td><td dir="ltr"><b>${fmt(e.amount)}</b></td></tr>`).join('')}
         </tbody>
       </table></div>
-    </div>`:''}`;
+    </div>`:''}
+    <div class="card">
+      <div class="card-header"><span class="card-title">🏢 حالة الشقق — الشاغر والمشغول</span></div>
+      ${renderVacancyChart()}
+    </div>`;
+}
+
+function renderVacancyChart(){
+  const apts=userProfile.apartments||[];
+  if(!apts.length) return '<div class="empty-state"><div class="icon">🏢</div><p>لا توجد شقق</p></div>';
+  const now=new Date();
+  const aptData=userProfile.apartmentData||{};
+  const rows=apts.map(a=>{
+    const activeBooking=allBookings.find(b=>b.apartment===a&&b.checkedIn&&!b.checkedOut);
+    const upcomingBookings=[...allBookings]
+      .filter(b=>b.apartment===a&&bookingStatus(b)==='upcoming')
+      .sort((x,y)=>new Date(x.checkIn)-new Date(y.checkIn));
+    const type=aptData[a]?.type||'daily';
+    const typeAr={daily:'يومي',monthly:'شهري',annual:'سنوي'}[type];
+    const occupied=!!activeBooking;
+    return {apt:a,occupied,activeBooking,upcomingBookings,typeAr};
+  });
+  const vacantNow=rows.filter(r=>!r.occupied);
+  const occupiedNow=rows.filter(r=>r.occupied);
+  return `
+    <div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+      <div style="background:rgba(58,125,90,.1);border-radius:8px;padding:14px 20px;text-align:center">
+        <div style="font-size:2rem;font-weight:900;color:var(--success)">${vacantNow.length}</div>
+        <div style="font-size:.78rem;color:var(--muted)">شاغرة الآن</div>
+      </div>
+      <div style="background:rgba(193,127,62,.1);border-radius:8px;padding:14px 20px;text-align:center">
+        <div style="font-size:2rem;font-weight:900;color:var(--accent)">${occupiedNow.length}</div>
+        <div style="font-size:.78rem;color:var(--muted)">مشغولة الآن</div>
+      </div>
+      <div style="background:var(--warm);border-radius:8px;padding:14px 20px;text-align:center">
+        <div style="font-size:2rem;font-weight:900">${apts.length}</div>
+        <div style="font-size:.78rem;color:var(--muted)">إجمالي الشقق</div>
+      </div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>الشقة</th><th>النوع</th><th>الحالة</th><th>المستأجر الحالي</th><th>الخروج المتوقع</th><th>الحجز القادم</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td><b>${r.apt}</b></td>
+        <td>${r.typeAr}</td>
+        <td><span class="badge ${r.occupied?'badge-checkedin':'badge-active'}">${r.occupied?'مشغولة':'شاغرة'}</span></td>
+        <td>${r.activeBooking?r.activeBooking.tenantName:'—'}</td>
+        <td dir="ltr">${r.activeBooking?fmtDate(r.activeBooking.checkOut):'—'}</td>
+        <td dir="ltr">${r.upcomingBookings.length?fmtDate(r.upcomingBookings[0].checkIn)+' ('+r.upcomingBookings[0].tenantName+')':'لا يوجد'}</td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div>`;
 }
 
 function printFullReport(){
