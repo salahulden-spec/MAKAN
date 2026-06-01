@@ -1183,20 +1183,14 @@ async function doUpgradeAccount(){
       showErr(err,'الرمز غير صحيح — Wrong code');
       btn.textContent='تفعيل الحساب'; return;
     }
-    // Code correct — upgrade plan
-    if(currentUser){
-      await updateDoc(doc(db,'users',currentUser.uid),{plan:'unlimited'});
-      await updateDoc(doc(db,'config','registration'),{code:''});
-      userProfile.plan='unlimited';
-      closeModal('modal-upgrade');
-      unlockApp();
-      updatePlanBanner();
-      showToast('🎉 تم ترقية حسابك — Unlimited bookings unlocked','success');
-    } else {
-      // Called before login (shouldn't happen anymore but safety fallback)
-      await updateDoc(doc(db,'config','registration'),{code:''});
-      showToast('تم التحقق ✓','success');
-    }
+    // Code correct — only update the landlord's own user doc (they have permission)
+    // Admin manually generates a new code for the next landlord
+    await updateDoc(doc(db,'users',currentUser.uid),{plan:'unlimited'});
+    userProfile.plan='unlimited';
+    closeModal('modal-upgrade');
+    unlockApp();
+    updatePlanBanner();
+    showToast('🎉 تم ترقية حسابك — Unlimited bookings unlocked','success');
   }catch(e){
     showErr(err, e.code ? translateAuthError(e.code) : (e.message||'خطأ غير معروف'));
     btn.textContent='تفعيل الحساب';
