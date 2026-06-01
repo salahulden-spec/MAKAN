@@ -550,9 +550,20 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       </div>
     </div>
     <div class="form-group">
-      <label>دفعة مقدمة (OMR) — اختياري</label>
-      <input type="number" id="b-advance" placeholder="0.000" step="0.001" min="0" dir="ltr" oninput="calcRent()">
-      <div class="hint">تُخصم من الإجمالي وتظهر في العقد والفاتورة</div>
+      <label>دفعة مقدمة (OMR) — Advance Payment (optional)</label>
+      <input type="number" id="b-advance" placeholder="0.000" step="0.001" min="0" dir="ltr" oninput="calcRent();toggleAdvanceMethod()">
+      <div class="hint">تُخصم من الإجمالي وتظهر في العقد والفاتورة · Deducted from total, shown on contract & invoice</div>
+    </div>
+    <div id="advance-method-row" style="display:none">
+      <div class="form-group">
+        <label>طريقة الدفعة المقدمة — Advance Payment Method</label>
+        <div style="display:flex;gap:10px">
+          <button type="button" id="adv-cash-btn" class="btn btn-secondary" style="flex:1" onclick="setAdvanceMethod('cash')">💵 نقداً — Cash</button>
+          <button type="button" id="adv-transfer-btn" class="btn btn-secondary" style="flex:1" onclick="setAdvanceMethod('transfer')">🏦 تحويل — Transfer</button>
+        </div>
+        <input type="hidden" id="b-advance-method" value="">
+        <div class="hint" id="adv-method-hint" style="color:var(--danger)">يرجى اختيار طريقة الدفع · Please select payment method</div>
+      </div>
     </div>
     <div class="form-group"><label>ملاحظات (تظهر في العقد)</label><textarea id="b-notes" placeholder="أي شروط إضافية..."></textarea></div>
     <div class="modal-footer">
@@ -582,8 +593,12 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
     <h2>تفاصيل الحجز</h2>
     <div id="booking-detail-content"></div>
     <div style="margin-top:16px">
-      <div style="font-weight:700;margin-bottom:10px;font-size:.9rem">سجل التعديلات</div>
-      <div id="booking-history"></div>
+      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'"
+        style="font-weight:700;font-size:.88rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--warm);border-radius:8px;user-select:none">
+        <span>📋 سجل التعديلات / Edit History</span>
+        <span style="font-size:.8rem;color:var(--muted)">▾ اضغط للعرض</span>
+      </div>
+      <div id="booking-history" style="display:none;margin-top:8px"></div>
     </div>
     <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
       <button class="btn btn-secondary" onclick="closeModal('modal-booking-detail')">إغلاق</button>
@@ -699,6 +714,18 @@ const exp = {
   shareContractWhatsApp, submitUpgradeCode, upgradeCodeNext, renderVacancyChart,
   enforcePlanGate, unlockApp,
   openMoveTenant, confirmMoveTenant, runVacancySearch, confirmPayment, tryClosePlanModal,
+  showAddAptForm, addNewApartments, renameApartment,
+  toggleAdvanceMethod:function(){
+    const adv=parseFloat(document.getElementById('b-advance')?.value)||0;
+    const row=document.getElementById('advance-method-row');
+    if(row) row.style.display=adv>0?'block':'none';
+  },
+  setAdvanceMethod:function(m){
+    const el=document.getElementById('b-advance-method'); if(el) el.value=m;
+    const hint=document.getElementById('adv-method-hint'); if(hint) hint.style.display='none';
+    document.getElementById('adv-cash-btn').style.cssText=m==='cash'?'flex:1;background:var(--accent);color:#fff':'flex:1';
+    document.getElementById('adv-transfer-btn').style.cssText=m==='transfer'?'flex:1;background:var(--accent);color:#fff':'flex:1';
+  },
   calPrev:()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar()},
   calNext:()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar()},
   toggleSidebar
@@ -949,7 +976,13 @@ function renderExpenses(){
   const el=document.getElementById('expenses-table');
   if(!allExpenses.length){el.innerHTML='<div class="empty-state"><div class="icon">💸</div><p>لا توجد مصروفات مسجّلة</p></div>';return;}
   const sorted=[...allExpenses].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  el.innerHTML=`<table><thead><tr><th>التاريخ</th><th>التفاصيل</th><th>المبلغ (OMR)</th></tr></thead><tbody>
+  const total=allExpenses.reduce((s,e)=>s+(e.amount||0),0);
+  el.innerHTML=`
+    <div style="background:rgba(224,60,60,.08);border-radius:8px;padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:.85rem;font-weight:700;color:var(--muted)">إجمالي المصروفات / Total Expenses</span>
+      <span style="font-size:1.3rem;font-weight:900;color:var(--danger);direction:ltr">${fmt(total)} OMR</span>
+    </div>
+    <table><thead><tr><th>التاريخ / Date</th><th>التفاصيل / Details</th><th>المبلغ / Amount (OMR)</th></tr></thead><tbody>
     ${sorted.map(e=>`<tr><td dir="ltr">${e.date}</td><td>${e.description}</td><td dir="ltr"><b>${fmt(e.amount)}</b></td></tr>`).join('')}
   </tbody></table>`;
 }
@@ -971,6 +1004,7 @@ function renderCalendar(){
     const isToday=c.cur&&c.day===today.getDate()&&calMonth===today.getMonth()&&calYear===today.getFullYear();
     const cellDate=new Date(calYear,calMonth,c.day);
     const events=c.cur?allBookings.filter(b=>{
+      if(bookingStatus(b)==='ended') return false;
       const ci=new Date(b.checkIn),co=new Date(b.checkOut);
       return cellDate>=new Date(ci.getFullYear(),ci.getMonth(),ci.getDate())&&
              cellDate<=new Date(co.getFullYear(),co.getMonth(),co.getDate());
@@ -991,6 +1025,8 @@ function renderCalendar(){
 function calcRent(){
   const ci=v('b-checkin'), co=v('b-checkout'), rate=parseFloat(v('b-daily-rate'))||0;
   const advance=parseFloat(v('b-advance'))||0;
+  const advanceMethod=v('b-advance-method');
+  if(advance>0 && !advanceMethod){showToast('اختر طريقة الدفعة المقدمة — نقداً أو تحويل','error');return;}
   if(!ci||!co||!rate){document.getElementById('b-total-rent').value='';return;}
   const nights=calcNights(ci,co);
   if(nights<=0){document.getElementById('b-total-rent').value='تاريخ غير صحيح';return;}
@@ -1046,6 +1082,8 @@ async function saveBooking(){
   const checkIn=v('b-checkin'), checkOut=v('b-checkout');
   const dailyRate=parseFloat(v('b-daily-rate'));
   const advance=parseFloat(v('b-advance'))||0;
+  const advanceMethod=v('b-advance-method');
+  if(advance>0 && !advanceMethod){showToast('اختر طريقة الدفعة المقدمة — نقداً أو تحويل','error');return;}
   const notes=v('b-notes'), editId=v('b-edit-id');
   if(!apt||!tenantId||!checkIn||!checkOut||isNaN(dailyRate)){showToast('يرجى تعبئة جميع الحقول','error');return;}
   // Free plan limit check (only for new bookings, not edits)
@@ -1091,11 +1129,13 @@ async function saveBooking(){
     });
     showToast('تم تعديل الحجز ✓','success');
   } else {
+    const advancePaidNow=advance>0;
     await addDoc(collection(db,'bookings'),{
       uid:currentUser.uid,apartment:apt,tenantId,tenantName:tenant?.name||'',
       tenantIdNumber:tenant?.idNumber||'',checkIn,checkOut,dailyRate,totalRent,
       advance,remaining:parseFloat((totalRent-advance).toFixed(3)),
       notes,checkedIn:false,paid:false,
+      advancePaid:advancePaidNow, advancePaidMethod:advancePaidNow?advanceMethod:'',
       landlordName:userProfile.name,landlordBuilding:userProfile.building,
       history:[historyEntry],createdAt:serverTimestamp()
     });
@@ -1103,6 +1143,10 @@ async function saveBooking(){
   }
   closeModal('modal-booking');
   clear(['b-apt','b-checkin','b-checkout','b-daily-rate','b-advance','b-notes','b-edit-id']);
+  const amr=document.getElementById('b-advance-method'); if(amr) amr.value='';
+  const amrr=document.getElementById('advance-method-row'); if(amrr) amrr.style.display='none';
+  const ah=document.getElementById('adv-method-hint'); if(ah) ah.style.display='block';
+  ['adv-cash-btn','adv-transfer-btn'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.background='';el.style.color='';}});
   document.getElementById('b-total-rent').value='';
   document.getElementById('b-tenant').value='';
   document.getElementById('apt-availability-hint').textContent='';
@@ -1363,16 +1407,50 @@ function printReport(){
 
 // ── PRINT ENGINE ──────────────────────────────────────────────────────
 function triggerPrint(html){
-  const area=document.getElementById('print-area');
-  area.innerHTML=`<div style="max-width:800px;margin:0 auto">
-    <div class="no-print" style="padding:16px;text-align:center;background:var(--ink)">
-      <button onclick="window.print()" style="background:var(--accent);color:#fff;border:none;padding:10px 24px;border-radius:8px;font-family:var(--font);font-size:.9rem;font-weight:700;cursor:pointer;margin-left:10px">🖨️ طباعة / حفظ PDF</button>
-      <button onclick="closePrintArea()" style="background:rgba(255,255,255,.15);color:#fff;border:none;padding:10px 24px;border-radius:8px;font-family:var(--font);font-size:.9rem;font-weight:700;cursor:pointer">إغلاق</button>
+  // Open print in a new popup window — immediate print dialog
+  const win=window.open('','_blank','width=850,height=1100');
+  if(!win){ alert('السماح للنوافذ المنبثقة مطلوب للطباعة'); return; }
+  win.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+      @page{size:A4;margin:10mm 12mm}
+      body{font-family:'Cairo',sans-serif;direction:rtl;text-align:right;margin:0;padding:20px;background:#fff;color:#111;font-size:13px;line-height:1.7}
+      .no-print{display:flex;gap:10px;padding:10px;background:#1e2535;margin:-20px -20px 20px;justify-content:center}
+      .no-print button{background:#4f7ef8;color:#fff;border:none;padding:9px 22px;border-radius:7px;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer}
+      .no-print .close{background:rgba(255,255,255,.2)}
+      h1{text-align:center;font-size:1.3rem;font-weight:900;margin-bottom:4px}
+      .doc-subtitle{text-align:center;color:#888;font-size:.78rem;margin-bottom:24px;letter-spacing:1px}
+      .doc-section{margin-bottom:16px}
+      .doc-section h3{font-weight:700;border-bottom:1px solid #eee;padding-bottom:4px;margin-bottom:8px;color:#4f7ef8;font-size:.88rem}
+      .doc-row{display:flex;gap:12px;margin-bottom:4px}
+      .doc-label{font-weight:700;min-width:130px;flex-shrink:0;font-size:.82rem}
+      .doc-value{flex:1;border-bottom:1px dotted #ddd;font-size:.82rem;padding-bottom:1px}
+      .doc-terms ol{padding-right:16px}
+      .doc-terms li{margin-bottom:5px;font-size:.78rem}
+      .signatures{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:36px}
+      .sig-block{text-align:center}
+      .sig-line{border-top:1px solid #111;padding-top:6px;margin-top:32px;font-weight:700;font-size:.78rem}
+      .invoice-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #4f7ef8}
+      .invoice-logo{font-family:Georgia,serif;font-size:1.8rem;color:#1e2535}
+      .invoice-meta{text-align:left;font-size:.76rem;color:#888}
+      .invoice-meta strong{display:block;color:#111;font-size:.88rem}
+      .invoice-table{width:100%;border-collapse:collapse;margin:12px 0}
+      .invoice-table th{background:#1e2535;color:#fff;padding:7px 10px;font-size:.76rem;text-align:right}
+      .invoice-table td{padding:7px 10px;border-bottom:1px solid #eee;font-size:.8rem}
+      .invoice-table tfoot td{font-weight:700;border-top:2px solid #1e2535;background:#f8f8f8}
+      .invoice-stamp{text-align:center;margin-top:24px;padding-top:12px;border-top:1px dashed #ddd;color:#aaa;font-size:.7rem}
+      @media print{.no-print{display:none!important}}
+    </style>
+  </head><body>
+    <div class="no-print">
+      <button onclick="window.print()">🖨️ طباعة / Print PDF</button>
+      <button class="close" onclick="window.close()">✕ إغلاق / Close</button>
     </div>
     ${html}
-  </div>`;
-  area.style.display='block';
-  window.closePrintArea=()=>{area.style.display='none';area.innerHTML='';};
+  </body></html>`);
+  win.document.close();
+  setTimeout(()=>win.print(),600);
 }
 
 // ── APARTMENTS PAGE ──────────────────────────────────────────────────
@@ -1391,34 +1469,93 @@ function renderApartmentsPage(){
   const occupiedCount=occupiedApts.size;
   el.innerHTML=`
     <div class="card-header">
-      <span class="card-title">شقق المبنى (${apts.length})</span>
-      <div style="display:flex;gap:8px">
+      <span class="card-title">🏢 شقق المبنى / Building Units (${apts.length})</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span class="badge badge-active">شاغرة: ${vacantCount}</span>
         <span class="badge badge-checkedin">مشغولة: ${occupiedCount}</span>
+        <button class="btn btn-primary btn-sm" onclick="showAddAptForm()">＋ إضافة شقة</button>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;padding-top:4px">
+    <div id="add-apt-form" style="display:none;background:var(--paper);border-radius:8px;padding:14px;margin-bottom:14px">
+      <div style="font-weight:700;font-size:.88rem;margin-bottom:10px">إضافة شقق جديدة / Add New Apartments</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div class="form-group" style="margin:0;flex:1;min-width:140px">
+          <label>أرقام الشقق (مفصولة بفاصلة)</label>
+          <input type="text" id="new-apt-numbers" placeholder="301، 302، 401" dir="ltr">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="addNewApartments()" style="margin-bottom:0">إضافة</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('add-apt-form').style.display='none'" style="margin-bottom:0">إلغاء</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;padding-top:4px">
       ${apts.map(a=>{
         const data=aptData[a]||{};
         const type=data.type||'daily';
-        const typeAr={daily:'يومي',monthly:'شهري',annual:'سنوي'}[type];
+        const typeAr={daily:'يومي / Daily',monthly:'شهري / Monthly',annual:'سنوي / Annual'}[type];
         const occupied=occupiedApts.has(a);
         const activeBooking=allBookings.find(b=>b.apartment===a&&b.checkedIn&&!b.checkedOut);
-        return `<div class="stat-card" style="padding:16px;border:2px solid ${occupied?'var(--success)':'var(--border)'}">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <div style="font-size:1.3rem;font-weight:900">${a}</div>
+        return `<div class="stat-card" style="padding:14px;border:2px solid ${occupied?'var(--success)':'var(--border)'}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="text" value="${a}" id="apt-num-${a}" dir="ltr"
+                style="font-size:1.2rem;font-weight:900;width:60px;border:1px solid var(--border);border-radius:6px;padding:3px 6px;background:var(--paper);font-family:var(--font)"
+                onchange="renameApartment('${a}',this.value)">
+            </div>
             <span class="badge ${occupied?'badge-checkedin':'badge-active'}">${occupied?'مشغولة':'شاغرة'}</span>
           </div>
-          ${occupied&&activeBooking?`<div style="font-size:.76rem;color:var(--muted);margin-bottom:8px">${activeBooking.tenantName}</div>`:''}
-          <span class="badge ${type==='daily'?'badge-upcoming':type==='monthly'?'badge-active':'badge-ended'}" style="margin-bottom:8px;display:inline-block">${typeAr}</span>
-          <select onchange="updateAptType('${a}',this.value)" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.82rem;background:var(--paper);color:var(--ink);outline:none;margin-top:4px">
-            <option value="daily" ${type==='daily'?'selected':''}>يومي / سياحي</option>
-            <option value="monthly" ${type==='monthly'?'selected':''}>شهري</option>
-            <option value="annual" ${type==='annual'?'selected':''}>سنوي</option>
+          ${occupied&&activeBooking?`<div style="font-size:.74rem;color:var(--muted);margin-bottom:6px">👤 ${activeBooking.tenantName}</div>`:''}
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">${typeAr}</div>
+          <select onchange="updateAptType('${a}',this.value)" style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.8rem;background:var(--paper);color:var(--ink);outline:none">
+            <option value="daily" ${type==='daily'?'selected':''}>يومي / Daily</option>
+            <option value="monthly" ${type==='monthly'?'selected':''}>شهري / Monthly</option>
+            <option value="annual" ${type==='annual'?'selected':''}>سنوي / Annual</option>
           </select>
         </div>`;
       }).join('')}
     </div>`;
+}
+
+function showAddAptForm(){
+  const f=document.getElementById('add-apt-form');
+  if(f) f.style.display=f.style.display==='none'?'block':'none';
+}
+
+async function addNewApartments(){
+  const val=v('new-apt-numbers');
+  if(!val){showToast('أدخل أرقام الشقق','error');return;}
+  const newApts=val.split(',').map(a=>a.trim()).filter(Boolean);
+  if(!newApts.length){showToast('أرقام غير صالحة','error');return;}
+  const existing=userProfile.apartments||[];
+  const dups=newApts.filter(a=>existing.includes(a));
+  if(dups.length){showToast(`الشقق ${dups.join('، ')} موجودة مسبقاً`,'error');return;}
+  const merged=[...existing,...newApts];
+  await updateDoc(doc(db,'users',currentUser.uid),{apartments:merged,units:merged.length});
+  userProfile.apartments=merged;
+  clear(['new-apt-numbers']);
+  document.getElementById('add-apt-form').style.display='none';
+  showToast(`تم إضافة ${newApts.length} شقة ✓`,'success');
+  renderApartmentsPage();
+  refreshAptSelect();
+}
+
+async function renameApartment(oldNum, newNum){
+  newNum=newNum.trim();
+  if(!newNum||newNum===oldNum) return;
+  const apts=userProfile.apartments||[];
+  if(apts.includes(newNum)){showToast(`رقم ${newNum} موجود مسبقاً`,'error');document.getElementById('apt-num-'+oldNum).value=oldNum;return;}
+  const updated=apts.map(a=>a===oldNum?newNum:a);
+  const aptData=userProfile.aptmentData||userProfile.apartmentData||{};
+  if(aptData[oldNum]){aptData[newNum]=aptData[oldNum];delete aptData[oldNum];}
+  await updateDoc(doc(db,'users',currentUser.uid),{apartments:updated,apartmentData:aptData});
+  userProfile.apartments=updated; userProfile.apartmentData=aptData;
+  // Update all bookings referencing old number
+  const toUpdate=allBookings.filter(b=>b.apartment===oldNum);
+  for(const b of toUpdate){
+    await updateDoc(doc(db,'bookings',b.id),{apartment:newNum});
+    b.apartment=newNum;
+  }
+  showToast(`تم تغيير رقم الشقة ${oldNum} إلى ${newNum} ✓`,'success');
+  renderApartmentsPage(); refreshAptSelect(); renderBookings(); renderCalendar();
 }
 
 async function updateAptType(aptNum, type){
@@ -1751,21 +1888,25 @@ _العقد موقّع وجاهز — مكان لإدارة العقارات_`;
 
 // ── TOGGLE PAID ──────────────────────────────────────────────────────
 function togglePaid(id){
-  // Show payment confirmation modal
   window._payingId=id;
   const b=allBookings.find(x=>x.id===id);
   if(!b) return;
   const hasAdvance=b.advance>0;
   const advancePaid=b.advancePaid;
   const fullPaid=b.paid;
-  // Determine what to confirm
-  let options='';
-  if(!advancePaid && hasAdvance) options+=`<button class="btn btn-secondary" style="width:100%;margin-bottom:8px" onclick="confirmPayment('advance','cash')">💵 دفعة مقدمة — نقداً</button>
-    <button class="btn btn-secondary" style="width:100%;margin-bottom:8px" onclick="confirmPayment('advance','transfer')">🏦 دفعة مقدمة — تحويل</button>`;
-  if(!fullPaid) options+=`<button class="btn btn-primary" style="width:100%;margin-bottom:8px" onclick="confirmPayment('full','cash')">💵 كامل المبلغ — نقداً</button>
-    <button class="btn btn-primary" style="width:100%;margin-bottom:8px" onclick="confirmPayment('full','transfer')">🏦 كامل المبلغ — تحويل</button>`;
-  if(fullPaid) options=`<div style="color:var(--success);font-weight:700;text-align:center;padding:16px">✅ تم استلام كامل المبلغ</div>
-    <button class="btn btn-ghost" style="width:100%" onclick="confirmPayment('reset','')">إلغاء الدفع</button>`;
+  const remaining=b.remaining||0;
+  const balanceLabel=hasAdvance&&advancePaid
+    ? `المبلغ المتبقي / Balance: <b>${fmt(remaining)} OMR</b>`
+    : `إجمالي الإيجار / Total Rent: <b>${fmt(b.totalRent||0)} OMR</b>`;
+  let options=`<div style="background:var(--paper);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.88rem;text-align:center">${balanceLabel}</div>`;
+  if(fullPaid){
+    options+=`<div style="color:var(--success);font-weight:700;text-align:center;padding:12px;margin-bottom:8px">✅ تم استلام كامل المبلغ<br>Full Payment Received</div>
+      <button class="btn btn-ghost" style="width:100%" onclick="confirmPayment('reset','')">↩ إلغاء الدفع / Undo</button>`;
+  } else {
+    options+=`<div style="font-size:.82rem;color:var(--muted);margin-bottom:10px;text-align:center">اختر طريقة الدفع / Select payment method:</div>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:8px" onclick="confirmPayment('full','cash')">💵 نقداً — Cash</button>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:8px" onclick="confirmPayment('full','transfer')">🏦 تحويل بنكي — Bank Transfer</button>`;
+  }
   document.getElementById('pay-modal-options').innerHTML=options;
   document.getElementById('modal-payment').classList.add('open');
 }
@@ -1835,9 +1976,13 @@ async function confirmPayment(type, method){
     showToast('تم إلغاء تسجيل الدفع','success');
   }
   await updateDoc(doc(db,'bookings',id),update);
-  viewBooking(id);
-  renderInvoicesPage();
+  // Sync everywhere
   renderDashboard();
+  renderBookings();
+  renderInvoicesPage();
+  renderContractsPage();
+  renderApartmentsPage();
+  if(document.getElementById('modal-booking-detail').classList.contains('open')) viewBooking(id);
 }
 
 // ── FULL REPORT ───────────────────────────────────────────────────────
@@ -1931,63 +2076,52 @@ function runVacancySearch(){
   if(!el) return;
   const apts=userProfile.apartments||[];
   const aptData=userProfile.apartmentData||{};
-  // Find apartments with no booking conflict in requested period
-  const available=apts.filter(a=>{
-    if(!from&&!to) return true; // no dates = show all
-    const conflict=allBookings.find(b=>{
+  // A booking "occupies" a date range if not ended
+  function isConflict(a, qFrom, qTo){
+    return allBookings.some(b=>{
       if(b.apartment!==a) return false;
       const bs=bookingStatus(b);
       if(bs==='ended') return false;
       const bci=new Date(b.checkIn+'T14:00:00');
       const bco=new Date(b.checkOut+'T12:00:00');
-      const qci=from?new Date(from+'T14:00:00'):null;
-      const qco=to?new Date(to+'T12:00:00'):null;
-      if(qci&&qco) return qci<bco&&qco>bci;
-      if(qci) return qci<bco;
-      if(qco) return qco>bci;
+      if(qFrom&&qTo) return new Date(qFrom+'T14:00:00')<bco&&new Date(qTo+'T12:00:00')>bci;
+      if(qFrom) return new Date(qFrom+'T14:00:00')<bco;
+      if(qTo) return new Date(qTo+'T12:00:00')>bci;
       return false;
     });
-    return !conflict;
+  }
+  const typeAr=(t)=>({daily:'يومي / Daily',monthly:'شهري / Monthly',annual:'سنوي / Annual'})[t]||t;
+  // Build full picture for each apt
+  const aptRows=apts.map(a=>{
+    const type=aptData[a]?.type||'daily';
+    const currentOccupied=allBookings.some(b=>b.apartment===a&&b.checkedIn&&!b.checkedOut);
+    const busyInPeriod=(from||to)?isConflict(a,from,to):currentOccupied;
+    const activeB=allBookings.find(b=>b.apartment===a&&b.checkedIn&&!b.checkedOut);
+    const upcomingB=allBookings.find(b=>b.apartment===a&&bookingStatus(b)==='upcoming');
+    return {a,type,currentOccupied,busyInPeriod,activeB,upcomingB};
   });
-  const show=needed?available.slice(0,needed):available;
-  const totalApts=apts.length;
-  const occupied=apts.length-available.length;
-  if(!from&&!to){
-    el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-top:8px">
-      ${apts.map(a=>{
-        const isOcc=allBookings.some(b=>b.apartment===a&&b.checkedIn&&!b.checkedOut);
-        const type=aptData[a]?.type||'daily';
-        const typeAr={daily:'يومي',monthly:'شهري',annual:'سنوي'}[type];
-        return `<div style="background:${isOcc?'rgba(34,160,107,.1)':'rgba(79,126,248,.1)'};border:2px solid ${isOcc?'var(--success)':'var(--accent)'};border-radius:10px;padding:10px;text-align:center">
-          <div style="font-weight:900;font-size:1.1rem">${a}</div>
-          <div style="font-size:.7rem;color:var(--muted)">${typeAr}</div>
-          <div style="font-size:.72rem;font-weight:700;color:${isOcc?'var(--success)':'var(--accent)'}">${isOcc?'مشغولة':'شاغرة'}</div>
-        </div>`;
-      }).join('')}
-    </div>`;
-    return;
-  }
-  if(!show.length){
-    el.innerHTML=`<div style="background:#fff3f3;border-radius:8px;padding:16px;text-align:center;color:var(--danger)">
-      ❌ لا توجد شقق متاحة${from&&to?` من ${from} إلى ${to}`:''}${needed?' بعدد '+needed:''}
-    </div>`;
-    return;
-  }
-  el.innerHTML=`
-    <div style="background:rgba(34,160,107,.08);border-radius:8px;padding:12px;margin-bottom:12px;font-size:.88rem">
-      ✅ <b>${show.length}</b> شقة متاحة${from&&to?` من ${from} إلى ${to}`:''}${needed&&show.length<needed?` (طلبت ${needed})`:''} — من أصل ${totalApts} شقة (${occupied} مشغولة)
+  const vacantRows=aptRows.filter(r=>!r.busyInPeriod);
+  const busyRows=aptRows.filter(r=>r.busyInPeriod);
+  const show=needed?vacantRows.slice(0,needed):vacantRows;
+  const html=`
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;font-size:.84rem">
+      <span style="background:rgba(34,160,107,.12);border-radius:6px;padding:6px 12px;font-weight:700;color:var(--success)">✅ شاغرة / Vacant: ${vacantRows.length}</span>
+      <span style="background:rgba(224,60,60,.1);border-radius:6px;padding:6px 12px;font-weight:700;color:var(--danger)">🔴 مشغولة / Busy: ${busyRows.length}</span>
+      <span style="background:var(--warm);border-radius:6px;padding:6px 12px;font-weight:700">🏢 الكل / Total: ${apts.length}</span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
-      ${show.map(a=>{
-        const type=aptData[a]?.type||'daily';
-        const typeAr={daily:'يومي',monthly:'شهري',annual:'سنوي'}[type];
-        return `<div style="background:rgba(34,160,107,.1);border:2px solid var(--success);border-radius:10px;padding:12px;text-align:center">
-          <div style="font-weight:900;font-size:1.2rem">${a}</div>
-          <div style="font-size:.72rem;color:var(--muted)">${typeAr}</div>
-          <div style="font-size:.72rem;font-weight:700;color:var(--success)">متاحة ✓</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px">
+      ${aptRows.map(r=>{
+        const vacant=!r.busyInPeriod;
+        const subtext=r.activeB?r.activeB.tenantName:r.upcomingB?`قادم ${fmtDate(r.upcomingB.checkIn)}`:'';
+        return `<div style="border:2px solid ${vacant?'var(--success)':'var(--danger)'};border-radius:12px;padding:12px;text-align:center;background:${vacant?'rgba(34,160,107,.06)':'rgba(224,60,60,.05)'}">
+          <div style="font-size:1.3rem;font-weight:900">${r.a}</div>
+          <div style="font-size:.7rem;color:var(--muted);margin:2px 0">${typeAr(r.type)}</div>
+          <div style="font-size:.72rem;font-weight:700;color:${vacant?'var(--success)':'var(--danger)'}">${vacant?'متاحة ✓':'مشغولة ✗'}</div>
+          ${subtext?`<div style="font-size:.66rem;color:var(--muted);margin-top:3px">${subtext}</div>`:''}
         </div>`;
       }).join('')}
     </div>`;
+  el.innerHTML=html;
 }
 
 function printFullReport(){
