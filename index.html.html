@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مكان — Makan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --ink: #0f0f0f;
+  --paper: #f7f4ef;
+  --warm: #e8e2d9;
+  --accent: #c17f3e;
+  --accent-dark: #9a6230;
+  --muted: #8a8278;
+  --success: #3a7d5a;
+  --danger: #c0392b;
+  --border: #d4cec6;
+  --card: #ffffff;
+  --shadow: 0 2px 16px rgba(15,15,15,0.08);
+  --shadow-lg: 0 8px 40px rgba(15,15,15,0.14);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: 'Cairo', sans-serif;
+  --serif: 'Instrument Serif', serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--paper); color: var(--ink); min-height: 100vh; font-size: 15px; line-height: 1.6; }
+
+#loader { position: fixed; inset: 0; background: var(--ink); display: flex; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.5s ease; }
+#loader .logo-mark { font-family: var(--serif); font-size: 3rem; color: var(--paper); letter-spacing: -1px; opacity: 0; animation: fadeUp 0.8s 0.3s forwards; }
+#loader .logo-sub { font-family: var(--font); font-size: 0.8rem; color: var(--muted); letter-spacing: 4px; text-transform: uppercase; margin-top: 4px; text-align: center; opacity: 0; animation: fadeUp 0.8s 0.6s forwards; }
+#loader .logo-wrap { text-align: center; }
+#loader.hidden { opacity: 0; pointer-events: none; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+#auth-screen { min-height: 100vh; display: none; align-items: center; justify-content: center; background: var(--ink); padding: 24px; }
+#auth-screen.active { display: flex; }
+
+.auth-card { background: var(--paper); border-radius: 20px; padding: 48px 40px; width: 100%; max-width: 420px; text-align: center; animation: fadeUp 0.5s ease; }
+.auth-logo { font-family: var(--serif); font-size: 2.8rem; color: var(--ink); margin-bottom: 4px; }
+.auth-tagline { color: var(--muted); font-size: 0.85rem; letter-spacing: 2px; margin-bottom: 40px; }
+.auth-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 24px; color: var(--ink); }
+
+.form-group { margin-bottom: 16px; text-align: right; }
+.form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.5px; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--card); font-family: var(--font); font-size: 0.95rem; color: var(--ink); transition: border-color 0.2s; outline: none; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+.form-group textarea { resize: vertical; min-height: 80px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 24px; border-radius: var(--radius-sm); border: none; font-family: var(--font); font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+.btn-primary { background: var(--accent); color: white; width: 100%; padding: 14px; }
+.btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(193,127,62,0.3); }
+.btn-secondary { background: var(--warm); color: var(--ink); }
+.btn-secondary:hover { background: var(--border); }
+.btn-ghost { background: transparent; color: var(--muted); font-size: 0.85rem; padding: 8px 12px; }
+.btn-ghost:hover { color: var(--ink); }
+.btn-sm { padding: 8px 14px; font-size: 0.82rem; }
+
+.auth-switch { margin-top: 20px; color: var(--muted); font-size: 0.85rem; }
+.auth-switch a { color: var(--accent); cursor: pointer; font-weight: 600; text-decoration: none; }
+.auth-switch a:hover { text-decoration: underline; }
+
+.error-msg { background: #fdecea; color: var(--danger); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 0.85rem; margin-bottom: 16px; display: none; }
+.error-msg.show { display: block; }
+
+#app { display: none; min-height: 100vh; }
+#app.active { display: block; }
+
+.sidebar { position: fixed; top: 0; right: 0; bottom: 0; width: 240px; background: var(--ink); display: flex; flex-direction: column; z-index: 100; transition: transform 0.3s ease; }
+.sidebar-logo { padding: 28px 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.sidebar-logo .wordmark { font-family: var(--serif); font-size: 1.8rem; color: var(--paper); }
+.sidebar-logo .sub { font-size: 0.7rem; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-top: 2px; }
+.sidebar-nav { flex: 1; padding: 16px 0; overflow-y: auto; }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: rgba(255,255,255,0.5); cursor: pointer; transition: all 0.2s; font-size: 0.9rem; font-weight: 600; border-right: 3px solid transparent; }
+.nav-item:hover { color: var(--paper); background: rgba(255,255,255,0.05); }
+.nav-item.active { color: var(--paper); border-right-color: var(--accent); background: rgba(193,127,62,0.1); }
+.sidebar-user { padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 10px; }
+.user-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; color: white; flex-shrink: 0; }
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 0.82rem; font-weight: 700; color: var(--paper); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-role { font-size: 0.7rem; color: var(--muted); }
+.logout-btn { background: none; border: none; cursor: pointer; color: var(--muted); padding: 4px; transition: color 0.2s; }
+.logout-btn:hover { color: var(--danger); }
+
+.main-content { margin-right: 240px; padding: 32px; min-height: 100vh; }
+.page { display: none; animation: fadeUp 0.3s ease; }
+.page.active { display: block; }
+.page-header { margin-bottom: 32px; }
+.page-header h1 { font-size: 1.8rem; font-weight: 900; color: var(--ink); margin-bottom: 4px; }
+.page-header p { color: var(--muted); font-size: 0.9rem; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.stat-card { background: var(--card); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); border: 1px solid var(--border); transition: transform 0.2s, box-shadow 0.2s; }
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.stat-label { font-size: 0.78rem; font-weight: 600; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 10px; }
+.stat-value { font-size: 2rem; font-weight: 900; color: var(--ink); font-family: var(--serif); }
+.stat-value.income { color: var(--success); }
+.stat-value.expense { color: var(--danger); }
+.stat-value.net-pos { color: var(--success); }
+.stat-value.net-neg { color: var(--danger); }
+.stat-sub { font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
+
+.card { background: var(--card); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 24px; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--warm); }
+.card-title { font-size: 1rem; font-weight: 700; }
+
+table { width: 100%; border-collapse: collapse; }
+th { font-size: 0.75rem; font-weight: 700; color: var(--muted); letter-spacing: 0.5px; padding: 10px 12px; text-align: right; border-bottom: 2px solid var(--warm); white-space: nowrap; }
+td { padding: 12px; border-bottom: 1px solid var(--warm); font-size: 0.88rem; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--paper); }
+
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px; }
+.badge-active { background: rgba(58,125,90,0.12); color: var(--success); }
+.badge-ended { background: var(--warm); color: var(--muted); }
+.badge-upcoming { background: rgba(193,127,62,0.12); color: var(--accent); }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(15,15,15,0.6); display: none; align-items: center; justify-content: center; z-index: 500; padding: 24px; backdrop-filter: blur(4px); }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--card); border-radius: 16px; padding: 36px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; animation: fadeUp 0.25s ease; box-shadow: var(--shadow-lg); }
+.modal h2 { font-size: 1.3rem; font-weight: 900; margin-bottom: 24px; }
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--warm); }
+
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-header { text-align: center; font-size: 0.72rem; font-weight: 700; color: var(--muted); padding: 8px 4px; }
+.cal-day { min-height: 80px; background: var(--card); border-radius: var(--radius-sm); border: 1px solid var(--border); padding: 6px; font-size: 0.75rem; }
+.cal-day.today { border-color: var(--accent); background: rgba(193,127,62,0.04); }
+.cal-day.other-month { opacity: 0.4; }
+.cal-day-num { font-weight: 700; font-size: 0.82rem; margin-bottom: 4px; }
+.cal-event { background: var(--accent); color: white; border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; font-weight: 700; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-nav { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.cal-nav h3 { flex: 1; text-align: center; font-size: 1.1rem; font-weight: 700; }
+
+.quick-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 32px; }
+.empty-state { text-align: center; padding: 60px 24px; color: var(--muted); }
+.empty-state .icon { font-size: 3rem; margin-bottom: 16px; }
+.empty-state p { font-size: 0.9rem; }
+
+.contract-preview { font-family: 'Cairo', sans-serif; direction: rtl; padding: 40px; background: white; border: 1px solid var(--border); border-radius: var(--radius); line-height: 2; color: #111; font-size: 0.9rem; }
+.contract-preview h1 { text-align: center; font-size: 1.4rem; font-weight: 900; margin-bottom: 8px; }
+.contract-preview .contract-subtitle { text-align: center; color: var(--muted); font-size: 0.82rem; margin-bottom: 32px; }
+.contract-section { margin-bottom: 20px; }
+.contract-section h3 { font-weight: 700; border-bottom: 1px solid var(--warm); padding-bottom: 6px; margin-bottom: 12px; color: var(--accent); }
+.contract-row { display: flex; gap: 16px; margin-bottom: 6px; }
+.contract-label { font-weight: 700; min-width: 140px; flex-shrink: 0; }
+.contract-value { flex: 1; border-bottom: 1px dotted var(--border); }
+.contract-terms ol { padding-right: 20px; }
+.contract-terms li { margin-bottom: 8px; }
+.signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 48px; }
+.sig-block { text-align: center; }
+.sig-line { border-top: 1px solid var(--ink); padding-top: 8px; margin-top: 40px; font-weight: 700; font-size: 0.85rem; }
+
+.landlord-card { background: var(--card); border-radius: var(--radius); padding: 20px 24px; border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; align-items: center; gap: 16px; margin-bottom: 12px; transition: transform 0.15s; }
+.landlord-card:hover { transform: translateX(-2px); }
+
+.toast { position: fixed; bottom: 24px; left: 24px; background: var(--ink); color: var(--paper); padding: 12px 20px; border-radius: var(--radius-sm); font-size: 0.88rem; font-weight: 600; z-index: 9000; transform: translateY(80px); opacity: 0; transition: all 0.3s ease; max-width: 320px; }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main-content { margin-right: 0; padding: 16px; padding-top: 72px; }
+  .mobile-nav-toggle { position: fixed; top: 16px; right: 16px; z-index: 200; background: var(--ink); color: var(--paper); border: none; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-size: 1.2rem; }
+}
+@media (min-width: 769px) { .mobile-nav-toggle { display: none; } }
+@media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+@media print {
+  body > *:not(#app) { display: none !important; }
+  .sidebar, .quick-actions, .modal-overlay:not(#modal-contract) { display: none !important; }
+  #modal-contract { position: static !important; background: none !important; display: block !important; }
+  #modal-contract .modal { box-shadow: none !important; max-width: 100% !important; }
+  #modal-contract .modal-footer { display: none !important; }
+  .main-content { margin: 0 !important; padding: 0 !important; }
+}
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="logo-wrap">
+    <div class="logo-mark">مكان</div>
+    <div class="logo-sub">Makan</div>
+  </div>
+</div>
+
+<button class="mobile-nav-toggle" onclick="toggleSidebar()">☰</button>
+
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">مكان</div>
+    <div class="auth-tagline">MAKAN · PROPERTY MANAGEMENT</div>
+
+    <div id="login-form">
+      <div class="auth-title">تسجيل الدخول</div>
+      <div class="error-msg" id="login-error"></div>
+      <div class="form-group">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="login-email" placeholder="you@example.com" dir="ltr">
+      </div>
+      <div class="form-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="login-pass" placeholder="••••••••" dir="ltr">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()"><span id="login-btn-text">دخول</span></button>
+      <div class="auth-switch">ما عندك حساب؟ <a onclick="showRegister()">سجّل الآن</a></div>
+    </div>
+
+    <div id="register-form" style="display:none">
+      <div class="auth-title">تسجيل مالك جديد</div>
+      <div class="error-msg" id="reg-error"></div>
+      <div class="form-group"><label>اسم المالك</label><input type="text" id="reg-name" placeholder="الاسم الكامل"></div>
+      <div class="form-group"><label>اسم المبنى</label><input type="text" id="reg-building" placeholder="مبنى الياسمين"></div>
+      <div class="form-group"><label>عدد الشقق</label><input type="number" id="reg-units" placeholder="12" min="1" dir="ltr"></div>
+      <div class="form-group"><label>رقم الهاتف</label><input type="tel" id="reg-phone" placeholder="+968 9X XXX XXX" dir="ltr"></div>
+      <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="reg-email" placeholder="you@example.com" dir="ltr"></div>
+      <div class="form-group"><label>كلمة المرور</label><input type="password" id="reg-pass" placeholder="6 أحرف على الأقل" dir="ltr"></div>
+      <button class="btn btn-primary" onclick="doRegister()"><span id="reg-btn-text">إنشاء الحساب</span></button>
+      <div class="auth-switch">عندك حساب؟ <a onclick="showLogin()">سجّل دخول</a></div>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="wordmark">مكان</div>
+      <div class="sub">Makan</div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="user-avatar-init">م</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebar-username">—</div>
+        <div class="user-role" id="sidebar-role">—</div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()" title="خروج">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page" id="page-dashboard">
+      <div class="page-header"><h1>لوحة التحكم</h1><p>نظرة عامة على المبنى والأداء المالي</p></div>
+      <div class="stats-grid" id="dashboard-stats"></div>
+      <div class="quick-actions">
+        <button class="btn btn-primary" onclick="openModal('modal-booking')">＋ حجز جديد</button>
+        <button class="btn btn-secondary" onclick="openModal('modal-expense')">＋ مصروف جديد</button>
+        <button class="btn btn-secondary" onclick="showPage('page-tenants')">إدارة المستأجرين</button>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">آخر الحجوزات</span><button class="btn btn-ghost btn-sm" onclick="showPage('page-bookings')">عرض الكل</button></div>
+        <div id="recent-bookings-table"></div>
+      </div>
+    </div>
+
+    <div class="page" id="page-tenants">
+      <div class="page-header"><h1>المستأجرون</h1><p>قائمة المستأجرين المسجّلين</p></div>
+      <div style="margin-bottom:20px;"><button class="btn btn-primary" onclick="openModal('modal-tenant')">＋ إضافة مستأجر</button></div>
+      <div class="card"><div id="tenants-table"></div></div>
+    </div>
+
+    <div class="page" id="page-bookings">
+      <div class="page-header"><h1>الحجوزات</h1><p>جميع حجوزات الشقق</p></div>
+      <div style="margin-bottom:20px;"><button class="btn btn-primary" onclick="openModal('modal-booking')">＋ حجز جديد</button></div>
+      <div class="card"><div id="bookings-table"></div></div>
+    </div>
+
+    <div class="page" id="page-calendar">
+      <div class="page-header"><h1>التقويم</h1><p>جدول الحجوزات الشهري</p></div>
+      <div class="card">
+        <div class="cal-nav">
+          <button class="btn btn-secondary btn-sm" onclick="calPrev()">‹ السابق</button>
+          <h3 id="cal-title"></h3>
+          <button class="btn btn-secondary btn-sm" onclick="calNext()">التالي ›</button>
+        </div>
+        <div class="calendar-grid" id="cal-headers"></div>
+        <div class="calendar-grid" id="cal-grid" style="margin-top:4px;"></div>
+      </div>
+    </div>
+
+    <div class="page" id="page-expenses">
+      <div class="page-header"><h1>المصروفات</h1><p>متابعة نفقات المبنى</p></div>
+      <div style="margin-bottom:20px;"><button class="btn btn-primary" onclick="openModal('modal-expense')">＋ إضافة مصروف</button></div>
+      <div class="card"><div id="expenses-table"></div></div>
+    </div>
+
+    <div class="page" id="page-admin">
+      <div class="page-header"><h1>لوحة الإدارة</h1><p>إدارة ملاك المباني المسجّلين</p></div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">إجمالي الملاك</div>
+          <div class="stat-value" id="admin-count">—</div>
+          <div class="stat-sub">مالك مسجّل في المنصة</div>
+        </div>
+      </div>
+      <div id="admin-landlords-list"></div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL: ADD TENANT -->
+<div class="modal-overlay" id="modal-tenant">
+  <div class="modal">
+    <h2>إضافة مستأجر جديد</h2>
+    <div class="form-row">
+      <div class="form-group"><label>الاسم الكامل</label><input type="text" id="t-name" placeholder="محمد علي"></div>
+      <div class="form-group"><label>رقم الهوية</label><input type="text" id="t-id" placeholder="1234567" dir="ltr"></div>
+    </div>
+    <div class="form-group"><label>رقم الهاتف (اختياري)</label><input type="tel" id="t-phone" placeholder="+968 9X XXX XXX" dir="ltr"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-tenant')">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveTenant()">حفظ المستأجر</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD BOOKING -->
+<div class="modal-overlay" id="modal-booking">
+  <div class="modal">
+    <h2>حجز جديد</h2>
+    <div class="form-row">
+      <div class="form-group"><label>رقم الشقة</label><input type="text" id="b-apt" placeholder="101" dir="ltr"></div>
+      <div class="form-group"><label>المستأجر</label><select id="b-tenant"><option value="">— اختر مستأجر —</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>تاريخ الدخول</label><input type="datetime-local" id="b-checkin" dir="ltr"></div>
+      <div class="form-group"><label>تاريخ الخروج</label><input type="datetime-local" id="b-checkout" dir="ltr"></div>
+    </div>
+    <div class="form-group"><label>مبلغ الإيجار (OMR)</label><input type="number" id="b-rent" placeholder="150.000" step="0.001" min="0" dir="ltr"></div>
+    <div class="form-group"><label>ملاحظات (تظهر في العقد)</label><textarea id="b-notes" placeholder="أي شروط إضافية أو ملاحظات..."></textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-booking')">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveBooking()">حفظ الحجز</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD EXPENSE -->
+<div class="modal-overlay" id="modal-expense">
+  <div class="modal">
+    <h2>إضافة مصروف</h2>
+    <div class="form-group"><label>التاريخ</label><input type="date" id="e-date" dir="ltr"></div>
+    <div class="form-group"><label>التفاصيل</label><input type="text" id="e-desc" placeholder="صيانة، كهرباء، نظافة..."></div>
+    <div class="form-group"><label>المبلغ (OMR)</label><input type="number" id="e-amount" placeholder="25.000" step="0.001" min="0" dir="ltr"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-expense')">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveExpense()">حفظ المصروف</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CONTRACT -->
+<div class="modal-overlay" id="modal-contract">
+  <div class="modal" style="max-width:700px">
+    <h2>عقد الإيجار</h2>
+    <div id="contract-content"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-contract')">إغلاق</button>
+      <button class="btn btn-primary" onclick="window.print()">🖨️ طباعة / PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, doc, addDoc, setDoc, getDoc, getDocs, query, where, serverTimestamp }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ─── FIREBASE CONFIG ────────────────────────────────────────────────────────
+// ⚠️ SALAH: Replace ALL values below with your Firebase project config
+//    Firebase Console → Project Settings → Your Apps → Web App → Config
+const firebaseConfig = {
+  apiKey:            "AIzaSyDADo3La7oaGq5rUWaroc0Dl5siaRAtDxk",
+  authDomain:        "makan-d8dd7.firebaseapp.com",
+  projectId:         "makan-d8dd7",
+  storageBucket:     "makan-d8dd7.firebasestorage.app",
+  messagingSenderId: "730195331288",
+  appId:             "1:730195331288:web:1e8b20b839d566886eafad"
+};
+
+// ⚠️ SALAH: Set this to YOUR email — this account gets the admin panel
+const ADMIN_EMAIL = "salahulden@outlook.com";
+// ────────────────────────────────────────────────────────────────────────────
+
+const fbApp = initializeApp(firebaseConfig);
+const auth  = getAuth(fbApp);
+const db    = getFirestore(fbApp);
+
+let currentUser = null;
+let userProfile  = null;
+let allTenants   = [];
+let allBookings  = [];
+let allExpenses  = [];
+let calYear, calMonth;
+
+// ── EXPOSE TO WINDOW ─────────────────────────────────────────────────────────
+window.doLogin      = doLogin;
+window.doRegister   = doRegister;
+window.doLogout     = doLogout;
+window.showLogin    = () => { document.getElementById('register-form').style.display='none'; document.getElementById('login-form').style.display='block'; };
+window.showRegister = () => { document.getElementById('login-form').style.display='none'; document.getElementById('register-form').style.display='block'; };
+window.showPage     = showPage;
+window.openModal    = openModal;
+window.closeModal   = closeModal;
+window.saveTenant   = saveTenant;
+window.saveBooking  = saveBooking;
+window.saveExpense  = saveExpense;
+window.viewContract = viewContract;
+window.calPrev      = () => { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); };
+window.calNext      = () => { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); };
+window.toggleSidebar = () => document.getElementById('sidebar').classList.toggle('open');
+
+// ── AUTH STATE ────────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
+  document.getElementById('loader').classList.add('hidden');
+  if (user) {
+    currentUser = user;
+    await loadProfile();
+    initApp();
+  } else {
+    showScreen('auth');
+  }
+});
+
+async function loadProfile() {
+  const snap = await getDoc(doc(db, 'users', currentUser.uid));
+  userProfile = snap.exists() ? snap.data() : { name: currentUser.email, role: 'landlord' };
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const btn   = document.getElementById('login-btn-text');
+  const err   = document.getElementById('login-error');
+  err.classList.remove('show');
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch(e) {
+    err.textContent = translateAuthError(e.code);
+    err.classList.add('show');
+    btn.textContent = 'دخول';
+  }
+}
+
+async function doRegister() {
+  const name     = document.getElementById('reg-name').value.trim();
+  const building = document.getElementById('reg-building').value.trim();
+  const units    = document.getElementById('reg-units').value;
+  const phone    = document.getElementById('reg-phone').value.trim();
+  const email    = document.getElementById('reg-email').value.trim();
+  const pass     = document.getElementById('reg-pass').value;
+  const btn = document.getElementById('reg-btn-text');
+  const err = document.getElementById('reg-error');
+  err.classList.remove('show');
+  if (!name||!building||!units||!email||!pass) {
+    err.textContent = 'يرجى تعبئة جميع الحقول المطلوبة';
+    err.classList.add('show'); return;
+  }
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    await setDoc(doc(db, 'users', cred.user.uid), {
+      name, building, units: Number(units), phone, email,
+      role: 'landlord', createdAt: serverTimestamp()
+    });
+    showToast('تم إنشاء الحساب بنجاح 🎉', 'success');
+  } catch(e) {
+    err.textContent = translateAuthError(e.code);
+    err.classList.add('show');
+    btn.textContent = 'إنشاء الحساب';
+  }
+}
+
+async function doLogout() {
+  await signOut(auth);
+  currentUser = null; userProfile = null;
+  allTenants = []; allBookings = []; allExpenses = [];
+  showScreen('auth');
+}
+
+function initApp() {
+  showScreen('app');
+  const isAdmin = currentUser.email === ADMIN_EMAIL;
+  renderSidebar(isAdmin);
+  document.getElementById('sidebar-username').textContent = userProfile.name || currentUser.email;
+  document.getElementById('sidebar-role').textContent = isAdmin ? 'مدير المنصة' : (userProfile.building || 'مالك');
+  document.getElementById('user-avatar-init').textContent = (userProfile.name || 'م')[0];
+  if (isAdmin) { showPage('page-admin'); loadAdminData(); }
+  else         { showPage('page-dashboard'); loadLandlordData(); }
+}
+
+function renderSidebar(isAdmin) {
+  const items = isAdmin
+    ? [{ id:'page-admin', ic:'shield', label:'إدارة الملاك' }]
+    : [
+        { id:'page-dashboard', ic:'grid',         label:'لوحة التحكم' },
+        { id:'page-tenants',   ic:'users',         label:'المستأجرون' },
+        { id:'page-bookings',  ic:'file-text',     label:'الحجوزات' },
+        { id:'page-calendar',  ic:'calendar',      label:'التقويم' },
+        { id:'page-expenses',  ic:'trending-down', label:'المصروفات' },
+      ];
+  document.getElementById('sidebar-nav').innerHTML = items.map(i =>
+    `<div class="nav-item" data-page="${i.id}" onclick="showPage('${i.id}')">${icon(i.ic)}<span>${i.label}</span></div>`
+  ).join('');
+}
+
+async function loadLandlordData() {
+  const uid = currentUser.uid;
+  const [tS, bS, eS] = await Promise.all([
+    getDocs(query(collection(db,'tenants'),  where('uid','==',uid))),
+    getDocs(query(collection(db,'bookings'), where('uid','==',uid))),
+    getDocs(query(collection(db,'expenses'), where('uid','==',uid))),
+  ]);
+  allTenants  = tS.docs.map(d=>({id:d.id,...d.data()}));
+  allBookings = bS.docs.map(d=>({id:d.id,...d.data()}));
+  allExpenses = eS.docs.map(d=>({id:d.id,...d.data()}));
+  renderDashboard(); renderTenants(); renderBookings(); renderExpenses();
+  const now = new Date(); calYear = now.getFullYear(); calMonth = now.getMonth();
+  renderCalendar();
+}
+
+async function loadAdminData() {
+  const snap = await getDocs(collection(db,'users'));
+  const landlords = snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.role==='landlord');
+  document.getElementById('admin-count').textContent = landlords.length;
+  const list = document.getElementById('admin-landlords-list');
+  if (!landlords.length) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">🏢</div><p>لا يوجد ملاك مسجّلون بعد</p></div>'; return;
+  }
+  list.innerHTML = landlords.map(l => `
+    <div class="landlord-card">
+      <div class="user-avatar" style="width:44px;height:44px;font-size:1rem">${(l.name||'م')[0]}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:1rem">${l.name}</div>
+        <div style="color:var(--muted);font-size:0.82rem">${l.building} · ${l.units} شقة · ${l.phone||'—'}</div>
+        <div style="color:var(--muted);font-size:0.78rem;margin-top:2px">${l.email}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderDashboard() {
+  const totalIncome  = allBookings.reduce((s,b)=>s+(b.rent||0),0);
+  const totalExpense = allExpenses.reduce((s,e)=>s+(e.amount||0),0);
+  const net = totalIncome - totalExpense;
+  document.getElementById('dashboard-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-label">إجمالي الدخل</div><div class="stat-value income">${fmt(totalIncome)}</div><div class="stat-sub">OMR من الحجوزات</div></div>
+    <div class="stat-card"><div class="stat-label">إجمالي المصروفات</div><div class="stat-value expense">${fmt(totalExpense)}</div><div class="stat-sub">OMR نفقات المبنى</div></div>
+    <div class="stat-card"><div class="stat-label">صافي الربح / الخسارة</div><div class="stat-value ${net>=0?'net-pos':'net-neg'}">${fmt(Math.abs(net))}</div><div class="stat-sub">${net>=0?'▲ ربح':'▼ خسارة'}</div></div>
+    <div class="stat-card"><div class="stat-label">عدد الحجوزات</div><div class="stat-value">${allBookings.length}</div><div class="stat-sub">إجمالي الحجوزات</div></div>`;
+  const recent = [...allBookings].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).slice(0,5);
+  document.getElementById('recent-bookings-table').innerHTML = recent.length
+    ? bookingsTable(recent)
+    : '<div class="empty-state"><div class="icon">📋</div><p>لا توجد حجوزات بعد</p></div>';
+}
+
+function renderTenants() {
+  const el = document.getElementById('tenants-table');
+  if (!allTenants.length) { el.innerHTML = '<div class="empty-state"><div class="icon">👥</div><p>لا يوجد مستأجرون مسجّلون</p></div>'; return; }
+  el.innerHTML = `<table><thead><tr><th>الاسم</th><th>رقم الهوية</th><th>الهاتف</th></tr></thead><tbody>
+    ${allTenants.map(t=>`<tr><td>${t.name}</td><td dir="ltr">${t.idNumber}</td><td dir="ltr">${t.phone||'—'}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderBookings() {
+  const el = document.getElementById('bookings-table');
+  el.innerHTML = allBookings.length ? bookingsTable(allBookings)
+    : '<div class="empty-state"><div class="icon">🏠</div><p>لا توجد حجوزات بعد</p></div>';
+}
+
+function bookingsTable(list) {
+  const sorted = [...list].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn));
+  return `<table><thead><tr><th>الشقة</th><th>المستأجر</th><th>الدخول</th><th>الخروج</th><th>الإيجار</th><th>الحالة</th><th></th></tr></thead><tbody>
+    ${sorted.map(b=>{
+      const now=Date.now(), ci=new Date(b.checkIn).getTime(), co=new Date(b.checkOut).getTime();
+      const s = now<ci?'upcoming':now>co?'ended':'active';
+      const sAr = {upcoming:'قادم',active:'نشط',ended:'منتهي'}[s];
+      return `<tr>
+        <td><b>${b.apartment}</b></td>
+        <td>${b.tenantName||'—'}</td>
+        <td dir="ltr">${fmtDate(b.checkIn)}</td>
+        <td dir="ltr">${fmtDate(b.checkOut)}</td>
+        <td dir="ltr"><b>${fmt(b.rent)} OMR</b></td>
+        <td><span class="badge badge-${s}">${sAr}</span></td>
+        <td><button class="btn btn-ghost btn-sm" onclick="viewContract('${b.id}')">📄 عقد</button></td>
+      </tr>`;
+    }).join('')}
+  </tbody></table>`;
+}
+
+function renderExpenses() {
+  const el = document.getElementById('expenses-table');
+  if (!allExpenses.length) { el.innerHTML = '<div class="empty-state"><div class="icon">💸</div><p>لا توجد مصروفات مسجّلة</p></div>'; return; }
+  const sorted = [...allExpenses].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  el.innerHTML = `<table><thead><tr><th>التاريخ</th><th>التفاصيل</th><th>المبلغ (OMR)</th></tr></thead><tbody>
+    ${sorted.map(e=>`<tr><td dir="ltr">${e.date}</td><td>${e.description}</td><td dir="ltr"><b>${fmt(e.amount)}</b></td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderCalendar() {
+  const days = ['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  document.getElementById('cal-headers').innerHTML = days.map(d=>`<div class="cal-header">${d}</div>`).join('');
+  document.getElementById('cal-title').textContent = `${months[calMonth]} ${calYear}`;
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const daysInPrev  = new Date(calYear, calMonth, 0).getDate();
+  const today = new Date();
+  let cells = [];
+  for (let i=firstDay-1;i>=0;i--) cells.push({day:daysInPrev-i,cur:false});
+  for (let d=1;d<=daysInMonth;d++) cells.push({day:d,cur:true});
+  while (cells.length%7!==0) cells.push({day:cells.length-daysInMonth-firstDay+1,cur:false});
+  document.getElementById('cal-grid').innerHTML = cells.map(c=>{
+    const isToday = c.cur && c.day===today.getDate() && calMonth===today.getMonth() && calYear===today.getFullYear();
+    const cellDate = new Date(calYear, calMonth, c.day);
+    const events = c.cur ? allBookings.filter(b=>{
+      const ci=new Date(b.checkIn), co=new Date(b.checkOut);
+      return cellDate>=new Date(ci.getFullYear(),ci.getMonth(),ci.getDate()) &&
+             cellDate<=new Date(co.getFullYear(),co.getMonth(),co.getDate());
+    }) : [];
+    return `<div class="cal-day ${isToday?'today':''} ${!c.cur?'other-month':''}">
+      <div class="cal-day-num">${c.day}</div>
+      ${events.slice(0,2).map(e=>`<div class="cal-event">${e.apartment}</div>`).join('')}
+      ${events.length>2?`<div style="font-size:0.65rem;color:var(--muted)">+${events.length-2}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function saveTenant() {
+  const name  = document.getElementById('t-name').value.trim();
+  const idNum = document.getElementById('t-id').value.trim();
+  const phone = document.getElementById('t-phone').value.trim();
+  if (!name||!idNum) { showToast('يرجى تعبئة الاسم ورقم الهوية','error'); return; }
+  await addDoc(collection(db,'tenants'), { uid:currentUser.uid, name, idNumber:idNum, phone, createdAt:serverTimestamp() });
+  showToast('تم إضافة المستأجر ✓','success');
+  closeModal('modal-tenant');
+  ['t-name','t-id','t-phone'].forEach(id=>document.getElementById(id).value='');
+  await loadLandlordData();
+}
+
+async function saveBooking() {
+  const apt      = document.getElementById('b-apt').value.trim();
+  const tenantId = document.getElementById('b-tenant').value;
+  const checkIn  = document.getElementById('b-checkin').value;
+  const checkOut = document.getElementById('b-checkout').value;
+  const rent     = parseFloat(document.getElementById('b-rent').value);
+  const notes    = document.getElementById('b-notes').value.trim();
+  if (!apt||!tenantId||!checkIn||!checkOut||isNaN(rent)) { showToast('يرجى تعبئة جميع الحقول','error'); return; }
+  if (new Date(checkOut)<=new Date(checkIn)) { showToast('تاريخ الخروج يجب أن يكون بعد الدخول','error'); return; }
+  const tenant = allTenants.find(t=>t.id===tenantId);
+  await addDoc(collection(db,'bookings'), {
+    uid: currentUser.uid, apartment: apt, tenantId, tenantName: tenant?.name||'',
+    tenantIdNumber: tenant?.idNumber||'', checkIn, checkOut, rent, notes,
+    landlordName: userProfile.name, landlordBuilding: userProfile.building,
+    createdAt: serverTimestamp()
+  });
+  showToast('تم حفظ الحجز ✓','success');
+  closeModal('modal-booking');
+  ['b-apt','b-checkin','b-checkout','b-rent','b-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('b-tenant').value='';
+  await loadLandlordData();
+}
+
+async function saveExpense() {
+  const date   = document.getElementById('e-date').value;
+  const desc   = document.getElementById('e-desc').value.trim();
+  const amount = parseFloat(document.getElementById('e-amount').value);
+  if (!date||!desc||isNaN(amount)) { showToast('يرجى تعبئة جميع الحقول','error'); return; }
+  await addDoc(collection(db,'expenses'), { uid:currentUser.uid, date, description:desc, amount, createdAt:serverTimestamp() });
+  showToast('تم إضافة المصروف ✓','success');
+  closeModal('modal-expense');
+  ['e-date','e-desc','e-amount'].forEach(id=>document.getElementById(id).value='');
+  await loadLandlordData();
+}
+
+function viewContract(bookingId) {
+  const b = allBookings.find(x=>x.id===bookingId);
+  if (!b) return;
+  const ci = new Date(b.checkIn), co = new Date(b.checkOut);
+  const days = Math.max(1, Math.ceil((co-ci)/(1000*60*60*24)));
+  document.getElementById('contract-content').innerHTML = `
+    <div class="contract-preview">
+      <h1>عقد إيجار</h1>
+      <div class="contract-subtitle">Lease Agreement</div>
+      <div class="contract-section">
+        <h3>الطرف الأول — المالك</h3>
+        <div class="contract-row"><span class="contract-label">الاسم:</span><span class="contract-value">${b.landlordName||userProfile.name}</span></div>
+        <div class="contract-row"><span class="contract-label">اسم المبنى:</span><span class="contract-value">${b.landlordBuilding||userProfile.building}</span></div>
+        <div class="contract-row"><span class="contract-label">رقم الشقة:</span><span class="contract-value">${b.apartment}</span></div>
+      </div>
+      <div class="contract-section">
+        <h3>الطرف الثاني — المستأجر</h3>
+        <div class="contract-row"><span class="contract-label">الاسم:</span><span class="contract-value">${b.tenantName}</span></div>
+        <div class="contract-row"><span class="contract-label">رقم الهوية:</span><span class="contract-value" dir="ltr">${b.tenantIdNumber}</span></div>
+      </div>
+      <div class="contract-section">
+        <h3>تفاصيل الإيجار</h3>
+        <div class="contract-row"><span class="contract-label">تاريخ الدخول:</span><span class="contract-value" dir="ltr">${fmtDate(b.checkIn)}</span></div>
+        <div class="contract-row"><span class="contract-label">تاريخ الخروج:</span><span class="contract-value" dir="ltr">${fmtDate(b.checkOut)}</span></div>
+        <div class="contract-row"><span class="contract-label">مدة الإيجار:</span><span class="contract-value">${days} يوم</span></div>
+        <div class="contract-row"><span class="contract-label">مبلغ الإيجار:</span><span class="contract-value" dir="ltr"><b>${fmt(b.rent)} OMR</b></span></div>
+      </div>
+      <div class="contract-section contract-terms">
+        <h3>الشروط والأحكام</h3>
+        <ol>
+          <li>يلتزم المستأجر بالمحافظة على الوحدة السكنية وإعادتها بالحالة ذاتها عند انتهاء العقد.</li>
+          <li>لا يحق للمستأجر التنازل عن العقد أو تأجير الوحدة من الباطن دون موافقة المالك الخطية.</li>
+          <li>يُدفع الإيجار مقدماً عند توقيع هذا العقد.</li>
+          <li>في حالة الإخلال بأي بند من هذا العقد يحق للمالك إنهاء العقد فوراً.</li>
+          <li>يلتزم المستأجر بالإخلاء الكامل في التاريخ والوقت المحددَين للخروج.</li>
+          <li>أي أضرار تلحق بالوحدة تُحتسب على المستأجر وفق تقدير المالك.</li>
+          <li>يخضع هذا العقد لأحكام القانون العُماني.</li>
+        </ol>
+      </div>
+      ${b.notes?`<div class="contract-section"><h3>ملاحظات</h3><p>${b.notes}</p></div>`:''}
+      <div class="signatures">
+        <div class="sig-block"><div class="sig-line">توقيع المالك</div></div>
+        <div class="sig-block"><div class="sig-line">توقيع المستأجر</div></div>
+      </div>
+      <div style="text-align:center;margin-top:24px;font-size:0.75rem;color:var(--muted)">
+        تاريخ الإصدار: ${new Date().toLocaleDateString('ar-OM')} · مُنشأ بواسطة مكان
+      </div>
+    </div>`;
+  openModal('modal-contract');
+}
+
+function showScreen(s) {
+  document.getElementById('auth-screen').classList.toggle('active', s==='auth');
+  document.getElementById('app').classList.toggle('active', s==='app');
+}
+
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(pageId)?.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.page===pageId));
+  document.getElementById('sidebar').classList.remove('open');
+  if (pageId==='page-bookings') refreshTenantSelect();
+}
+
+function openModal(id) {
+  if (id==='modal-booking') refreshTenantSelect();
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function refreshTenantSelect() {
+  const sel = document.getElementById('b-tenant');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— اختر مستأجر —</option>' +
+    allTenants.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+  sel.value = cur;
+}
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+function fmt(n) { return (n||0).toLocaleString('en-OM',{minimumFractionDigits:3,maximumFractionDigits:3}); }
+function fmtDate(d) { return d ? new Date(d).toLocaleString('ar-OM',{dateStyle:'medium',timeStyle:'short'}) : '—'; }
+
+function translateAuthError(code) {
+  const m = {
+    'auth/user-not-found':'البريد الإلكتروني غير مسجّل',
+    'auth/wrong-password':'كلمة المرور غير صحيحة',
+    'auth/email-already-in-use':'البريد الإلكتروني مستخدم بالفعل',
+    'auth/weak-password':'كلمة المرور ضعيفة — 6 أحرف على الأقل',
+    'auth/invalid-email':'بريد إلكتروني غير صالح',
+    'auth/invalid-credential':'بيانات الدخول غير صحيحة',
+  };
+  return m[code] || `خطأ: ${code}`;
+}
+
+function icon(name) {
+  const ic = {
+    'grid':'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+    'users':'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    'file-text':'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+    'calendar':'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+    'trending-down':'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>',
+    'shield':'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  };
+  return ic[name]||'';
+}
+
+document.querySelectorAll('.modal-overlay').forEach(o =>
+  o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); })
+);
+</script>
+</body>
+</html>
