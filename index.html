@@ -1073,7 +1073,7 @@ const exp = {
   adminResetPassword, showUpgradePrompt, doRegisterDirect, doUpgradeAccount, updatePlanBanner,
   togglePaid, renderFullReportPage, printFullReport,
   shareContractWhatsApp, submitUpgradeCode, upgradeCodeNext, renderVacancyChart,
-  enforcePlanGate, unlockApp, toggleLang, applyLang,
+  enforcePlanGate, unlockApp, toggleLang, applyLang, deleteLandlord,
   openMoveTenant, confirmMoveTenant, runVacancySearch, confirmPayment, tryClosePlanModal,
   showAddAptForm, addNewApartments, renameApartment,
   toggleAdvanceMethod:function(){
@@ -1271,15 +1271,55 @@ async function loadAdminData(){
   const list=document.getElementById('admin-landlords-list');
   if(!landlords.length){list.innerHTML='<div class="empty-state"><div class="icon">🏢</div><p>لا يوجد ملاك مسجّلون بعد</p></div>';return;}
   list.innerHTML=landlords.map(l=>`
-    <div class="landlord-card">
-      <div class="user-avatar" style="width:42px;height:42px;font-size:.95rem">${(l.name||'م')[0]}</div>
-      <div style="flex:1">
+    <div class="landlord-card" id="landlord-card-${l.id}">
+      <div class="user-avatar" style="width:42px;height:42px;font-size:.95rem;flex-shrink:0">${(l.name||'م')[0]}</div>
+      <div style="flex:1;min-width:0">
         <div style="font-weight:700">${l.name}</div>
         <div style="color:var(--muted);font-size:.8rem">${l.building} · ${l.units||0} شقة · ${l.phone||'—'}</div>
         <div style="color:var(--muted);font-size:.75rem">${l.email}</div>
-        ${l.apartments?`<div style="font-size:.74rem;color:var(--accent);margin-top:3px">الشقق: ${l.apartments.join('، ')}</div>`:''}
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
+          <span class="badge ${l.plan==='unlimited'?'badge-active':'badge-ended'}">${l.plan==='unlimited'?'✓ Unlimited':'Free (5)'}</span>
+          ${l.apartments?`<span style="font-size:.74rem;color:var(--accent)">الشقق: ${l.apartments.join('، ')}</span>`:''}
+        </div>
       </div>
+      <button onclick="deleteLandlord('${l.id}','${l.name}')"
+        style="background:rgba(224,60,60,.1);border:1px solid rgba(224,60,60,.3);color:var(--danger);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:.8rem;font-weight:700;cursor:pointer;flex-shrink:0;transition:background .2s"
+        onmouseover="this.style.background='rgba(224,60,60,.2)'"
+        onmouseout="this.style.background='rgba(224,60,60,.1)'">
+        🗑️ حذف
+      </button>
     </div>`).join('');
+}
+
+async function deleteLandlord(uid, name){
+  if(!confirm(`حذف حساب "${name}" بشكل نهائي؟\nسيتم حذف جميع بياناته من المنصة.\nهذا الإجراء لا يمكن التراجع عنه.`)) return;
+  try{
+    // Delete user's bookings, tenants, expenses from Firestore
+    const [bSnap, tSnap, eSnap] = await Promise.all([
+      getDocs(query(collection(db,'bookings'), where('uid','==',uid))),
+      getDocs(query(collection(db,'tenants'),  where('uid','==',uid))),
+      getDocs(query(collection(db,'expenses'), where('uid','==',uid))),
+    ]);
+    const deletes = [
+      ...bSnap.docs.map(d => deleteDoc(doc(db,'bookings',d.id))),
+      ...tSnap.docs.map(d => deleteDoc(doc(db,'tenants', d.id))),
+      ...eSnap.docs.map(d => deleteDoc(doc(db,'expenses',d.id))),
+    ];
+    await Promise.all(deletes);
+    // Delete user profile doc
+    await deleteDoc(doc(db,'users',uid));
+    // Remove card from UI immediately
+    const card = document.getElementById('landlord-card-'+uid);
+    if(card) card.remove();
+    // Update count
+    const countEl = document.getElementById('admin-count');
+    if(countEl) countEl.textContent = parseInt(countEl.textContent||0) - 1;
+    showToast(`تم حذف حساب ${name} ✓`,'success');
+    // Note: Firebase Auth user still exists — they can't do anything without Firestore profile
+    // To fully delete auth account, use Firebase Admin SDK or manual deletion from console
+  } catch(e){
+    showToast('خطأ أثناء الحذف: ' + (e.message||e.code), 'error');
+  }
 }
 
 async function generateNewCode(){
