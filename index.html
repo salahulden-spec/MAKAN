@@ -609,7 +609,7 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,5)">
     </div>
     <button class="btn btn-primary btn-full" style="margin-top:16px" onclick="submitUpgradeCode()"><span id="upgrade-btn-text">تفعيل الحساب</span></button>
-    <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="closeModal('modal-upgrade')">لاحقاً</button>
+    <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="tryClosePlanModal()">لاحقاً</button>
   </div>
 </div>
 
@@ -661,6 +661,7 @@ const exp = {
   adminResetPassword, showUpgradePrompt, doRegisterDirect, doUpgradeAccount, updatePlanBanner,
   togglePaid, renderFullReportPage, printFullReport,
   shareContractWhatsApp, submitUpgradeCode, upgradeCodeNext, renderVacancyChart,
+  enforcePlanGate, unlockApp,
   calPrev:()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar()},
   calNext:()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar()},
   toggleSidebar
@@ -811,6 +812,7 @@ async function loadLandlordData(){
   renderCalendar();
   updateNotifBadge();
   updatePlanBanner();
+  enforcePlanGate();
 }
 
 async function loadAdminData(){
@@ -1560,6 +1562,41 @@ async function adminResetPassword(){
 }
 
 // ── PLAN / UPGRADE ────────────────────────────────────────────────────
+function enforcePlanGate(){
+  // If free plan and at or over limit, lock the whole app behind upgrade modal
+  const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+  if(isAdmin) return;
+  const plan = userProfile.plan || 'free';
+  if(plan === 'unlimited') return;
+  const count = allBookings.length;
+  if(count < 5) return; // still under limit, allow access
+  // Lock: show upgrade modal, disable all nav clicks except logout
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    n.style.pointerEvents='none';
+    n.style.opacity='0.4';
+  });
+  // Show upgrade modal after short delay so UI renders first
+  setTimeout(()=>{ showUpgradePrompt(); }, 400);
+}
+
+function tryClosePlanModal(){
+  // Only allow closing if still under limit (manual open, not forced)
+  const plan = userProfile.plan||'free';
+  const count = allBookings.length;
+  if(plan==='unlimited' || count < 5){
+    closeModal('modal-upgrade');
+  } else {
+    showToast('يجب ترقية حسابك للمتابعة','error');
+  }
+}
+
+function unlockApp(){
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    n.style.pointerEvents='';
+    n.style.opacity='';
+  });
+}
+
 function updatePlanBanner(){
   const isAdmin=currentUser&&currentUser.email===ADMIN_EMAIL;
   if(isAdmin) return;
@@ -1624,6 +1661,7 @@ async function submitUpgradeCode(){
     userProfile.plan='unlimited';
     closeModal('modal-upgrade');
     showToast('🎉 تم ترقية حسابك — حجوزات غير محدودة','success');
+    unlockApp();
     updatePlanBanner();
   }catch(e){
     showErr(err,translateAuthError(e.code));
@@ -1913,9 +1951,10 @@ function icon(name){
   return ic[name]||'';
 }
 
-document.querySelectorAll('.modal-overlay').forEach(o=>
-  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');})
-);
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  if(o.id==='modal-upgrade') return; // upgrade modal not closeable by clicking overlay
+  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});
+});
 </script>
 
 <style>
