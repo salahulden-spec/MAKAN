@@ -1028,15 +1028,18 @@ function editBookingFromDetail(){
 
 async function markCheckedIn(){
   if(!activeBookingId) return;
-  await updateDoc(doc(db,'bookings',activeBookingId),{
+  const bid=activeBookingId;
+  await updateDoc(doc(db,'bookings',bid),{
     checkedIn:true, checkedInAt:new Date().toISOString(),
     history:arrayUnion({action:'تسجيل دخول',by:userProfile.name,at:new Date().toISOString(),note:'دخل المستأجر الشقة'})
   });
+  // update local array immediately so UI reflects change without waiting for Firestore
+  const idx=allBookings.findIndex(x=>x.id===bid);
+  if(idx>-1){ allBookings[idx].checkedIn=true; allBookings[idx].checkedInAt=new Date().toISOString(); }
   showToast('تم تسجيل دخول المستأجر ✓','success');
   closeModal('modal-booking-detail');
-  await loadLandlordData();
-  // print invoice
-  setTimeout(()=>printInvoice(activeBookingId),300);
+  renderDashboard(); renderBookings();
+  setTimeout(()=>printInvoice(bid),300);
 }
 
 // ── CONTRACT ──────────────────────────────────────────────────────────
@@ -1278,13 +1281,17 @@ function printContractDirect(id){
 // ── CHECKOUT ──────────────────────────────────────────────────────────
 async function markCheckedOut(){
   if(!activeBookingId) return;
-  await updateDoc(doc(db,'bookings',activeBookingId),{
+  const bid=activeBookingId;
+  await updateDoc(doc(db,'bookings',bid),{
     checkedOut:true, checkedOutAt:new Date().toISOString(),
     history:arrayUnion({action:'تسجيل خروج',by:userProfile.name,at:new Date().toISOString(),note:'غادر المستأجر الشقة'})
   });
+  // update local array immediately
+  const idx=allBookings.findIndex(x=>x.id===bid);
+  if(idx>-1){ allBookings[idx].checkedOut=true; allBookings[idx].checkedOutAt=new Date().toISOString(); }
   showToast('تم تسجيل خروج المستأجر ✓','success');
   closeModal('modal-booking-detail');
-  await loadLandlordData();
+  renderDashboard(); renderBookings();
 }
 
 // ── UI HELPERS ────────────────────────────────────────────────────────
