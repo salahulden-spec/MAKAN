@@ -642,8 +642,6 @@ async function doRegisterStep2(){
     if(!snap.exists()||!snap.data().code){ showErr(err,'لا يوجد رمز تفعيل نشط — تواصل مع مدير المنصة'); btn.textContent='إنشاء الحساب'; return; }
     const validCode=snap.data().code;
     if(code!==validCode){ showErr(err,'الرمز غير صحيح — تواصل مع مدير المنصة'); btn.textContent='إنشاء الحساب'; return; }
-    // Invalidate code immediately before creating account
-    await updateDoc(doc(db,'config','registration'),{code:''});
     const {name,building,apartments,floors,perFloor,phone,email,pass}=pendingRegData;
     const cred=await createUserWithEmailAndPassword(auth,email,pass);
     await setDoc(doc(db,'users',cred.user.uid),{
@@ -651,6 +649,8 @@ async function doRegisterStep2(){
       units:apartments.length,phone,email,
       role:'landlord',createdAt:serverTimestamp()
     });
+    // Invalidate code AFTER account created (user is now authenticated)
+    await updateDoc(doc(db,'config','registration'),{code:''});
     showToast('تم إنشاء الحساب بنجاح 🎉','success');
   }catch(e){ showErr(err,translateAuthError(e.code)); btn.textContent='إنشاء الحساب'; }
 }
