@@ -768,12 +768,13 @@ function renderDashboard(){
   const totalIncome=allBookings.reduce((s,b)=>s+(b.totalRent||b.rent||0),0);
   const totalExpense=allExpenses.reduce((s,e)=>s+(e.amount||0),0);
   const net=totalIncome-totalExpense;
-  const active=allBookings.filter(b=>{const now=Date.now();return now>=new Date(b.checkIn).getTime()&&now<=new Date(b.checkOut).getTime();}).length;
+  const active=allBookings.filter(b=>bookingStatus(b)==='checkedin').length;
+  const upcoming=allBookings.filter(b=>bookingStatus(b)==='upcoming').length;
   document.getElementById('dashboard-stats').innerHTML=`
     <div class="stat-card"><div class="stat-label">إجمالي الدخل</div><div class="stat-value income">${fmt(totalIncome)}</div><div class="stat-sub">OMR من الحجوزات</div></div>
     <div class="stat-card"><div class="stat-label">إجمالي المصروفات</div><div class="stat-value expense">${fmt(totalExpense)}</div><div class="stat-sub">OMR نفقات المبنى</div></div>
     <div class="stat-card"><div class="stat-label">صافي الربح / الخسارة</div><div class="stat-value ${net>=0?'net-pos':'net-neg'}">${fmt(Math.abs(net))}</div><div class="stat-sub">${net>=0?'▲ ربح':'▼ خسارة'}</div></div>
-    <div class="stat-card"><div class="stat-label">حجوزات نشطة</div><div class="stat-value">${active}</div><div class="stat-sub">من ${allBookings.length} إجمالي</div></div>`;
+    <div class="stat-card"><div class="stat-label">مستأجرون داخل</div><div class="stat-value">${active}</div><div class="stat-sub">${upcoming} قادم · ${allBookings.length} إجمالي</div></div>`;
   const recent=[...allBookings].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).slice(0,5);
   document.getElementById('recent-bookings-table').innerHTML=recent.length?bookingsTable(recent)
     :'<div class="empty-state"><div class="icon">📋</div><p>لا توجد حجوزات بعد</p></div>';
@@ -793,13 +794,25 @@ function renderBookings(){
     :'<div class="empty-state"><div class="icon">🏠</div><p>لا توجد حجوزات بعد</p></div>';
 }
 
+// ── SHARED STATUS HELPER ─────────────────────────────────────────────
+function bookingStatus(b){
+  if(b.checkedOut) return 'ended';
+  if(b.checkedIn)  return 'checkedin';
+  const now=Date.now();
+  const ci=new Date(b.checkIn+'T14:00:00').getTime();
+  const co=new Date(b.checkOut+'T12:00:00').getTime();
+  if(now < ci) return 'upcoming';
+  if(now > co) return 'ended';
+  return 'active';
+}
+function bookingStatusAr(s){ return {upcoming:'قادم',active:'نشط',ended:'منتهي',checkedin:'داخل'}[s]||s; }
+
 function bookingsTable(list){
   const sorted=[...list].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn));
   return `<table><thead><tr><th>الشقة</th><th>المستأجر</th><th>الدخول</th><th>الخروج</th><th>الليالي</th><th>الإجمالي</th><th>الحالة</th><th></th></tr></thead><tbody>
     ${sorted.map(b=>{
-      const now=Date.now(),co=new Date(b.checkOut+'T12:00:00').getTime(),ci=new Date(b.checkIn+'T14:00:00').getTime();
-      const s=b.checkedOut?'ended':b.checkedIn?'checkedin':now<ci?'upcoming':now>co?'ended':'active';
-      const sAr={upcoming:'قادم',active:'نشط',ended:'منتهي',checkedin:'داخل'}[s];
+      const s=bookingStatus(b);
+      const sAr=bookingStatusAr(s);
       const nights=calcNights(b.checkIn,b.checkOut);
       return `<tr>
         <td><b>${b.apartment}</b></td>
@@ -847,7 +860,11 @@ function renderCalendar(){
     }):[];
     return `<div class="cal-day ${isToday?'today':''} ${!c.cur?'other-month':''}">
       <div class="cal-day-num">${c.day}</div>
-      ${events.slice(0,2).map(e=>`<div class="cal-event" style="cursor:pointer" onclick="viewBooking('${e.id}')">${e.apartment} — ${e.tenantName||''}</div>`).join('')}
+      ${events.slice(0,2).map(e=>{
+        const es=bookingStatus(e);
+        const bg=es==='ended'?'#aaa':es==='checkedin'?'#3a7d5a':es==='upcoming'?'#c17f3e':'#0f0f0f';
+        return `<div class="cal-event" style="cursor:pointer;background:${bg}" onclick="viewBooking('${e.id}')">${e.apartment} — ${e.tenantName||''}</div>`;
+      }).join('')}
       ${events.length>2?`<div style="font-size:.6rem;color:var(--muted)">+${events.length-2}</div>`:''}
     </div>`;
   }).join('');
@@ -1038,7 +1055,7 @@ async function markCheckedIn(){
   if(idx>-1){ allBookings[idx].checkedIn=true; allBookings[idx].checkedInAt=new Date().toISOString(); }
   showToast('تم تسجيل دخول المستأجر ✓','success');
   closeModal('modal-booking-detail');
-  renderDashboard(); renderBookings();
+  renderDashboard(); renderBookings(); renderCalendar();
   setTimeout(()=>printInvoice(bid),300);
 }
 
@@ -1257,9 +1274,8 @@ function renderContractsPage(){
   const sorted=[...allBookings].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn));
   el.innerHTML=`<table><thead><tr><th>الشقة</th><th>المستأجر</th><th>الدخول</th><th>الخروج</th><th>الإجمالي</th><th>الحالة</th><th></th></tr></thead><tbody>
     ${sorted.map(b=>{
-      const now=Date.now(),co=new Date(b.checkOut+'T12:00:00').getTime(),ci=new Date(b.checkIn+'T14:00:00').getTime();
-      const s=b.checkedOut?'ended':b.checkedIn?'checkedin':now<ci?'upcoming':now>co?'ended':'active';
-      const sAr={upcoming:'قادم',active:'نشط',ended:'منتهي',checkedin:'داخل'}[s];
+      const s=bookingStatus(b);
+      const sAr=bookingStatusAr(s);
       return `<tr>
         <td><b>${b.apartment}</b></td>
         <td>${b.tenantName}</td>
@@ -1291,7 +1307,7 @@ async function markCheckedOut(){
   if(idx>-1){ allBookings[idx].checkedOut=true; allBookings[idx].checkedOutAt=new Date().toISOString(); }
   showToast('تم تسجيل خروج المستأجر ✓','success');
   closeModal('modal-booking-detail');
-  renderDashboard(); renderBookings();
+  renderDashboard(); renderBookings(); renderCalendar();
 }
 
 // ── UI HELPERS ────────────────────────────────────────────────────────
