@@ -86,6 +86,7 @@ body{font-family:var(--font);background:var(--paper);color:var(--ink);min-height
 .nav-item:hover{color:var(--paper);background:rgba(255,255,255,.05)}
 .nav-item.active{color:var(--paper);border-right-color:var(--accent);background:rgba(193,127,62,.1)}
 .nav-item svg{flex-shrink:0;width:16px;height:16px}
+.nav-badge{background:var(--danger);color:#fff;border-radius:20px;font-size:.65rem;font-weight:700;padding:1px 6px;margin-right:auto;min-width:18px;text-align:center;display:inline-flex;align-items:center;justify-content:center}
 .sidebar-user{padding:14px 20px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;flex-shrink:0}
 .user-avatar{width:34px;height:34px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;color:#fff;flex-shrink:0}
 .user-info{flex:1;min-width:0}
@@ -431,6 +432,14 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       <div class="card"><div class="table-wrap" id="contracts-table"></div></div>
     </div>
 
+    <!-- NOTIFICATIONS -->
+    <div class="page" id="page-notifications">
+      <div class="page-header">
+        <div class="page-header-text"><h1>التنبيهات</h1><p>مستأجرون قادمون ومغادرون قريباً</p></div>
+      </div>
+      <div id="notifications-content"></div>
+    </div>
+
     <!-- ADMIN -->
     <div class="page" id="page-admin">
       <div class="page-header"><div class="page-header-text"><h1>لوحة الإدارة</h1><p>إدارة ملاك المباني المسجّلين</p></div></div>
@@ -545,6 +554,7 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       <button class="btn btn-secondary" onclick="editBookingFromDetail()">✏️ تعديل</button>
       <button class="btn btn-secondary" onclick="printReport()">📊 تقرير</button>
       <button class="btn btn-primary" onclick="printContract()">🖨️ العقد</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmDeleteBooking()" style="margin-right:auto">🗑️ حذف</button>
     </div>
   </div>
 </div>
@@ -559,7 +569,7 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, collection, doc, addDoc, setDoc, getDoc, getDocs, updateDoc, query, where, orderBy, serverTimestamp, arrayUnion }
+import { getFirestore, collection, doc, addDoc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp, arrayUnion }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -593,6 +603,7 @@ const exp = {
   calcRent, checkAptAvailability,
   codeNext, generateNewCode, previewApartments,
   updateAptType, printInvoiceDirect, printContractDirect, markCheckedOut,
+  confirmDeleteBooking, deleteBooking, updateNotifBadge,
   calPrev:()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar()},
   calNext:()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar()},
   toggleSidebar
@@ -713,10 +724,12 @@ function renderSidebar(isAdmin){
     {id:'page-expenses',ic:'trending-down',label:'المصروفات'},
     {id:'page-invoices',ic:'receipt',label:'الفواتير'},
     {id:'page-contracts',ic:'contract',label:'العقود'},
+    {id:'page-notifications',ic:'bell',label:'التنبيهات',badge:true},
   ];
   document.getElementById('sidebar-nav').innerHTML=items.map(i=>
-    `<div class="nav-item" data-page="${i.id}" onclick="showPage('${i.id}')">${icon(i.ic)}<span>${i.label}</span></div>`
+    `<div class="nav-item" data-page="${i.id}" onclick="showPage('${i.id}')">${icon(i.ic)}<span>${i.label}</span>${i.badge?`<span class="nav-badge" id="notif-badge" style="display:none">0</span>`:''}</div>`
   ).join('');
+  updateNotifBadge();
 }
 
 // ── DATA ──────────────────────────────────────────────────────────────
@@ -733,6 +746,7 @@ async function loadLandlordData(){
   renderDashboard();renderTenants();renderBookings();renderExpenses();
   const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
   renderCalendar();
+  updateNotifBadge();
 }
 
 async function loadAdminData(){
@@ -1310,6 +1324,98 @@ async function markCheckedOut(){
   renderDashboard(); renderBookings(); renderCalendar();
 }
 
+// ── DELETE BOOKING ───────────────────────────────────────────────────
+function confirmDeleteBooking(){
+  const b=allBookings.find(x=>x.id===activeBookingId);
+  if(!b) return;
+  if(!confirm(`حذف حجز شقة ${b.apartment} للمستأجر ${b.tenantName}؟\nهذا الإجراء لا يمكن التراجع عنه.`)) return;
+  deleteBooking(activeBookingId);
+}
+
+async function deleteBooking(id){
+  await deleteDoc(doc(db,'bookings',id));
+  allBookings=allBookings.filter(x=>x.id!==id);
+  showToast('تم حذف الحجز ✓','success');
+  closeModal('modal-booking-detail');
+  renderDashboard();
+  renderBookings();
+  renderCalendar();
+  renderInvoicesPage();
+  renderContractsPage();
+  updateNotifBadge();
+}
+
+// ── NOTIFICATIONS ─────────────────────────────────────────────────────
+function getNotifications(){
+  const now=new Date();
+  const soon=3; // days window
+  const notifs=[];
+  allBookings.forEach(b=>{
+    const s=bookingStatus(b);
+    if(s==='ended') return;
+    const ci=new Date(b.checkIn+'T14:00:00');
+    const co=new Date(b.checkOut+'T12:00:00');
+    const daysToCheckIn=Math.ceil((ci-now)/(1000*60*60*24));
+    const daysToCheckOut=Math.ceil((co-now)/(1000*60*60*24));
+    if(daysToCheckIn>=0 && daysToCheckIn<=soon){
+      notifs.push({
+        type:'arriving', booking:b,
+        days:daysToCheckIn,
+        msg:daysToCheckIn===0?'يصل اليوم':`يصل خلال ${daysToCheckIn} ${daysToCheckIn===1?'يوم':'أيام'}`
+      });
+    }
+    if(daysToCheckOut>=0 && daysToCheckOut<=soon && s==='checkedin'){
+      notifs.push({
+        type:'leaving', booking:b,
+        days:daysToCheckOut,
+        msg:daysToCheckOut===0?'يغادر اليوم':`يغادر خلال ${daysToCheckOut} ${daysToCheckOut===1?'يوم':'أيام'}`
+      });
+    }
+  });
+  return notifs.sort((a,b)=>a.days-b.days);
+}
+
+function updateNotifBadge(){
+  const badge=document.getElementById('notif-badge');
+  if(!badge) return;
+  const count=getNotifications().length;
+  badge.textContent=count;
+  badge.style.display=count>0?'inline-flex':'none';
+}
+
+function renderNotificationsPage(){
+  const notifs=getNotifications();
+  const el=document.getElementById('notifications-content');
+  if(!notifs.length){
+    el.innerHTML=`<div class="empty-state"><div class="icon">🔔</div><p>لا توجد تنبيهات — لا أحد يصل أو يغادر خلال 3 أيام</p></div>`;
+    return;
+  }
+  const arriving=notifs.filter(n=>n.type==='arriving');
+  const leaving=notifs.filter(n=>n.type==='leaving');
+  const section=(title,icon,items,color)=>items.length?`
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header"><span class="card-title">${icon} ${title} (${items.length})</span></div>
+      ${items.map(n=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--warm);gap:12px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:44px;height:44px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1rem;flex-shrink:0">${n.booking.apartment}</div>
+            <div>
+              <div style="font-weight:700">${n.booking.tenantName}</div>
+              <div style="font-size:.8rem;color:var(--muted)">${fmtDate(n.type==='arriving'?n.booking.checkIn:n.booking.checkOut)} · شقة ${n.booking.apartment}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="badge" style="background:${color}22;color:${color}">${n.msg}</span>
+            <button class="btn btn-ghost btn-sm" onclick="viewBooking('${n.booking.id}')">عرض</button>
+          </div>
+        </div>`).join('')}
+    </div>`:''
+  ;
+  el.innerHTML=
+    section('قادمون قريباً','🟡',arriving,'#c17f3e')+
+    section('مغادرون قريباً','🟢',leaving,'#3a7d5a');
+}
+
 // ── UI HELPERS ────────────────────────────────────────────────────────
 function showScreen(s){
   document.getElementById('auth-screen').classList.toggle('active',s==='auth');
@@ -1325,6 +1431,7 @@ function showPage(pageId){
   if(pageId==='page-apartments') renderApartmentsPage();
   if(pageId==='page-invoices') renderInvoicesPage();
   if(pageId==='page-contracts') renderContractsPage();
+  if(pageId==='page-notifications') renderNotificationsPage();
 }
 
 function openModal(id){
@@ -1390,6 +1497,7 @@ function icon(name){
     'building':'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M9 21V9"/></svg>',
     'receipt':'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 2v20l3-3 3 3 3-3 3 3 3-3V2z"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>',
     'contract':'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>',
+    'bell':'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
   };
   return ic[name]||'';
 }
