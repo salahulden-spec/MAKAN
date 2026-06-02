@@ -1404,7 +1404,9 @@ function renderSidebar(isAdmin){
 
 // ── DATA ──────────────────────────────────────────────────────────────
 async function loadLandlordData(){
-  const uid=currentUser.uid;
+  // Sub-users share ALL data with their parent — use parent's UID to query
+  const isSubuser = userProfile && userProfile.role==='subuser';
+  const uid = isSubuser ? (userProfile.parentUid || currentUser.uid) : currentUser.uid;
   const [tS,bS,eS]=await Promise.all([
     getDocs(query(collection(db,'tenants'),where('uid','==',uid))),
     getDocs(query(collection(db,'bookings'),where('uid','==',uid))),
@@ -1417,8 +1419,7 @@ async function loadLandlordData(){
   const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
   renderCalendar();
   updateNotifBadge();
-  updatePlanBanner();
-  enforcePlanGate();
+  if(!isSubuser){ updatePlanBanner(); enforcePlanGate(); }
 }
 
 async function loadAdminData(){
@@ -1747,7 +1748,8 @@ async function saveTenant(){
     if(idx>-1){allTenants[idx].name=name;allTenants[idx].idNumber=idNum;allTenants[idx].phone=phone;allTenants[idx].idPhoto=photo;}
     showToast('تم تعديل بيانات المستأجر ✓','success');
   } else {
-    const ref=await addDoc(collection(db,'tenants'),{uid:currentUser.uid,name,idNumber:idNum,phone,idPhoto:photo,createdAt:serverTimestamp()});
+    const _tUid=(userProfile&&userProfile.role==='subuser')?(userProfile.parentUid||currentUser.uid):currentUser.uid;
+    const ref=await addDoc(collection(db,'tenants'),{uid:_tUid,name,idNumber:idNum,phone,idPhoto:photo,createdAt:serverTimestamp()});
     allTenants.push({id:ref.id,uid:currentUser.uid,name,idNumber:idNum,phone,idPhoto:photo});
     showToast('تم إضافة المستأجر ✓','success');
   }
@@ -1819,8 +1821,9 @@ async function saveBooking(){
     showToast('تم تعديل الحجز ✓','success');
   } else {
     const advancePaidNow=advance>0;
+    const _saveUid=(userProfile&&userProfile.role==='subuser')?(userProfile.parentUid||currentUser.uid):currentUser.uid;
     await addDoc(collection(db,'bookings'),{
-      uid:currentUser.uid,apartment:apt,tenantId,tenantName:tenant?.name||'',
+      uid:_saveUid,apartment:apt,tenantId,tenantName:tenant?.name||'',
       tenantIdNumber:tenant?.idNumber||'',checkIn,checkOut,dailyRate,totalRent,
       advance,remaining:parseFloat((totalRent-advance).toFixed(3)),
       notes,checkedIn:false,paid:false,
@@ -1857,7 +1860,8 @@ async function saveExpense(){
     const titleEl=document.querySelector('[data-t="m_add_expense"]');
     if(titleEl) titleEl.textContent='إضافة مصروف';
   } else {
-    const ref=await addDoc(collection(db,'expenses'),{uid:currentUser.uid,date,description:desc,amount,createdAt:serverTimestamp()});
+    const _eUid=(userProfile&&userProfile.role==='subuser')?(userProfile.parentUid||currentUser.uid):currentUser.uid;
+    const ref=await addDoc(collection(db,'expenses'),{uid:_eUid,date,description:desc,amount,createdAt:serverTimestamp()});
     allExpenses.push({id:ref.id,uid:currentUser.uid,date,description:desc,amount});
     showToast('تم إضافة المصروف ✓','success');
   }
@@ -2604,13 +2608,13 @@ async function adminResetPassword(){
 
 // ── PLAN / UPGRADE ────────────────────────────────────────────────────
 function enforcePlanGate(){
-  // If free plan and at or over limit, lock the whole app behind upgrade modal
   const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
   if(isAdmin) return;
+  if(userProfile && userProfile.role==='subuser') return; // sub-users inherit parent's plan
   const plan = userProfile.plan || 'free';
   if(plan === 'unlimited') return;
   const count = allBookings.length;
-  if(count < 5) return; // still under limit, allow access
+  if(count < 5) return;
   // Lock: show upgrade modal, disable all nav clicks except logout
   document.querySelectorAll('.nav-item').forEach(n=>{
     n.style.pointerEvents='none';
