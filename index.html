@@ -464,9 +464,10 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       </div>
       <div class="card">
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
-          <input type="text" id="contract-search" placeholder="🔍 اسم المستأجر / رقم الهوية / رقم الشقة" style="flex:1;min-width:200px;padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:.9rem;outline:none" oninput="renderContractsPage()">
-          <input type="date" id="contract-from" dir="ltr" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;outline:none" oninput="renderContractsPage()">
-          <input type="date" id="contract-to" dir="ltr" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;outline:none" oninput="renderContractsPage()">
+          <input type="text" id="contract-search" placeholder="🔍 اسم المستأجر / رقم الهوية / رقم الشقة" style="flex:1;min-width:200px;padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:.9rem;outline:none" onkeydown="if(event.key==='Enter')renderContractsPage()">
+          <input type="date" id="contract-from" dir="ltr" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;outline:none">
+          <input type="date" id="contract-to" dir="ltr" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;outline:none">
+          <button class="btn btn-primary btn-sm" onclick="renderContractsPage()">🔍 بحث</button>
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('contract-search').value='';document.getElementById('contract-from').value='';document.getElementById('contract-to').value='';renderContractsPage()">✕ مسح</button>
         </div>
         <div class="table-wrap" id="contracts-table"></div>
@@ -667,15 +668,13 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       </div>
       <div id="booking-history" style="display:none;margin-top:8px"></div>
     </div>
-    <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
+    <div class="modal-footer" style="flex-wrap:wrap;gap:8px" id="booking-detail-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-booking-detail')" data-t="btn_close">إغلاق</button>
       <button class="btn btn-success" id="btn-checkin-tenant" onclick="markCheckedIn()" style="display:none" data-t="btn_checkin_label">✅ دخل المستأجر</button>
       <button class="btn btn-danger" id="btn-checkout-tenant" onclick="markCheckedOut()" style="display:none" data-t="btn_checkout_label">🚪 غادر المستأجر</button>
-      <button class="btn btn-secondary" onclick="editBookingFromDetail()" data-t="btn_edit_label">✏️ تعديل</button>
-      <button class="btn btn-secondary" onclick="openMoveTenant()" data-t="btn_move_label">🔄 نقل</button>
       <button class="btn btn-primary" onclick="printContract()" data-t="btn_contract_label">🖨️ العقد</button>
-      <button class="btn btn-success btn-sm" onclick="shareContractWhatsApp()" style="background:#25D366" data-t="btn_whatsapp_label">💬 واتساب</button>
-<!-- delete injected by viewBooking for owners only -->
+      <button class="btn btn-success btn-sm" onclick="shareContractWhatsApp()" style="background:#25D366;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> واتساب</button>
+      <span id="owner-only-btns"></span>
     </div>
   </div>
 </div>
@@ -1137,6 +1136,7 @@ function applyLang(){
   const placeholders={
     'b-apt':'f_apt_placeholder','b-tenant':'f_tenant_placeholder',
     'b-notes-input':'f_notes_placeholder',
+    'contract-search': currentLang==='ar'?'🔍 اسم المستأجر / رقم الهوية / رقم الشقة':'🔍 Tenant name / ID / Unit number',
   };
   Object.entries(placeholders).forEach(([id,key])=>{
     const el=document.getElementById(id); if(el) el.placeholder=t(key);
@@ -1458,27 +1458,37 @@ async function loadAdminData(){
     const bCount=bookingCounts[l.id]||0;
     const pct=platformTotal>0?Math.round((bCount/platformTotal)*100):0;
     return `
-    <div class="landlord-card" id="landlord-card-${l.id}">
-      <div class="user-avatar" style="width:42px;height:42px;font-size:.95rem;flex-shrink:0">${(l.name||'م')[0]}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:700">${l.name}</div>
-        <div style="color:var(--muted);font-size:.8rem">${l.building} · ${l.units||0} شقة · ${l.phone||'—'}</div>
-        <div style="color:var(--muted);font-size:.75rem">${l.email}</div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
-          <span class="badge ${l.plan==='unlimited'?'badge-active':'badge-ended'}">${l.plan==='unlimited'?'✓ Unlimited':'Free (5)'}</span>
-          <span style="font-size:.78rem;font-weight:700;color:var(--accent)">📋 ${bCount} حجز</span>
-          <span style="font-size:.72rem;color:var(--muted)">${pct}% من المنصة</span>
+    <div class="card" id="landlord-card-${l.id}" style="margin-bottom:12px">
+      <div style="display:flex;align-items:flex-start;gap:14px">
+        <div class="user-avatar" style="width:44px;height:44px;font-size:1rem;flex-shrink:0">${(l.name||'م')[0]}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:1rem">${l.name}</div>
+          <div style="color:var(--muted);font-size:.8rem;margin-top:2px">${l.building} · ${l.units||0} شقة · ${l.phone||'—'}</div>
+          <div style="color:var(--muted);font-size:.75rem">${l.email}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <span class="badge ${l.plan==='unlimited'?'badge-active':'badge-ended'}">${l.plan==='unlimited'?'✓ Unlimited':'Free (5)'}</span>
+            <span style="font-size:.78rem;font-weight:700;color:var(--accent)">📋 ${bCount} حجز</span>
+            <span style="font-size:.72rem;color:var(--muted)">${pct}% من المنصة</span>
+          </div>
+          <div style="height:4px;background:var(--warm);border-radius:4px;margin-top:8px;overflow:hidden;max-width:200px">
+            <div style="height:100%;width:${pct}%;background:var(--accent);border-radius:4px"></div>
+          </div>
+          ${(l.subUsers&&l.subUsers.length)?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--warm)">
+            <div style="font-size:.74rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">👤 مستخدم فرعي / Sub-User</div>
+            ${l.subUsers.map(su=>`<div style="display:flex;align-items:center;gap:8px;font-size:.8rem;padding:5px 0">
+              <div style="width:26px;height:26px;border-radius:50%;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem;flex-shrink:0">${su.email[0].toUpperCase()}</div>
+              <span style="color:var(--ink)">${su.email}</span>
+              <span style="color:var(--muted);font-size:.73rem">· ${Object.entries(su.permissions||{}).filter(([,v])=>v).map(([k])=>k).join(', ')||'no perms'}</span>
+            </div>`).join('')}
+          </div>`:''}
         </div>
-        <div style="height:5px;background:var(--warm);border-radius:4px;margin-top:7px;overflow:hidden">
-          <div style="height:100%;width:${pct}%;background:var(--accent);border-radius:4px;transition:width .4s ease"></div>
-        </div>
+        <button onclick="deleteLandlord('${l.id}','${l.name}')"
+          style="background:rgba(224,60,60,.08);border:1.5px solid rgba(224,60,60,.25);color:var(--danger);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:.8rem;font-weight:700;cursor:pointer;flex-shrink:0"
+          onmouseover="this.style.background='rgba(224,60,60,.18)'"
+          onmouseout="this.style.background='rgba(224,60,60,.08)'">
+          🗑️
+        </button>
       </div>
-      <button onclick="deleteLandlord('${l.id}','${l.name}')"
-        style="background:rgba(224,60,60,.1);border:1px solid rgba(224,60,60,.3);color:var(--danger);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:.8rem;font-weight:700;cursor:pointer;flex-shrink:0;margin-right:8px"
-        onmouseover="this.style.background='rgba(224,60,60,.2)'"
-        onmouseout="this.style.background='rgba(224,60,60,.1)'">
-        🗑️ حذف
-      </button>
     </div>`;
   }).join('');
 }
@@ -1993,11 +2003,17 @@ function viewBooking(id){
   // Inject owner-only buttons
   const _isSubNow=userProfile&&userProfile.role==='subuser';
   const ownerBtns=document.getElementById('owner-only-btns');
-  if(ownerBtns) ownerBtns.innerHTML=_isSubNow?'':
-    `<button class="btn btn-secondary" onclick="editBookingFromDetail()">✏️ تعديل</button>
-     <button class="btn btn-secondary" onclick="openMoveTenant()">🔄 نقل</button>
-     <button class="btn btn-secondary" onclick="printReport()">📊 تقرير</button>
-     <button class="btn btn-danger btn-sm" onclick="confirmDeleteBooking()" style="margin-right:auto">🗑️ حذف</button>`;
+  if(ownerBtns){
+    if(_isSubNow){
+      ownerBtns.innerHTML=''; // sub-users: NO edit/move/delete
+    } else {
+      ownerBtns.innerHTML=
+        `<button class="btn btn-secondary" onclick="editBookingFromDetail()">✏️ ${t('btn_edit_label')}</button>
+         <button class="btn btn-secondary" onclick="openMoveTenant()">🔄 ${t('btn_move_label')}</button>
+         <button class="btn btn-secondary" onclick="printReport()">📊</button>
+         <button class="btn btn-danger btn-sm" onclick="confirmDeleteBooking()" style="margin-right:auto;margin-left:auto">🗑️ ${t('btn_delete_label')}</button>`;
+    }
+  }
   document.getElementById('booking-detail-content').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
       <div class="stat-card" style="padding:14px"><div class="stat-label">الشقة</div><div style="font-size:1.4rem;font-weight:900">${b.apartment}</div></div>
