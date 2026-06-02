@@ -1257,7 +1257,32 @@ async function doLogout(){
 
 async function loadProfile(){
   const snap=await getDoc(doc(db,'users',currentUser.uid));
-  userProfile=snap.exists()?snap.data():{name:currentUser.email,role:'landlord',apartments:[]};
+  if(snap.exists()){
+    userProfile=snap.data();
+  } else {
+    // Could be a sub-user — search all users for a subUsers entry matching this UID
+    const allUsersSnap=await getDocs(collection(db,'users'));
+    let found=false;
+    for(const d of allUsersSnap.docs){
+      const data=d.data();
+      const subEntry=(data.subUsers||[]).find(s=>s.uid===currentUser.uid);
+      if(subEntry){
+        // Load parent data but apply sub-user role and permissions
+        userProfile={
+          ...data,
+          name:subEntry.email,
+          email:subEntry.email,
+          role:'subuser',
+          permissions:subEntry.permissions||{},
+          parentUid:d.id,
+          plan:'unlimited',
+        };
+        found=true;
+        break;
+      }
+    }
+    if(!found) userProfile={name:currentUser.email,role:'landlord',apartments:[]};
+  }
 }
 
 function initApp(){
@@ -2884,20 +2909,18 @@ async function saveSubUser(){
       return;
     }
     const subUid = data.localId;
-    // Write profile to Firestore using current user's auth (still active)
-    await setDoc(doc(db,'users',subUid),{
-      name:email, email, role:'subuser',
-      parentUid:currentUser.uid,
-      parentBuilding:userProfile.building,
-      parentName:userProfile.name||'',
-      permissions:perms,
-      plan:'unlimited',
-      apartments:userProfile.apartments||[],
-      building:userProfile.building||'',
-      createdAt:serverTimestamp()
-    });
+    // Store sub-user info inside the PARENT's own doc (we have write permission there)
+    // Also store a minimal profile in a subusers subcollection under parent
     const subs=userProfile.subUsers||[];
-    subs.push({uid:subUid,email,permissions:perms});
+    subs.push({
+      uid:subUid, email, permissions:perms,
+      parentUid:currentUser.uid,
+      building:userProfile.building||'',
+      apartments:userProfile.apartments||[],
+      plan:'unlimited',
+      role:'subuser',
+      createdAt:new Date().toISOString()
+    });
     await updateDoc(doc(db,'users',currentUser.uid),{subUsers:subs});
     userProfile.subUsers=subs;
     closeModal('modal-subuser');
