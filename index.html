@@ -487,10 +487,10 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
     <!-- SUB USERS -->
     <div class="page" id="page-subusers">
       <div class="page-header">
-        <div class="page-header-text"><h1>المستخدمون / Sub-Users</h1><p>أضف مستخدمين فرعيين وحدد صلاحياتهم</p></div>
-        <button class="btn btn-primary" onclick="openModal('modal-subuser')">＋ إضافة مستخدم</button>
+        <div class="page-header-text"><h1>المستخدم الفرعي / Sub-User</h1><p>مستخدم واحد يتشارك بياناتك بصلاحيات محددة</p></div>
+        <button class="btn btn-primary" id="btn-add-subuser" onclick="openAddSubuser()">＋ إضافة مستخدم</button>
       </div>
-      <div class="card" id="subusers-list"><div class="empty-state"><div class="icon">👤</div><p>لا يوجد مستخدمون فرعيون بعد</p></div></div>
+      <div id="subusers-list"></div>
     </div>
 
     <!-- ADMIN -->
@@ -696,30 +696,56 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
 
 <!-- SUB-USER MODAL -->
 <div class="modal-overlay" id="modal-subuser">
-  <div class="modal" style="max-width:480px">
-    <h2>إضافة مستخدم فرعي / Add Sub-User</h2>
-    <p style="font-size:.83rem;color:var(--muted);margin-bottom:16px">المستخدم الفرعي يتشارك بياناتك ولكن بصلاحيات محددة</p>
-    <div class="form-group"><label>البريد الإلكتروني / Email</label><input type="email" id="su-email" placeholder="user@example.com" dir="ltr"></div>
-    <div class="form-group"><label>كلمة المرور / Password</label><input type="password" id="su-pass" placeholder="6 أحرف على الأقل" dir="ltr"></div>
+  <div class="modal" style="max-width:500px">
+    <h2>👤 مستخدم فرعي / Sub-User</h2>
+    <p style="font-size:.83rem;color:var(--muted);margin-bottom:20px">يمكنك إضافة مستخدم واحد فقط يتشارك بياناتك بصلاحيات تحددها أنت</p>
+    <div class="form-row">
+      <div class="form-group"><label>البريد الإلكتروني / Email</label><input type="email" id="su-email" placeholder="user@example.com" dir="ltr" autocomplete="off"></div>
+      <div class="form-group"><label>كلمة المرور / Password</label><input type="password" id="su-pass" placeholder="6+ أحرف" dir="ltr" autocomplete="new-password"></div>
+    </div>
     <div class="form-group">
-      <label>الصلاحيات / Permissions</label>
-      <style>
-        .perm-label{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--paper);border:2px solid var(--border);border-radius:9px;cursor:pointer;font-size:.85rem;font-weight:600;transition:border-color .15s,background .15s}
-        .perm-label input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
-        .perm-label:has(input:checked){border-color:var(--accent);background:var(--accent-light)}
-      </style>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
-        <label class="perm-label"><input type="checkbox" id="su-p-bookings" checked><span>📋 الحجوزات<br><small style="font-weight:400;color:var(--muted)">Bookings</small></span></label>
-        <label class="perm-label"><input type="checkbox" id="su-p-tenants" checked><span>👥 المستأجرون<br><small style="font-weight:400;color:var(--muted)">Tenants</small></span></label>
-        <label class="perm-label"><input type="checkbox" id="su-p-expenses"><span>💸 المصروفات<br><small style="font-weight:400;color:var(--muted)">Expenses</small></span></label>
-        <label class="perm-label"><input type="checkbox" id="su-p-contracts" checked><span>📄 العقود<br><small style="font-weight:400;color:var(--muted)">Contracts</small></span></label>
-        <label class="perm-label"><input type="checkbox" id="su-p-invoices" checked><span>🧾 الفواتير<br><small style="font-weight:400;color:var(--muted)">Invoices</small></span></label>
-        <label class="perm-label"><input type="checkbox" id="su-p-reports"><span>📊 التقارير<br><small style="font-weight:400;color:var(--muted)">Reports</small></span></label>
+      <label style="font-weight:700;font-size:.85rem;display:block;margin-bottom:12px">✅ الصلاحيات / Permissions — اختر ما يمكنه رؤيته</label>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--paper);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s" id="perm-row-bookings">
+          <span style="display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600">
+            <span style="font-size:1.1rem">📋</span>
+            <span>الحجوزات والتقويم<br><small style="font-weight:400;color:var(--muted)">Bookings & Calendar</small></span>
+          </span>
+          <input type="checkbox" id="su-p-bookings" checked onchange="updatePermRow('bookings',this.checked)" style="width:20px;height:20px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--paper);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s" id="perm-row-tenants">
+          <span style="display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600">
+            <span style="font-size:1.1rem">👥</span>
+            <span>المستأجرون<br><small style="font-weight:400;color:var(--muted)">Tenants</small></span>
+          </span>
+          <input type="checkbox" id="su-p-tenants" checked onchange="updatePermRow('tenants',this.checked)" style="width:20px;height:20px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--paper);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s" id="perm-row-expenses">
+          <span style="display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600">
+            <span style="font-size:1.1rem">💸</span>
+            <span>المصروفات<br><small style="font-weight:400;color:var(--muted)">Expenses</small></span>
+          </span>
+          <input type="checkbox" id="su-p-expenses" onchange="updatePermRow('expenses',this.checked)" style="width:20px;height:20px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--paper);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s" id="perm-row-contracts">
+          <span style="display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600">
+            <span style="font-size:1.1rem">📄</span>
+            <span>العقود والفواتير<br><small style="font-weight:400;color:var(--muted)">Contracts & Invoices</small></span>
+          </span>
+          <input type="checkbox" id="su-p-contracts" checked onchange="updatePermRow('contracts',this.checked)" style="width:20px;height:20px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+        </label>
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--paper);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s" id="perm-row-reports">
+          <span style="display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600">
+            <span style="font-size:1.1rem">📊</span>
+            <span>التقارير المالية<br><small style="font-weight:400;color:var(--muted)">Financial Reports</small></span>
+          </span>
+          <input type="checkbox" id="su-p-reports" onchange="updatePermRow('reports',this.checked)" style="width:20px;height:20px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+        </label>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-subuser')">إلغاء</button>
-      <button class="btn btn-primary" onclick="saveSubUser()">إنشاء المستخدم</button>
+      <button class="btn btn-primary" onclick="saveSubUser()">إنشاء المستخدم ✓</button>
     </div>
   </div>
 </div>
@@ -1124,7 +1150,7 @@ const exp = {
   enforcePlanGate, unlockApp, toggleLang, applyLang, deleteLandlord,
   editExpense, deleteExpense, printExpensesReport,
   openEditTenant, deleteTenant, loadTenantPhoto,
-  saveSubUser, renderSubusers, removeSubUser,
+  saveSubUser, renderSubusers, removeSubUser, updatePermRow, openAddSubuser,
   openMoveTenant, confirmMoveTenant, runVacancySearch, confirmPayment, tryClosePlanModal,
   showAddAptForm, addNewApartments, renameApartment,
   toggleAdvanceMethod:function(){
@@ -1300,19 +1326,34 @@ function initApp(){
 }
 
 function renderSidebar(isAdmin){
-  const items=isAdmin?[{id:'page-admin',ic:'shield',label:t('nav_admin')}]:[
-    {id:'page-dashboard',ic:'grid',label:t('nav_dashboard')},
-    {id:'page-tenants',ic:'users',label:t('nav_tenants')},
-    {id:'page-bookings',ic:'file-text',label:t('nav_bookings')},
-    {id:'page-apartments',ic:'building',label:t('nav_apartments')},
-    {id:'page-calendar',ic:'calendar',label:t('nav_calendar')},
-    {id:'page-expenses',ic:'trending-down',label:t('nav_expenses')},
-    {id:'page-invoices',ic:'receipt',label:t('nav_invoices')},
-    {id:'page-contracts',ic:'contract',label:t('nav_contracts')},
-    {id:'page-notifications',ic:'bell',label:t('nav_notifications'),badge:true},
-    {id:'page-fullreport',ic:'bar-chart',label:t('nav_report')},
-    {id:'page-subusers',ic:'user-plus',label:t('nav_subusers')},
+  const isSubuser = userProfile && userProfile.role==='subuser';
+  const perms = isSubuser ? (userProfile.permissions||{}) : null;
+  if(isAdmin){
+    const items=[{id:'page-admin',ic:'shield',label:t('nav_admin')}];
+    document.getElementById('sidebar-nav').innerHTML=items.map(i=>
+      `<div class="nav-item" data-page="${i.id}" onclick="showPage('${i.id}')">${icon(i.ic)}<span>${i.label}</span></div>`
+    ).join('');
+    return;
+  }
+  // Full landlord nav — filter by permissions if sub-user
+  const allItems=[
+    {id:'page-dashboard',ic:'grid',label:t('nav_dashboard'),perm:null}, // always visible
+    {id:'page-tenants',ic:'users',label:t('nav_tenants'),perm:'tenants'},
+    {id:'page-bookings',ic:'file-text',label:t('nav_bookings'),perm:'bookings'},
+    {id:'page-apartments',ic:'building',label:t('nav_apartments'),perm:null}, // always visible
+    {id:'page-calendar',ic:'calendar',label:t('nav_calendar'),perm:'bookings'},
+    {id:'page-expenses',ic:'trending-down',label:t('nav_expenses'),perm:'expenses'},
+    {id:'page-invoices',ic:'receipt',label:t('nav_invoices'),perm:'contracts'},
+    {id:'page-contracts',ic:'contract',label:t('nav_contracts'),perm:'contracts'},
+    {id:'page-notifications',ic:'bell',label:t('nav_notifications'),perm:null,badge:true},
+    {id:'page-fullreport',ic:'bar-chart',label:t('nav_report'),perm:'reports'},
+    {id:'page-subusers',ic:'user-plus',label:t('nav_subusers'),perm:null,ownerOnly:true},
   ];
+  const items=allItems.filter(i=>{
+    if(i.ownerOnly && isSubuser) return false; // sub-users can't manage sub-users
+    if(i.perm && isSubuser && !perms[i.perm]) return false; // permission not granted
+    return true;
+  });
   document.getElementById('sidebar-nav').innerHTML=items.map(i=>
     `<div class="nav-item" data-page="${i.id}" onclick="showPage('${i.id}')">${icon(i.ic)}<span>${i.label}</span>${i.badge?`<span class="nav-badge" id="notif-badge" style="display:none">0</span>`:''}</div>`
   ).join('');
@@ -1785,26 +1826,40 @@ function printExpensesReport(){
 
 // ── SUB-USER RENDER ───────────────────────────────────────────────────
 function renderSubusers(){
-  const el = document.getElementById('subusers-list');
+  const el=document.getElementById('subusers-list');
   if(!el) return;
-  const subs = userProfile.subUsers || [];
+  const subs=userProfile.subUsers||[];
+  const addBtn=document.getElementById('btn-add-subuser');
+  if(addBtn) addBtn.style.display=subs.length>=1?'none':'inline-flex';
   if(!subs.length){
-    el.innerHTML = '<div class="empty-state"><div class="icon">👤</div><p>لا يوجد مستخدمون فرعيون بعد</p></div>';
+    el.innerHTML=`<div class="card"><div class="empty-state"><div class="icon">👤</div>
+      <p style="margin-bottom:16px">لا يوجد مستخدم فرعي بعد<br><small style="color:var(--muted)">يمكنك إضافة مستخدم واحد يتشارك بياناتك</small></p>
+    </div></div>`;
     return;
   }
-  el.innerHTML = subs.map(s => `
-    <div class="landlord-card">
-      <div class="user-avatar" style="width:38px;height:38px;font-size:.85rem">${s.email[0].toUpperCase()}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:700;font-size:.9rem">${s.email}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
-          ${Object.entries(s.permissions||{}).filter(([,v])=>v).map(([k])=>`<span class="badge badge-active" style="font-size:.68rem">${k}</span>`).join('')}
+  const permLabels={bookings:'📋 الحجوزات',tenants:'👥 المستأجرون',expenses:'💸 المصروفات',contracts:'📄 العقود',reports:'📊 التقارير'};
+  el.innerHTML=subs.map(s=>`
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+        <div class="user-avatar" style="width:46px;height:46px;font-size:1.1rem;flex-shrink:0">${s.email[0].toUpperCase()}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:1rem">${s.email}</div>
+          <div style="font-size:.78rem;color:var(--muted);margin-top:2px">مستخدم فرعي · Sub-User</div>
         </div>
+        <button onclick="removeSubUser('${s.uid}')"
+          style="background:rgba(224,60,60,.08);border:1.5px solid rgba(224,60,60,.25);color:var(--danger);border-radius:8px;padding:8px 14px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer">
+          🗑️ حذف
+        </button>
       </div>
-      <button onclick="removeSubUser('${s.uid}')"
-        style="background:rgba(224,60,60,.1);border:1px solid rgba(224,60,60,.3);color:var(--danger);border-radius:8px;padding:6px 12px;font-family:var(--font);font-size:.8rem;font-weight:700;cursor:pointer">
-        🗑️
-      </button>
+      <div style="font-size:.8rem;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">الصلاحيات / Permissions</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">
+        ${Object.entries(permLabels).map(([key,label])=>{
+          const allowed=s.permissions&&s.permissions[key];
+          return `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;font-size:.82rem;font-weight:600;background:${allowed?'rgba(34,160,107,.1)':'rgba(224,60,60,.07)'};color:${allowed?'var(--success)':'var(--muted)'};border:1.5px solid ${allowed?'rgba(34,160,107,.2)':'rgba(224,60,60,.15)'}">
+            <span>${allowed?'✓':'✗'}</span>${label}
+          </div>`;
+        }).join('')}
+      </div>
     </div>`).join('');
 }
 
@@ -2878,57 +2933,83 @@ function printFullReport(){
 }
 
 // ── SUB USERS ────────────────────────────────────────────────────────
+function updatePermRow(key, checked){
+  const row=document.getElementById('perm-row-'+key);
+  if(row) row.style.borderColor=checked?'var(--accent)':'var(--border)';
+  if(row) row.style.background=checked?'var(--accent-light)':'var(--paper)';
+}
+
+function openAddSubuser(){
+  const existing=(userProfile.subUsers||[]);
+  if(existing.length>=1){
+    showToast('يمكنك إضافة مستخدم فرعي واحد فقط — Only one sub-user allowed','error');
+    return;
+  }
+  // Reset form
+  clear(['su-email','su-pass']);
+  ['bookings','tenants','contracts'].forEach(k=>{
+    const cb=document.getElementById('su-p-'+k); if(cb){cb.checked=true; updatePermRow(k,true);}
+  });
+  ['expenses','reports'].forEach(k=>{
+    const cb=document.getElementById('su-p-'+k); if(cb){cb.checked=false; updatePermRow(k,false);}
+  });
+  openModal('modal-subuser');
+}
+
 async function saveSubUser(){
-  const email=v('su-email'), pass=v('su-pass');
+  const email=v('su-email').trim(), pass=v('su-pass');
   if(!email||!pass){showToast('أدخل البريد وكلمة المرور','error');return;}
   if(pass.length<6){showToast('كلمة المرور 6 أحرف على الأقل','error');return;}
+  if((userProfile.subUsers||[]).length>=1){
+    showToast('مستخدم فرعي واحد فقط مسموح — One sub-user only','error');
+    closeModal('modal-subuser'); return;
+  }
   const perms={
     bookings:document.getElementById('su-p-bookings').checked,
     tenants:document.getElementById('su-p-tenants').checked,
     expenses:document.getElementById('su-p-expenses').checked,
     contracts:document.getElementById('su-p-contracts').checked,
-    invoices:document.getElementById('su-p-invoices').checked,
     reports:document.getElementById('su-p-reports').checked,
   };
+  const btn=document.querySelector('#modal-subuser .btn-primary');
+  if(btn) btn.innerHTML='<span class="spinner"></span>';
   try{
-    // Use Firebase REST API to create auth user without affecting current session
-    const apiKey = firebaseConfig.apiKey;
-    const res = await fetch(
+    const apiKey=firebaseConfig.apiKey;
+    const res=await fetch(
       `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,
-      { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({email, password:pass, returnSecureToken:true}) }
+      {method:'POST',headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({email,password:pass,returnSecureToken:true})}
     );
-    const data = await res.json();
+    const data=await res.json();
     if(data.error){
-      const errMap = {
-        'EMAIL_EXISTS':'البريد الإلكتروني مستخدم بالفعل',
-        'WEAK_PASSWORD : Password should be at least 6 characters':'كلمة المرور ضعيفة',
-        'INVALID_EMAIL':'بريد إلكتروني غير صالح',
-      };
-      showToast('خطأ: '+(errMap[data.error.message]||data.error.message),'error');
+      const msgs={'EMAIL_EXISTS':'البريد مستخدم بالفعل — Email already exists',
+        'WEAK_PASSWORD':'كلمة المرور ضعيفة — Weak password',
+        'INVALID_EMAIL':'بريد غير صالح — Invalid email'};
+      const msg=Object.entries(msgs).find(([k])=>data.error.message.includes(k));
+      showToast('خطأ: '+(msg?msg[1]:data.error.message),'error');
+      if(btn) btn.textContent='إنشاء المستخدم ✓';
       return;
     }
-    const subUid = data.localId;
-    // Store sub-user info inside the PARENT's own doc (we have write permission there)
-    // Also store a minimal profile in a subusers subcollection under parent
-    const subs=userProfile.subUsers||[];
-    subs.push({
+    const subUid=data.localId;
+    const subEntry={
       uid:subUid, email, permissions:perms,
       parentUid:currentUser.uid,
       building:userProfile.building||'',
       apartments:userProfile.apartments||[],
-      plan:'unlimited',
-      role:'subuser',
+      apartmentData:userProfile.apartmentData||{},
+      plan:'unlimited', role:'subuser',
       createdAt:new Date().toISOString()
-    });
+    };
+    const subs=[subEntry]; // max 1
     await updateDoc(doc(db,'users',currentUser.uid),{subUsers:subs});
     userProfile.subUsers=subs;
     closeModal('modal-subuser');
     clear(['su-email','su-pass']);
-    showToast('✓ تم إنشاء المستخدم — يمكنه تسجيل الدخول الآن','success');
+    showToast('✓ تم إنشاء المستخدم الفرعي — يمكنه تسجيل الدخول الآن','success');
     renderSubusers();
   }catch(e){
     showToast('خطأ: '+(e.message||e.code||'unknown'),'error');
+    if(btn) btn.textContent='إنشاء المستخدم ✓';
   }
 }
 
