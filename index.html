@@ -108,7 +108,7 @@ body{font-family:var(--font);background:var(--paper);color:var(--ink);min-height
 
 /* ── MAIN ── */
 .main-content{margin-right:var(--sidebar-w);padding:28px;min-height:100vh;max-width:100%}
-.page{display:none;animation:fadeUp .3s ease}
+.page{display:none;animation:fadeUp .25s ease}
 .page.active{display:block}
 .page-header{margin-bottom:28px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .page-header-text h1{font-size:1.7rem;font-weight:900;color:var(--ink);margin-bottom:2px}
@@ -276,8 +276,9 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
 
 <!-- MOBILE TOPBAR -->
 <div class="mobile-topbar">
+  <button onclick="toggleSidebar()" style="background:none;border:none;color:var(--paper);cursor:pointer;padding:6px;font-size:1.3rem">☰</button>
   <div class="m-logo">مكان</div>
-  <button onclick="toggleSidebar()">☰</button>
+  <div style="width:32px"></div>
 </div>
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
@@ -286,6 +287,7 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
   <div class="auth-card">
     <div class="auth-logo">مكان</div>
     <div class="auth-tagline">MAKAN · PROPERTY MANAGEMENT</div>
+    <div style="font-size:.82rem;color:rgba(255,255,255,.4);margin-bottom:32px;margin-top:-24px;text-align:center;line-height:1.5">نظام ذكي لإدارة المباني السكنية<br><span style="font-size:.75rem;opacity:.7">Smart Building Management System</span></div>
 
     <!-- LOGIN -->
     <div id="login-form">
@@ -630,7 +632,7 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
         <div class="hint" id="adv-method-hint" style="color:var(--danger)">يرجى اختيار طريقة الدفع · Please select payment method</div>
       </div>
     </div>
-    <div class="form-group"><label data-t="f_notes">ملاحظات (تظهر في العقد)</label><textarea id="b-notes" id="b-notes-input" placeholder="أي شروط إضافية..."></textarea></div>
+    <div class="form-group"><label data-t="f_notes">ملاحظات (تظهر في العقد)</label><textarea id="b-notes" placeholder="أي شروط إضافية..."></textarea></div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-booking')" data-t="btn_cancel">إلغاء</button>
       <button class="btn btn-primary" onclick="saveBooking()" data-t="btn_save_booking">حفظ الحجز</button>
@@ -673,7 +675,7 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       <button class="btn btn-secondary" onclick="openMoveTenant()" data-t="btn_move_label">🔄 نقل</button>
       <button class="btn btn-primary" onclick="printContract()" data-t="btn_contract_label">🖨️ العقد</button>
       <button class="btn btn-success btn-sm" onclick="shareContractWhatsApp()" style="background:#25D366" data-t="btn_whatsapp_label">💬 واتساب</button>
-      <button class="btn btn-danger btn-sm" onclick="confirmDeleteBooking()" style="margin-right:auto;margin-left:auto" data-t="btn_delete_label">🗑️ حذف</button>
+<!-- delete injected by viewBooking for owners only -->
     </div>
   </div>
 </div>
@@ -1171,7 +1173,7 @@ function applyLang(){
 
 // ── EXPOSE ────────────────────────────────────────────────────────────
 const exp = {
-  doLogin, doRegisterDirect, doRegisterStep1:doRegisterDirect, doRegisterStep2:doUpgradeAccount, doLogout,
+  doLogin, doRegisterDirect, doLogout,
   showLogin:()=>{showForm('login-form')}, showRegister:()=>{showForm('register-form')},
   showPage, openModal, closeModal,
   saveTenant, saveBooking, saveExpense,
@@ -1730,6 +1732,9 @@ function openEditTenant(id){
 }
 
 async function deleteTenant(id, name){
+  if(userProfile && userProfile.role==='subuser'){
+    showToast('غير مسموح — Not allowed','error'); return;
+  }
   if(!confirm(`حذف مستأجر "${name}"؟ Delete tenant?`)) return;
   await deleteDoc(doc(db,'tenants',id));
   allTenants=allTenants.filter(t=>t.id!==id);
@@ -1806,6 +1811,9 @@ async function saveBooking(){
     note:editId?`تعديل الحجز`:'إنشاء الحجز'
   };
   if(editId){
+    if(userProfile && userProfile.role==='subuser'){
+      showToast('غير مسموح — Not allowed','error'); return;
+    }
     const old=allBookings.find(b=>b.id===editId);
     const changes=[];
     if(old.apartment!==apt) changes.push(`الشقة: ${old.apartment}→${apt}`);
@@ -1882,6 +1890,9 @@ function editExpense(id, date, desc, amount){
 }
 
 async function deleteExpense(id){
+  if(userProfile && userProfile.role==='subuser'){
+    showToast('غير مسموح — Not allowed','error'); return;
+  }
   if(!confirm('حذف هذا المصروف؟ Delete this expense?')) return;
   await deleteDoc(doc(db,'expenses',id));
   allExpenses = allExpenses.filter(e => e.id !== id);
@@ -2022,6 +2033,9 @@ function viewBooking(id){
 }
 
 function editBookingFromDetail(){
+  if(userProfile && userProfile.role==='subuser'){
+    showToast('غير مسموح — Not allowed','error'); return;
+  }
   const b=allBookings.find(x=>x.id===activeBookingId);
   if(!b) return;
   closeModal('modal-booking-detail');
@@ -2499,6 +2513,10 @@ async function markCheckedOut(){
 
 // ── DELETE BOOKING ───────────────────────────────────────────────────
 function confirmDeleteBooking(){
+  // Hard block for sub-users — no matter how they call this
+  if(userProfile && userProfile.role==='subuser'){
+    showToast('غير مسموح — Not allowed','error'); return;
+  }
   const b=allBookings.find(x=>x.id===activeBookingId);
   if(!b) return;
   if(!confirm(`حذف حجز شقة ${b.apartment} للمستأجر ${b.tenantName}؟\nهذا الإجراء لا يمكن التراجع عنه.`)) return;
@@ -2506,6 +2524,9 @@ function confirmDeleteBooking(){
 }
 
 async function deleteBooking(id){
+  if(userProfile && userProfile.role==='subuser'){
+    showToast('غير مسموح — Not allowed','error'); return;
+  }
   await deleteDoc(doc(db,'bookings',id));
   allBookings=allBookings.filter(x=>x.id!==id);
   showToast('تم حذف الحجز ✓','success');
@@ -3138,7 +3159,6 @@ async function saveSubUser(){
   }
 }
 
-// duplicate removed
 
 // ── UI HELPERS ────────────────────────────────────────────────────────
 function showScreen(s){
