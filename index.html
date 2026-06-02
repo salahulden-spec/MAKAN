@@ -668,13 +668,16 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       </div>
       <div id="booking-history" style="display:none;margin-top:8px"></div>
     </div>
-    <div class="modal-footer" style="flex-wrap:wrap;gap:8px" id="booking-detail-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-booking-detail')" data-t="btn_close">إغلاق</button>
-      <button class="btn btn-success" id="btn-checkin-tenant" onclick="markCheckedIn()" style="display:none" data-t="btn_checkin_label">✅ دخل المستأجر</button>
-      <button class="btn btn-danger" id="btn-checkout-tenant" onclick="markCheckedOut()" style="display:none" data-t="btn_checkout_label">🚪 غادر المستأجر</button>
-      <button class="btn btn-primary" onclick="printContract()" data-t="btn_contract_label">🖨️ العقد</button>
-      <button class="btn btn-success btn-sm" onclick="shareContractWhatsApp()" style="background:#25D366;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> واتساب</button>
-      <span id="owner-only-btns"></span>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--warm)">
+      <!-- Status action row — check-in / check-out -->
+      <div id="booking-status-actions" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap"></div>
+      <!-- Main actions row -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button onclick="printContract()" style="background:var(--accent);color:#fff;border:none;padding:9px 16px;border-radius:8px;font-family:var(--font);font-size:.84rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">🖨️ <span data-t="btn_contract_label">العقد</span></button>
+        <button onclick="shareContractWhatsApp()" style="background:#25D366;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-family:var(--font);font-size:.84rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">💬 <span data-t="btn_whatsapp_label">واتساب</span></button>
+        <span id="owner-only-btns" style="display:flex;gap:8px;flex-wrap:wrap"></span>
+        <button onclick="closeModal('modal-booking-detail')" style="background:var(--warm);border:none;padding:9px 16px;border-radius:8px;font-family:var(--font);font-size:.84rem;font-weight:700;cursor:pointer;margin-right:auto"><span data-t="btn_close">إغلاق</span></button>
+      </div>
     </div>
   </div>
 </div>
@@ -1562,7 +1565,9 @@ function renderTenants(){
 
 function renderBookings(){
   const el=document.getElementById('bookings-table');
-  el.innerHTML=allBookings.length?bookingsTable(allBookings)
+  // Bookings page: show only active/upcoming/checkedin — NOT ended
+  const active=allBookings.filter(b=>bookingStatus(b)!=='ended');
+  el.innerHTML=active.length?bookingsTable(active)
     :`<div class='empty-state'><div class='icon'>🏠</div><p>${t('empty_bookings')}</p></div>`;
 }
 
@@ -1998,20 +2003,27 @@ function viewBooking(id){
   const notEnded = now <= co + (24*60*60*1000); // grace: 1 day after checkout
   const showCheckin = !b.checkedIn && notEnded;
   const showCheckout = b.checkedIn && !b.checkedOut;
-  document.getElementById('btn-checkin-tenant').style.display=showCheckin?'inline-flex':'none';
-  document.getElementById('btn-checkout-tenant').style.display=showCheckout?'inline-flex':'none';
+  const statusDiv=document.getElementById('booking-status-actions');
+  if(statusDiv){
+    statusDiv.innerHTML='';
+    if(showCheckin){
+      statusDiv.innerHTML+=`<button onclick="markCheckedIn()" style="background:#22a06b;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-family:var(--font);font-size:.86rem;font-weight:700;cursor:pointer;flex:1;min-width:140px">✅ ${t('btn_checkin_label')}</button>`;
+    }
+    if(showCheckout){
+      statusDiv.innerHTML+=`<button onclick="markCheckedOut()" style="background:var(--danger);color:#fff;border:none;padding:10px 18px;border-radius:8px;font-family:var(--font);font-size:.86rem;font-weight:700;cursor:pointer;flex:1;min-width:140px">🚪 ${t('btn_checkout_label')}</button>`;
+    }
+  }
   // Inject owner-only buttons
   const _isSubNow=userProfile&&userProfile.role==='subuser';
   const ownerBtns=document.getElementById('owner-only-btns');
   if(ownerBtns){
     if(_isSubNow){
-      ownerBtns.innerHTML=''; // sub-users: NO edit/move/delete
+      ownerBtns.innerHTML='';
     } else {
       ownerBtns.innerHTML=
-        `<button class="btn btn-secondary" onclick="editBookingFromDetail()">✏️ ${t('btn_edit_label')}</button>
-         <button class="btn btn-secondary" onclick="openMoveTenant()">🔄 ${t('btn_move_label')}</button>
-         <button class="btn btn-secondary" onclick="printReport()">📊</button>
-         <button class="btn btn-danger btn-sm" onclick="confirmDeleteBooking()" style="margin-right:auto;margin-left:auto">🗑️ ${t('btn_delete_label')}</button>`;
+        `<button onclick="editBookingFromDetail()" style="background:var(--warm);border:none;padding:9px 14px;border-radius:8px;font-family:var(--font);font-size:.84rem;font-weight:700;cursor:pointer">✏️ ${t('btn_edit_label')}</button>
+         <button onclick="openMoveTenant()" style="background:var(--warm);border:none;padding:9px 14px;border-radius:8px;font-family:var(--font);font-size:.84rem;font-weight:700;cursor:pointer">🔄 ${t('btn_move_label')}</button>
+         <button onclick="confirmDeleteBooking()" style="background:rgba(224,60,60,.1);border:1.5px solid rgba(224,60,60,.3);color:var(--danger);padding:9px 14px;border-radius:8px;font-family:var(--font);font-size:.84rem;font-weight:700;cursor:pointer">🗑️</button>`;
     }
   }
   document.getElementById('booking-detail-content').innerHTML=`
@@ -2469,10 +2481,12 @@ function printInvoiceDirect(id){
 // ── CONTRACTS PAGE ────────────────────────────────────────────────────
 function renderContractsPage(){
   const el=document.getElementById('contracts-table');
+  // Clear search on page entry if called from showPage (not from search button)
   if(!allBookings.length){el.innerHTML='<div class="empty-state"><div class="icon">📋</div><p>لا توجد عقود بعد</p></div>';return;}
   const q=(document.getElementById('contract-search')?.value||'').toLowerCase().trim();
   const cf=document.getElementById('contract-from')?.value;
   const ct=document.getElementById('contract-to')?.value;
+  // Contracts page: show ALL bookings (ended ones first — they are completed contracts)
   let filtered=allBookings.filter(b=>{
     if(q){
       const name=(b.tenantName||'').toLowerCase();
@@ -2488,7 +2502,13 @@ function renderContractsPage(){
     if(ct&&b.checkOut>ct) return false;
     return true;
   });
-  const sorted=[...filtered].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn));
+  // Ended (completed contracts) first, then by check-in date desc
+  const sorted=[...filtered].sort((a,b)=>{
+    const as=bookingStatus(a)==='ended'?0:1;
+    const bs2=bookingStatus(b)==='ended'?0:1;
+    if(as!==bs2) return as-bs2;
+    return new Date(b.checkIn)-new Date(a.checkIn);
+  });
   el.innerHTML=`<table><thead><tr><th>${t('th_apt')}</th><th>${t('th_tenant')}</th><th>${t('th_checkin')}</th><th>${t('th_checkout')}</th><th>${t('th_total')}</th><th>${t('th_status')}</th><th></th></tr></thead><tbody>
     ${sorted.map(b=>{
       const s=bookingStatus(b);
@@ -3190,10 +3210,17 @@ function showPage(pageId){
   if(pageId==='page-bookings'||pageId==='page-dashboard'){refreshAptSelect();refreshTenantSelect();}
   if(pageId==='page-apartments') renderApartmentsPage();
   if(pageId==='page-invoices') renderInvoicesPage();
-  if(pageId==='page-contracts') renderContractsPage();
+  // contracts handled above with search clear
   if(pageId==='page-notifications') renderNotificationsPage();
   if(pageId==='page-subusers') renderSubusers();
   if(pageId==='page-fullreport') renderFullReportPage();
+  if(pageId==='page-contracts'){
+    // Clear search inputs when entering contracts page
+    ['contract-search','contract-from','contract-to'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    renderContractsPage();
+  }
 }
 
 function openModal(id){
