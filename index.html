@@ -743,6 +743,7 @@ const firebaseConfig = {
 const ADMIN_EMAIL = "salahulden@outlook.com";
 
 const fbApp = initializeApp(firebaseConfig);
+window._fbOptions = firebaseConfig; // needed for secondary auth
 const auth  = getAuth(fbApp);
 const db    = getFirestore(fbApp);
 
@@ -761,7 +762,7 @@ const T = {
     nav_dashboard: 'لوحة التحكم', nav_tenants: 'المستأجرون', nav_bookings: 'الحجوزات',
     nav_apartments: 'الشقق', nav_calendar: 'التقويم', nav_expenses: 'المصروفات',
     nav_invoices: 'الفواتير', nav_contracts: 'العقود', nav_notifications: 'التنبيهات',
-    nav_report: 'التقرير الكامل', nav_admin: 'إدارة الملاك',
+    nav_report: 'التقرير الكامل', nav_admin: 'إدارة الملاك', nav_subusers: 'المستخدمون',
     // Page headers
     ph_dashboard: 'لوحة التحكم', ph_dashboard_sub: 'نظرة عامة على المبنى والأداء المالي',
     ph_tenants: 'المستأجرون', ph_tenants_sub: 'قائمة المستأجرين المسجّلين',
@@ -901,7 +902,7 @@ const T = {
     nav_dashboard: 'Dashboard', nav_tenants: 'Tenants', nav_bookings: 'Bookings',
     nav_apartments: 'Apartments', nav_calendar: 'Calendar', nav_expenses: 'Expenses',
     nav_invoices: 'Invoices', nav_contracts: 'Contracts', nav_notifications: 'Alerts',
-    nav_report: 'Full Report', nav_admin: 'Admin Panel',
+    nav_report: 'Full Report', nav_admin: 'Admin Panel', nav_subusers: 'Sub-Users',
     ph_dashboard: 'Dashboard', ph_dashboard_sub: 'Building overview and financial performance',
     ph_tenants: 'Tenants', ph_tenants_sub: 'Registered tenants list',
     ph_bookings: 'Bookings', ph_bookings_sub: 'All apartment bookings',
@@ -1118,7 +1119,7 @@ const exp = {
   enforcePlanGate, unlockApp, toggleLang, applyLang, deleteLandlord,
   editExpense, deleteExpense, printExpensesReport,
   openEditTenant, deleteTenant, loadTenantPhoto,
-  saveSubUser, renderSubusers,
+  saveSubUser, renderSubusers, removeSubUser,
   openMoveTenant, confirmMoveTenant, runVacancySearch, confirmPayment, tryClosePlanModal,
   showAddAptForm, addNewApartments, renameApartment,
   toggleAdvanceMethod:function(){
@@ -2761,6 +2762,7 @@ function printFullReport(){
 async function saveSubUser(){
   const email=v('su-email'), pass=v('su-pass');
   if(!email||!pass){showToast('أدخل البريد وكلمة المرور','error');return;}
+  if(pass.length<6){showToast('كلمة المرور 6 أحرف على الأقل','error');return;}
   const perms={
     bookings:document.getElementById('su-p-bookings').checked,
     tenants:document.getElementById('su-p-tenants').checked,
@@ -2770,8 +2772,17 @@ async function saveSubUser(){
     reports:document.getElementById('su-p-reports').checked,
   };
   try{
-    const cred=await createUserWithEmailAndPassword(auth,email,pass);
-    const subUid=cred.user.uid;
+    // Use a secondary Firebase app to create sub-user WITHOUT signing out current user
+    const {initializeApp:initApp2, getApp} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+    const {getAuth:getAuth2, createUserWithEmailAndPassword:createUser2} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+    let secondaryApp;
+    try { secondaryApp = getApp('secondary'); }
+    catch { secondaryApp = initApp2(fbApp.options, 'secondary'); }
+    const secondaryAuth = getAuth2(secondaryApp);
+    const cred = await createUser2(secondaryAuth, email, pass);
+    const subUid = cred.user.uid;
+    await secondaryAuth.signOut();
+    // Write sub-user profile using primary db
     await setDoc(doc(db,'users',subUid),{
       name:email, email, role:'subuser',
       parentUid:currentUser.uid,
@@ -2780,14 +2791,13 @@ async function saveSubUser(){
       plan:'unlimited',
       createdAt:serverTimestamp()
     });
-    // Sign back in as main user (creating user auto-signs-in as new user)
-    showToast('تم إنشاء المستخدم الفرعي ✓ — يمكنه تسجيل الدخول الآن','success');
-    closeModal('modal-subuser');
-    // Store subuser in parent's profile
     const subs=userProfile.subUsers||[];
     subs.push({uid:subUid,email,permissions:perms});
     await updateDoc(doc(db,'users',currentUser.uid),{subUsers:subs});
     userProfile.subUsers=subs;
+    closeModal('modal-subuser');
+    clear(['su-email','su-pass']);
+    showToast('تم إنشاء المستخدم الفرعي ✓','success');
     renderSubusers();
   }catch(e){
     showToast('خطأ: '+translateAuthError(e.code),'error');
