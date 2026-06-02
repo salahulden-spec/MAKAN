@@ -739,43 +739,45 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       <div class="form-group"><label>كلمة المرور / Password</label><input type="password" id="su-pass" placeholder="6+ أحرف" dir="ltr" autocomplete="new-password"></div>
     </div>
     <div class="form-group">
-      <label style="font-weight:700;font-size:.85rem;display:block;margin-bottom:12px">✅ الصلاحيات / Permissions — اختر ما يمكنه رؤيته</label>
+      <div style="font-weight:700;font-size:.85rem;margin-bottom:4px">الصلاحيات / Permissions</div>
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:14px">اختر ما يستطيع الموظف الوصول إليه — Financial data is always hidden from workers</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--paper);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s" id="perm-row-bookings">
-          <span style="display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600">
-            <span style="font-size:1.1rem">📋</span>
-            <span>الحجوزات والتقويم<br><small style="font-weight:400;color:var(--muted)">Bookings & Calendar</small></span>
-          </span>
-          <input type="checkbox" id="su-p-bookings" checked onchange="updatePermRow('bookings',this.checked)" style="width:20px;height:20px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
-        </label>
-        <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--paper);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s" id="perm-row-tenants">
-          <span style="display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600">
-            <span style="font-size:1.1rem">👥</span>
-            <span>المستأجرون<br><small style="font-weight:400;color:var(--muted)">Tenants</small></span>
-          </span>
-          <input type="checkbox" id="su-p-tenants" checked onchange="updatePermRow('tenants',this.checked)" style="width:20px;height:20px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
-        </label>
-        <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--paper);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s" id="perm-row-expenses">
-          <span style="display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600">
-            <span style="font-size:1.1rem">💸</span>
-            <span>المصروفات<br><small style="font-weight:400;color:var(--muted)">Expenses</small></span>
-          </span>
-          <input type="checkbox" id="su-p-expenses" onchange="updatePermRow('expenses',this.checked)" style="width:20px;height:20px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
-        </label>
-        <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--paper);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s" id="perm-row-contracts">
-          <span style="display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600">
-            <span style="font-size:1.1rem">📄</span>
-            <span>العقود والفواتير<br><small style="font-weight:400;color:var(--muted)">Contracts & Invoices</small></span>
-          </span>
-          <input type="checkbox" id="su-p-contracts" checked onchange="updatePermRow('contracts',this.checked)" style="width:20px;height:20px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
-        </label>
-        <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--paper);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s" id="perm-row-reports">
-          <span style="display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600">
-            <span style="font-size:1.1rem">📊</span>
-            <span>التقارير المالية<br><small style="font-weight:400;color:var(--muted)">Financial Reports</small></span>
-          </span>
-          <input type="checkbox" id="su-p-reports" onchange="updatePermRow('reports',this.checked)" style="width:20px;height:20px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
-        </label>
+        <div style="background:rgba(34,160,107,.06);border:1.5px solid rgba(34,160,107,.2);border-radius:10px;padding:12px 14px">
+          <div style="font-size:.75rem;font-weight:700;color:var(--success);letter-spacing:.5px;margin-bottom:10px">✓ مفعّل دائماً / Always ON — للموظف الأساسي</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <span style="background:#fff;border:1px solid rgba(34,160,107,.3);border-radius:6px;padding:5px 10px;font-size:.8rem;font-weight:600">📋 الحجوزات</span>
+            <span style="background:#fff;border:1px solid rgba(34,160,107,.3);border-radius:6px;padding:5px 10px;font-size:.8rem;font-weight:600">📅 التقويم</span>
+            <span style="background:#fff;border:1px solid rgba(34,160,107,.3);border-radius:6px;padding:5px 10px;font-size:.8rem;font-weight:600">🏢 الشقق</span>
+            <span style="background:#fff;border:1px solid rgba(34,160,107,.3);border-radius:6px;padding:5px 10px;font-size:.8rem;font-weight:600">🔔 التنبيهات</span>
+          </div>
+        </div>
+        <div style="background:rgba(224,60,60,.04);border:1.5px solid rgba(224,60,60,.15);border-radius:10px;padding:12px 14px">
+          <div style="font-size:.75rem;font-weight:700;color:var(--danger);letter-spacing:.5px;margin-bottom:10px">✗ مخفي دائماً / Always HIDDEN — البيانات المالية</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <span style="background:#fff;border:1px solid rgba(224,60,60,.2);border-radius:6px;padding:5px 10px;font-size:.8rem;font-weight:600;color:var(--muted)">💰 الأرباح والخسائر</span>
+            <span style="background:#fff;border:1px solid rgba(224,60,60,.2);border-radius:6px;padding:5px 10px;font-size:.8rem;font-weight:600;color:var(--muted)">📊 التقارير المالية</span>
+            <span style="background:#fff;border:1px solid rgba(224,60,60,.2);border-radius:6px;padding:5px 10px;font-size:.8rem;font-weight:600;color:var(--muted)">🧾 الفواتير</span>
+            <span style="background:#fff;border:1px solid rgba(224,60,60,.2);border-radius:6px;padding:5px 10px;font-size:.8rem;font-weight:600;color:var(--muted)">💸 المصروفات</span>
+          </div>
+        </div>
+        <div style="border:1.5px solid var(--border);border-radius:10px;padding:12px 14px">
+          <div style="font-size:.75rem;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:10px">اختياري / Optional — فعّل ما تريد</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label id="perm-row-tenants" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--paper);border:2px solid var(--accent);border-radius:8px;cursor:pointer">
+              <span style="display:flex;align-items:center;gap:9px;font-size:.86rem;font-weight:600">
+                <span style="font-size:1rem">👥</span> إضافة وعرض المستأجرين / View &amp; Add Tenants
+              </span>
+              <input type="checkbox" id="su-p-tenants" checked onchange="updatePermRow('tenants',this.checked)" style="width:22px;height:22px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+            </label>
+            <label id="perm-row-contracts" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--paper);border:2px solid var(--accent);border-radius:8px;cursor:pointer">
+              <span style="display:flex;align-items:center;gap:9px;font-size:.86rem;font-weight:600">
+                <span style="font-size:1rem">📄</span> عرض وطباعة العقود / View &amp; Print Contracts
+              </span>
+              <input type="checkbox" id="su-p-contracts" checked onchange="updatePermRow('contracts',this.checked)" style="width:22px;height:22px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+            </label>
+          </div>
+          <div style="font-size:.74rem;color:var(--muted);margin-top:10px">* الموظف لا يستطيع تعديل أو حذف أي بيانات بغض النظر عن الصلاحيات</div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1371,23 +1373,27 @@ function renderSidebar(isAdmin){
     ).join('');
     return;
   }
-  // Full landlord nav — filter by permissions if sub-user
   const allItems=[
-    {id:'page-dashboard',ic:'grid',label:t('nav_dashboard'),perm:null}, // always visible
-    {id:'page-tenants',ic:'users',label:t('nav_tenants'),perm:'tenants'},
-    {id:'page-bookings',ic:'file-text',label:t('nav_bookings'),perm:'bookings'},
-    {id:'page-apartments',ic:'building',label:t('nav_apartments'),perm:null}, // always visible
-    {id:'page-calendar',ic:'calendar',label:t('nav_calendar'),perm:'bookings'},
-    {id:'page-expenses',ic:'trending-down',label:t('nav_expenses'),perm:'expenses'},
-    {id:'page-invoices',ic:'receipt',label:t('nav_invoices'),perm:'contracts'},
-    {id:'page-contracts',ic:'contract',label:t('nav_contracts'),perm:'contracts'},
-    {id:'page-notifications',ic:'bell',label:t('nav_notifications'),perm:null,badge:true},
-    {id:'page-fullreport',ic:'bar-chart',label:t('nav_report'),perm:'reports'},
-    {id:'page-subusers',ic:'user-plus',label:t('nav_subusers'),perm:null,ownerOnly:true},
+    {id:'page-dashboard',  ic:'grid',         label:t('nav_dashboard'),  perm:null,     ownerOnly:false},
+    {id:'page-bookings',   ic:'file-text',    label:t('nav_bookings'),   perm:'bookings',ownerOnly:false},
+    {id:'page-calendar',   ic:'calendar',     label:t('nav_calendar'),   perm:'bookings',ownerOnly:false},
+    {id:'page-tenants',    ic:'users',        label:t('nav_tenants'),    perm:'tenants', ownerOnly:false},
+    {id:'page-apartments', ic:'building',     label:t('nav_apartments'), perm:null,      ownerOnly:false},
+    {id:'page-contracts',  ic:'contract',     label:t('nav_contracts'),  perm:'contracts',ownerOnly:false},
+    {id:'page-notifications',ic:'bell',       label:t('nav_notifications'),perm:null,   ownerOnly:false, badge:true},
+    // Financial — owner only or if explicitly granted
+    {id:'page-expenses',   ic:'trending-down',label:t('nav_expenses'),   perm:'expenses', ownerOnly:false},
+    {id:'page-invoices',   ic:'receipt',      label:t('nav_invoices'),   perm:'invoices', ownerOnly:false},
+    {id:'page-fullreport', ic:'bar-chart',    label:t('nav_report'),     perm:'reports',  ownerOnly:false},
+    {id:'page-subusers',   ic:'user-plus',    label:t('nav_subusers'),   perm:null,       ownerOnly:true},
   ];
   const items=allItems.filter(i=>{
-    if(i.ownerOnly && isSubuser) return false; // sub-users can't manage sub-users
-    if(i.perm && isSubuser && !perms[i.perm]) return false; // permission not granted
+    if(i.ownerOnly && isSubuser) return false;
+    if(isSubuser){
+      if(i.perm && !perms[i.perm]) return false;
+      // Financial pages always hidden from sub-users unless explicitly granted
+      if(['page-fullreport','page-invoices','page-expenses'].includes(i.id) && !perms[i.perm]) return false;
+    }
     return true;
   });
   document.getElementById('sidebar-nav').innerHTML=items.map(i=>
@@ -1519,7 +1525,11 @@ function renderDashboard(){
   const net=totalIncome-totalExpense;
   const active=allBookings.filter(b=>bookingStatus(b)==='checkedin').length;
   const upcoming=allBookings.filter(b=>bookingStatus(b)==='upcoming').length;
-  document.getElementById('dashboard-stats').innerHTML=`
+  const _isSub=userProfile&&userProfile.role==='subuser';
+  document.getElementById('dashboard-stats').innerHTML=_isSub?`
+    <div class="stat-card"><div class="stat-label">${t('stat_active')}</div><div class="stat-value">${active}</div><div class="stat-sub">${upcoming} ${t('s_upcoming')} · ${allBookings.length} إجمالي</div></div>
+    <div class="stat-card"><div class="stat-label">الحجوزات الكلية / Total Bookings</div><div class="stat-value">${allBookings.length}</div></div>
+  `:`
     <div class="stat-card"><div class="stat-label">${t('stat_income')}</div><div class="stat-value income">${fmt(totalIncome)}</div><div class="stat-sub">OMR</div></div>
     <div class="stat-card"><div class="stat-label">${t('stat_expenses')}</div><div class="stat-value expense">${fmt(totalExpense)}</div><div class="stat-sub">OMR</div></div>
     <div class="stat-card"><div class="stat-label">${t('stat_net')}</div><div class="stat-value ${net>=0?'net-pos':'net-neg'}">${fmt(Math.abs(net))}</div><div class="stat-sub">${net>=0?t('profit'):t('loss')}</div></div>
@@ -1558,7 +1568,8 @@ function bookingStatusAr(s){ return {upcoming:t('s_upcoming'),active:t('s_active
 
 function bookingsTable(list){
   const sorted=[...list].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn));
-  return `<table><thead><tr><th>${t('th_apt')}</th><th>${t('th_tenant')}</th><th>${t('th_checkin')}</th><th>${t('th_checkout')}</th><th>${t('th_nights')}</th><th>${t('th_total')}</th><th>${t('th_status')}</th><th></th></tr></thead><tbody>
+  const _subMode=userProfile&&userProfile.role==='subuser';
+  return `<table><thead><tr><th>${t('th_apt')}</th><th>${t('th_tenant')}</th><th>${t('th_checkin')}</th><th>${t('th_checkout')}</th><th>${t('th_nights')}</th>${!_subMode?`<th>${t('th_total')}</th>`:''}<th>${t('th_status')}</th><th></th></tr></thead><tbody>
     ${sorted.map(b=>{
       const s=bookingStatus(b);
       const sAr=bookingStatusAr(s);
@@ -1569,7 +1580,7 @@ function bookingsTable(list){
         <td dir="ltr">${fmtDate(b.checkIn)}</td>
         <td dir="ltr">${fmtDate(b.checkOut)}</td>
         <td>${nights}</td>
-        <td dir="ltr"><b>${fmt(b.totalRent||b.rent||0)} OMR</b></td>
+        ${!_subMode?`<td dir="ltr"><b>${fmt(b.totalRent||b.rent||0)} OMR</b></td>`:''}
         <td><span class="badge badge-${s}">${sAr}</span></td>
         <td><button class="btn btn-ghost btn-sm" onclick="viewBooking('${b.id}')">عرض</button></td>
       </tr>`;
@@ -1964,6 +1975,14 @@ function viewBooking(id){
   const showCheckout = b.checkedIn && !b.checkedOut;
   document.getElementById('btn-checkin-tenant').style.display=showCheckin?'inline-flex':'none';
   document.getElementById('btn-checkout-tenant').style.display=showCheckout?'inline-flex':'none';
+  // Inject owner-only buttons
+  const _isSubNow=userProfile&&userProfile.role==='subuser';
+  const ownerBtns=document.getElementById('owner-only-btns');
+  if(ownerBtns) ownerBtns.innerHTML=_isSubNow?'':
+    `<button class="btn btn-secondary" onclick="editBookingFromDetail()">✏️ تعديل</button>
+     <button class="btn btn-secondary" onclick="openMoveTenant()">🔄 نقل</button>
+     <button class="btn btn-secondary" onclick="printReport()">📊 تقرير</button>
+     <button class="btn btn-danger btn-sm" onclick="confirmDeleteBooking()" style="margin-right:auto">🗑️ حذف</button>`;
   document.getElementById('booking-detail-content').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
       <div class="stat-card" style="padding:14px"><div class="stat-label">الشقة</div><div style="font-size:1.4rem;font-weight:900">${b.apartment}</div></div>
@@ -1973,7 +1992,7 @@ function viewBooking(id){
       <div class="stat-card" style="padding:14px"><div class="stat-label">عدد الليالي</div><div class="stat-value">${nights}</div></div>
       <div class="stat-card" style="padding:14px"><div class="stat-label">الإجمالي</div><div class="stat-value income">${fmt(b.totalRent||b.rent||0)} OMR</div></div>
     </div>
-    ${b.advance>0?`<div style="background:rgba(193,127,62,.08);border-radius:8px;padding:12px;font-size:.85rem;margin-bottom:8px;display:flex;justify-content:space-between">
+    ${(!_isSubNow&&b.advance>0)?`<div style="background:rgba(193,127,62,.08);border-radius:8px;padding:12px;font-size:.85rem;margin-bottom:8px;display:flex;justify-content:space-between">
       <span><b>دفعة مقدمة:</b> ${fmt(b.advance)} OMR</span>
       <span><b>المتبقي:</b> <span style="color:var(--danger)">${fmt(b.remaining||0)} OMR</span></span>
     </div>`:''}
@@ -3050,11 +3069,8 @@ function openAddSubuser(){
   }
   // Reset form
   clear(['su-email','su-pass']);
-  ['bookings','tenants','contracts'].forEach(k=>{
+  ['tenants','contracts'].forEach(k=>{
     const cb=document.getElementById('su-p-'+k); if(cb){cb.checked=true; updatePermRow(k,true);}
-  });
-  ['expenses','reports'].forEach(k=>{
-    const cb=document.getElementById('su-p-'+k); if(cb){cb.checked=false; updatePermRow(k,false);}
   });
   openModal('modal-subuser');
 }
@@ -3067,12 +3083,14 @@ async function saveSubUser(){
     showToast('مستخدم فرعي واحد فقط مسموح — One sub-user only','error');
     closeModal('modal-subuser'); return;
   }
+  // bookings always ON, financial always OFF, only tenants & contracts are optional
   const perms={
-    bookings:document.getElementById('su-p-bookings').checked,
+    bookings:true,
     tenants:document.getElementById('su-p-tenants').checked,
-    expenses:document.getElementById('su-p-expenses').checked,
     contracts:document.getElementById('su-p-contracts').checked,
-    reports:document.getElementById('su-p-reports').checked,
+    expenses:false,
+    invoices:false,
+    reports:false,
   };
   const btn=document.querySelector('#modal-subuser .btn-primary');
   if(btn) btn.innerHTML='<span class="spinner"></span>';
