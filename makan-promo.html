@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>مكان — نظام إدارة المباني</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f4f6fb;
+  --ink:#1e2535;
+  --ink2:rgba(30,37,53,.6);
+  --ink3:rgba(30,37,53,.35);
+  --accent:#4f7ef8;
+  --accent-dark:#3563d6;
+  --accent-light:#e8effe;
+  --success:#22a06b;
+  --success-light:rgba(34,160,107,.1);
+  --danger:#e03c3c;
+  --danger-light:rgba(224,60,60,.08);
+  --card:#ffffff;
+  --border:#d8dde8;
+  --warm:#e8ecf4;
+  --sidebar:#1e2535;
+  --shadow:0 2px 16px rgba(30,37,53,.08);
+  --shadow-lg:0 8px 40px rgba(30,37,53,.14);
+  --r:14px;
+  --font:'Cairo',sans-serif;
+}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);line-height:1.7;overflow-x:hidden}
+
+/* ── NAV ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  padding:14px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  box-shadow:0 2px 12px rgba(30,37,53,.06);
+}
+.nav-logo{
+  font-size:1.4rem;font-weight:900;color:var(--accent);
+  letter-spacing:-0.5px;
+}
+.nav-cta{
+  background:var(--accent);color:#fff;
+  border:none;border-radius:10px;
+  padding:9px 20px;
+  font-family:var(--font);font-size:.84rem;font-weight:700;
+  cursor:pointer;text-decoration:none;display:inline-block;
+  box-shadow:0 4px 14px rgba(79,126,248,.3);
+  transition:transform .2s,box-shadow .2s;
+}
+.nav-cta:active{transform:scale(.97)}
+
+/* ── HERO ── */
+.hero{
+  min-height:100svh;
+  padding:100px 24px 60px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  background:linear-gradient(160deg,#f0f4ff 0%,var(--bg) 60%,#f4f6fb 100%);
+  position:relative;overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;
+  width:600px;height:600px;border-radius:50%;
+  background:radial-gradient(circle,rgba(79,126,248,.08),transparent 70%);
+  top:-100px;left:50%;transform:translateX(-50%);
+  pointer-events:none;
+}
+.hero::after{
+  content:'';position:absolute;
+  width:300px;height:300px;border-radius:50%;
+  background:radial-gradient(circle,rgba(34,160,107,.06),transparent 70%);
+  bottom:0;right:-50px;pointer-events:none;
+}
+
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--accent-light);
+  border:1px solid rgba(79,126,248,.25);
+  border-radius:40px;padding:6px 16px;
+  font-size:.72rem;font-weight:700;color:var(--accent);
+  letter-spacing:1px;text-transform:uppercase;
+  margin-bottom:28px;
+  animation:fadeUp .7s ease both;
+}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.6)}}
+
+.hero-title{
+  font-size:clamp(2.4rem,10vw,3.8rem);
+  font-weight:900;line-height:1.1;
+  margin-bottom:8px;color:var(--ink);
+  animation:fadeUp .7s .1s ease both;
+}
+.hero-title .blue{color:var(--accent)}
+.hero-sub{
+  font-size:clamp(1.1rem,4vw,1.5rem);
+  font-weight:300;color:var(--ink2);
+  margin-bottom:24px;
+  animation:fadeUp .7s .2s ease both;
+}
+.hero-desc{
+  font-size:.93rem;color:var(--ink2);
+  max-width:320px;line-height:1.8;
+  margin:0 auto 36px;
+  animation:fadeUp .7s .3s ease both;
+}
+.hero-btns{
+  display:flex;flex-direction:column;gap:12px;
+  width:100%;max-width:300px;
+  animation:fadeUp .7s .4s ease both;
+}
+.btn-primary{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:16px 28px;border-radius:14px;
+  background:var(--accent);color:#fff;
+  font-family:var(--font);font-size:.98rem;font-weight:700;
+  text-decoration:none;border:none;cursor:pointer;
+  box-shadow:0 6px 24px rgba(79,126,248,.35);
+  transition:transform .2s,box-shadow .2s;
+}
+.btn-primary:active{transform:scale(.97)}
+.btn-outline{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:16px 28px;border-radius:14px;
+  background:transparent;color:var(--accent);
+  font-family:var(--font);font-size:.93rem;font-weight:600;
+  text-decoration:none;border:2px solid rgba(79,126,248,.3);
+  transition:border-color .2s,background .2s;
+}
+.btn-outline:active{background:var(--accent-light)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent)}
+
+/* ── SECTION ── */
+section{padding:64px 20px}
+.s-label{font-size:.68rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:10px}
+.s-title{font-size:clamp(1.7rem,7vw,2.4rem);font-weight:900;line-height:1.2;margin-bottom:12px;color:var(--ink)}
+.s-body{font-size:.88rem;color:var(--ink2);line-height:1.8;margin-bottom:28px}
+
+/* ── PROBLEM ── */
+.problem{background:var(--bg)}
+.pain-list{display:flex;flex-direction:column;gap:10px;margin-bottom:32px}
+.pain{
+  display:flex;align-items:flex-start;gap:12px;
+  background:var(--danger-light);border:1px solid rgba(224,60,60,.12);
+  border-radius:14px;padding:14px 16px;
+  font-size:.86rem;color:var(--ink2);
+  opacity:0;transform:translateX(16px);
+  transition:opacity .5s,transform .5s;
+}
+.pain.in{opacity:1;transform:translateX(0)}
+.pain-icon{font-size:1.05rem;flex-shrink:0;margin-top:1px}
+
+.solution-box{
+  background:var(--success-light);
+  border:1.5px solid rgba(34,160,107,.2);
+  border-radius:18px;padding:28px 20px;text-align:center;
+}
+.solution-box h3{font-size:1.3rem;font-weight:900;margin-bottom:8px;color:var(--ink)}
+.solution-box h3 span{color:var(--accent)}
+.solution-box p{font-size:.86rem;color:var(--ink2);line-height:1.7}
+
+/* ── DEMO PHONE ── */
+.demo-section{background:#fff}
+.phone{
+  width:100%;max-width:300px;margin:32px auto 0;
+  background:var(--sidebar);border-radius:30px;
+  border:1px solid rgba(255,255,255,.08);
+  overflow:hidden;
+  box-shadow:0 24px 60px rgba(30,37,53,.25),0 0 0 1px rgba(255,255,255,.05);
+}
+.phone-bar{
+  height:32px;background:rgba(0,0,0,.3);
+  display:flex;align-items:center;justify-content:center;
+}
+.phone-pill{width:72px;height:5px;border-radius:3px;background:rgba(255,255,255,.12)}
+.phone-screen{padding:14px;background:#1e2535}
+.phone-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.phone-logo{font-size:.95rem;font-weight:900;color:var(--accent)}
+.phone-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:#fff}
+
+.demo-tabs{display:flex;gap:5px;background:rgba(255,255,255,.06);border-radius:9px;padding:3px;margin-bottom:14px}
+.dtab{flex:1;padding:6px 4px;border-radius:6px;background:transparent;border:none;font-family:var(--font);font-size:.6rem;font-weight:600;color:rgba(255,255,255,.35);cursor:pointer;transition:all .2s;text-align:center}
+.dtab.active{background:var(--accent);color:#fff}
+
+.dpanel{display:none;animation:fadePop .25s ease}
+.dpanel.active{display:block}
+@keyframes fadePop{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+.dstat-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px}
+.dstat{background:rgba(255,255,255,.06);border-radius:9px;padding:9px 10px}
+.dstat-lbl{font-size:.56rem;color:rgba(255,255,255,.35);margin-bottom:3px}
+.dstat-val{font-size:.95rem;font-weight:900;direction:ltr}
+.g{color:#4ade80}.r{color:#f87171}.b{color:#60a5fa}.a{color:#fbbf24}
+
+.dbooking{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border-radius:8px;padding:8px 9px;margin-bottom:5px}
+.dapt{font-weight:900;font-size:.88rem;color:var(--accent);width:28px;flex-shrink:0}
+.dinfo{flex:1}
+.dname{font-size:.68rem;font-weight:600;color:rgba(255,255,255,.85)}
+.ddate{font-size:.6rem;color:rgba(255,255,255,.3);margin-top:1px}
+.dstatus{padding:2px 7px;border-radius:10px;font-size:.58rem;font-weight:700;white-space:nowrap}
+.ds-in{background:rgba(34,160,107,.2);color:#4ade80}
+.ds-up{background:rgba(79,126,248,.2);color:#93c5fd}
+.ds-end{background:rgba(255,255,255,.08);color:rgba(255,255,255,.35)}
+
+.apt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.apt-c{border-radius:8px;padding:9px 6px;text-align:center;border:1.5px solid}
+.apt-c.free{background:rgba(34,160,107,.1);border-color:rgba(34,160,107,.25)}
+.apt-c.busy{background:rgba(224,60,60,.08);border-color:rgba(224,60,60,.2)}
+.apt-n{font-size:.85rem;font-weight:900;display:block;margin-bottom:1px}
+.apt-c.free .apt-n{color:#4ade80}
+.apt-c.busy .apt-n{color:#f87171}
+.apt-s{font-size:.55rem;font-weight:700}
+.apt-c.free .apt-s{color:rgba(74,222,128,.7)}
+.apt-c.busy .apt-s{color:rgba(248,113,113,.7)}
+
+.contract-block{background:rgba(255,255,255,.05);border-radius:9px;padding:11px;font-size:.58rem}
+.cline{display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.05);padding:3px 0}
+.cline:last-child{border:none}
+.ck{color:rgba(255,255,255,.3)}
+.cv{font-weight:700;color:rgba(255,255,255,.85);direction:ltr}
+.cv.am{color:#fbbf24}
+.cstamp{margin-top:10px;border-top:1px dashed rgba(79,126,248,.25);padding-top:8px;text-align:center;font-size:.58rem;color:rgba(79,126,248,.7)}
+
+/* ── FEATURES ── */
+.features-section{background:var(--bg)}
+.feat{border-bottom:1px solid var(--border);overflow:hidden}
+.feat-btn{
+  display:flex;align-items:center;gap:12px;
+  padding:18px 0;cursor:pointer;
+  background:transparent;border:none;width:100%;text-align:right;
+}
+.feat-num{font-size:.68rem;font-weight:700;color:var(--ink3);width:22px;flex-shrink:0}
+.feat-ico{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;transition:transform .3s}
+.feat.open .feat-ico{transform:scale(1.08)}
+.feat-info{flex:1}
+.feat-name{font-size:.93rem;font-weight:700;color:var(--ink);display:block}
+.feat-hint{font-size:.72rem;color:var(--ink3);margin-top:1px;display:block}
+.feat-chev{color:var(--ink3);font-size:.68rem;transition:transform .3s;flex-shrink:0}
+.feat.open .feat-chev{transform:rotate(180deg)}
+.feat-body{max-height:0;overflow:hidden;transition:max-height .35s ease,opacity .3s;opacity:0}
+.feat.open .feat-body{max-height:200px;opacity:1}
+.feat-desc{font-size:.84rem;color:var(--ink2);line-height:1.8;padding:0 0 18px 54px}
+
+/* ── STEPS ── */
+.steps-section{background:#fff}
+.step{display:flex;gap:16px;margin-bottom:32px;opacity:0;transform:translateX(12px);transition:opacity .55s,transform .55s}
+.step.in{opacity:1;transform:translateX(0)}
+.step-col{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.step-num{width:40px;height:40px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:900;color:#fff}
+.step-line{width:2px;flex:1;min-height:28px;background:linear-gradient(to bottom,rgba(79,126,248,.3),transparent)}
+.step:last-child .step-line{display:none}
+.step-body{flex:1;padding-top:7px}
+.step-title{font-size:.97rem;font-weight:700;margin-bottom:4px;color:var(--ink)}
+.step-desc{font-size:.84rem;color:var(--ink2);line-height:1.7}
+
+/* ── TESTIMONIALS ── */
+.testi-section{background:var(--bg)}
+.testi-scroll{display:flex;gap:14px;overflow-x:auto;margin:0 -20px;padding:4px 20px 16px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.testi-scroll::-webkit-scrollbar{display:none}
+.testi-card{flex-shrink:0;width:240px;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px 16px;scroll-snap-align:start;box-shadow:var(--shadow)}
+.t-stars{color:#f59e0b;font-size:.85rem;margin-bottom:9px;letter-spacing:2px}
+.t-text{font-size:.82rem;color:var(--ink2);line-height:1.7;margin-bottom:13px}
+.t-person{display:flex;align-items:center;gap:9px}
+.t-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;color:#fff;flex-shrink:0}
+.t-name{font-size:.82rem;font-weight:700;color:var(--ink)}
+.t-role{font-size:.7rem;color:var(--ink3)}
+
+/* ── PRICING ── */
+.pricing-section{background:#fff}
+.price-cards{display:flex;flex-direction:column;gap:14px}
+.price-card{border-radius:20px;padding:24px 20px;position:relative;overflow:hidden}
+.pc-free{background:var(--bg);border:1.5px solid var(--border)}
+.pc-pro{background:linear-gradient(145deg,#1e2535,#2d3748);border:1.5px solid rgba(79,126,248,.35)}
+.pc-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:.65rem;font-weight:700;letter-spacing:.5px;margin-bottom:12px}
+.pc-free .pc-badge{background:var(--warm);color:var(--ink2)}
+.pc-pro .pc-badge{background:rgba(79,126,248,.2);color:#93c5fd}
+.pc-price{font-size:2.2rem;font-weight:900;line-height:1;margin-bottom:4px}
+.pc-free .pc-price{color:var(--ink)}
+.pc-pro .pc-price{color:#93c5fd}
+.pc-sub{font-size:.78rem;margin-bottom:18px}
+.pc-free .pc-sub{color:var(--ink2)}
+.pc-pro .pc-sub{color:rgba(255,255,255,.4)}
+.pc-features{list-style:none;display:flex;flex-direction:column;gap:9px}
+.pc-features li{display:flex;align-items:center;gap:9px;font-size:.84rem}
+.pc-free .pc-features li{color:var(--ink2)}
+.pc-pro .pc-features li{color:rgba(255,255,255,.7)}
+.pcheck{font-size:.78rem;flex-shrink:0}
+.pc-free .pcheck{color:var(--success)}
+.pc-pro .pcheck{color:#4ade80}
+.contact-cta{margin-top:14px;padding-top:14px;border-top:1px solid rgba(79,126,248,.15);font-size:.8rem;color:rgba(255,255,255,.5)}
+
+/* ── FINAL CTA ── */
+.final-section{
+  padding:80px 24px 100px;text-align:center;
+  background:linear-gradient(160deg,#1e2535,#2a3548);
+  position:relative;overflow:hidden;
+}
+.final-section::before{
+  content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);
+  width:400px;height:400px;border-radius:50%;
+  background:radial-gradient(circle,rgba(79,126,248,.15),transparent 70%);
+  pointer-events:none;
+}
+.final-logo{font-size:3.2rem;font-weight:900;color:var(--accent);margin-bottom:8px}
+.final-tagline{font-size:1.4rem;font-weight:300;color:rgba(255,255,255,.6);margin-bottom:32px}
+.btn-final{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;max-width:300px;padding:18px 28px;border-radius:16px;
+  background:var(--accent);color:#fff;
+  font-family:var(--font);font-size:1.05rem;font-weight:700;
+  text-decoration:none;
+  box-shadow:0 8px 32px rgba(79,126,248,.4);
+  transition:transform .2s;
+  margin-bottom:14px;
+}
+.btn-final:active{transform:scale(.97)}
+.final-note{font-size:.76rem;color:rgba(255,255,255,.25)}
+
+/* ── STATS ── */
+.stats-section{background:var(--ink);padding:48px 20px}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:rgba(255,255,255,.08);border-radius:18px;overflow:hidden;max-width:400px;margin:0 auto}
+.stat-item{background:var(--sidebar);padding:24px 16px;text-align:center}
+.stat-num{font-size:2.2rem;font-weight:900;color:var(--accent);line-height:1;margin-bottom:4px}
+.stat-lbl{font-size:.74rem;color:rgba(255,255,255,.4)}
+
+/* ── SCROLL REVEAL ── */
+.sr{opacity:0;transform:translateY(24px);transition:opacity .65s ease,transform .65s ease}
+.sr.in{opacity:1;transform:translateY(0)}
+
+/* ── FOOTER ── */
+footer{padding:28px 20px;text-align:center;border-top:1px solid var(--border);font-size:.76rem;color:var(--ink3)}
+footer a{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">مكان</div>
+  <a href="https://makanpm.com" class="nav-cta">ابدأ مجاناً ←</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge"><div class="badge-dot"></div>نظام إدارة المباني الذكي · عُمان</div>
+  <h1 class="hero-title">أدِر مبناك<br>من <span class="blue">جوالك</span></h1>
+  <p class="hero-sub">من الفوضى إلى السيطرة الكاملة</p>
+  <p class="hero-desc">حجوزاتك، عقودك، مستأجريك، وأرباحك — كلها في لوحة واحدة واضحة في أي وقت ومن أي مكان</p>
+  <div class="hero-btns">
+    <a href="https://makanpm.com" class="btn-primary">🚀 جرّب مكان مجاناً الآن</a>
+    <a href="#problem" class="btn-outline">ما المشكلة التي نحلّها؟ ↓</a>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PROBLEM -->
+<section class="problem" id="problem">
+  <span class="s-label sr">المشكلة</span>
+  <h2 class="s-title sr">هل يحدث معك هذا؟</h2>
+  <p class="s-body sr">كل مالك مبنى في عُمان يعاني من نفس الفوضى...</p>
+  <div class="pain-list">
+    <div class="pain"><span class="pain-icon">😤</span><span>تسجّل الحجوزات في واتساب والأوراق وتنساها</span></div>
+    <div class="pain"><span class="pain-icon">😰</span><span>حجزت شقة لشخصين في نفس الوقت بدون قصد</span></div>
+    <div class="pain"><span class="pain-icon">📝</span><span>تكتب عقد الإيجار يدوياً من الصفر في كل مرة</span></div>
+    <div class="pain"><span class="pain-icon">🤔</span><span>لا تعرف كم ربحت هذا الشهر بدون حساب طويل</span></div>
+    <div class="pain"><span class="pain-icon">📞</span><span>موظفك يتصل بك لكل صغيرة وكبيرة</span></div>
+  </div>
+  <div class="solution-box sr">
+    <div style="font-size:2rem;margin-bottom:10px">🎯</div>
+    <h3><span>مكان</span> صُمّم لحل كل هذا</h3>
+    <p>نظام ذكي يحوّل إدارة مبناك من فوضى يومية إلى عملية سلسة من جوالك</p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- DEMO -->
+<section class="demo-section" id="demo">
+  <span class="s-label sr">معاينة حية</span>
+  <h2 class="s-title sr">شوف كيف تبدو لوحة التحكم</h2>
+  <div class="phone sr">
+    <div class="phone-bar"><div class="phone-pill"></div></div>
+    <div class="phone-screen">
+      <div class="phone-topbar">
+        <div class="phone-logo">مكان</div>
+        <div class="phone-avatar">م</div>
+      </div>
+      <div class="demo-tabs">
+        <button class="dtab active" onclick="dt(0)">الرئيسية</button>
+        <button class="dtab" onclick="dt(1)">الحجوزات</button>
+        <button class="dtab" onclick="dt(2)">الشقق</button>
+        <button class="dtab" onclick="dt(3)">العقد</button>
+      </div>
+      <!-- Dashboard -->
+      <div class="dpanel active" id="dp0">
+        <div class="dstat-grid">
+          <div class="dstat"><div class="dstat-lbl">إجمالي الدخل</div><div class="dstat-val g" id="dc-inc">0.000</div></div>
+          <div class="dstat"><div class="dstat-lbl">المصروفات</div><div class="dstat-val r" id="dc-exp">0.000</div></div>
+          <div class="dstat"><div class="dstat-lbl">صافي الربح</div><div class="dstat-val g" id="dc-net">0.000</div></div>
+          <div class="dstat"><div class="dstat-lbl">داخل الآن</div><div class="dstat-val b" id="dc-in">0</div></div>
+        </div>
+      </div>
+      <!-- Bookings -->
+      <div class="dpanel" id="dp1">
+        <div class="dbooking"><div class="dapt">101</div><div class="dinfo"><div class="dname">أحمد الخروصي</div><div class="ddate">٢ — ٤ يونيو</div></div><div class="dstatus ds-in">داخل</div></div>
+        <div class="dbooking"><div class="dapt">205</div><div class="dinfo"><div class="dname">محمد السيابي</div><div class="ddate">٦ — ١٢ يونيو</div></div><div class="dstatus ds-up">قادم</div></div>
+        <div class="dbooking"><div class="dapt">312</div><div class="dinfo"><div class="dname">سالم البلوشي</div><div class="ddate">١ — ٣ يونيو</div></div><div class="dstatus ds-end">منتهي</div></div>
+        <div class="dbooking"><div class="dapt">108</div><div class="dinfo"><div class="dname">خالد الرشيدي</div><div class="ddate">٧ — ١٠ يونيو</div></div><div class="dstatus ds-up">قادم</div></div>
+      </div>
+      <!-- Apartments -->
+      <div class="dpanel" id="dp2">
+        <div class="apt-grid">
+          <div class="apt-c busy"><span class="apt-n">101</span><span class="apt-s">مشغولة</span></div>
+          <div class="apt-c free"><span class="apt-n">102</span><span class="apt-s">شاغرة</span></div>
+          <div class="apt-c free"><span class="apt-n">103</span><span class="apt-s">شاغرة</span></div>
+          <div class="apt-c free"><span class="apt-n">201</span><span class="apt-s">شاغرة</span></div>
+          <div class="apt-c busy"><span class="apt-n">205</span><span class="apt-s">مشغولة</span></div>
+          <div class="apt-c free"><span class="apt-n">210</span><span class="apt-s">شاغرة</span></div>
+          <div class="apt-c free"><span class="apt-n">301</span><span class="apt-s">شاغرة</span></div>
+          <div class="apt-c busy"><span class="apt-n">312</span><span class="apt-s">مشغولة</span></div>
+          <div class="apt-c free"><span class="apt-n">315</span><span class="apt-s">شاغرة</span></div>
+        </div>
+      </div>
+      <!-- Contract -->
+      <div class="dpanel" id="dp3">
+        <div class="contract-block">
+          <div class="cline"><span class="ck">المستأجر</span><span class="cv">أحمد الخروصي</span></div>
+          <div class="cline"><span class="ck">رقم الهوية</span><span class="cv">12345678</span></div>
+          <div class="cline"><span class="ck">الشقة</span><span class="cv">101</span></div>
+          <div class="cline"><span class="ck">الدخول</span><span class="cv">٢ يونيو ٢:٠٠م</span></div>
+          <div class="cline"><span class="ck">الخروج</span><span class="cv">٤ يونيو ١٢:٠٠م</span></div>
+          <div class="cline"><span class="ck">الإجمالي</span><span class="cv am">30.000 OMR</span></div>
+          <div class="cstamp">✓ العقد جاهز للطباعة والمشاركة</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- STATS -->
+<section class="stats-section sr">
+  <div class="stats-grid">
+    <div class="stat-item"><div class="stat-num" data-n="10">0</div><div class="stat-lbl">ثواني لإنشاء عقد كامل</div></div>
+    <div class="stat-item"><div class="stat-num" data-n="5">0</div><div class="stat-lbl">حجوزات مجانية للتجربة</div></div>
+    <div class="stat-item"><div class="stat-num" data-n="100">0</div><div class="stat-lbl">% بيانات محمية</div></div>
+    <div class="stat-item"><div class="stat-num" data-n="24">0</div><div class="stat-lbl">ساعة وصول من أي جهاز</div></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <span class="s-label sr">المميزات</span>
+  <h2 class="s-title sr">كل شيء في مكان واحد</h2>
+  <div id="feats">
+    <div class="feat" id="f1">
+      <button class="feat-btn" onclick="tf('f1')"><span class="feat-num">01</span><div class="feat-ico" style="background:rgba(79,126,248,.1)">📋</div><div class="feat-info"><span class="feat-name">إدارة الحجوزات</span><span class="feat-hint">منع التداخل تلقائياً</span></div><span class="feat-chev">▾</span></button>
+      <div class="feat-body"><p class="feat-desc">أضف الحجز وحدد الشقة والمستأجر والتواريخ — النظام يمنع الحجز المزدوج ويحسب الإجمالي فوراً. سجّل الدخول والخروج بضغطة.</p></div>
+    </div>
+    <div class="feat" id="f2">
+      <button class="feat-btn" onclick="tf('f2')"><span class="feat-num">02</span><div class="feat-ico" style="background:rgba(34,160,107,.1)">📄</div><div class="feat-info"><span class="feat-name">عقود PDF تلقائية</span><span class="feat-hint">طباعة أو واتساب مباشرة</span></div><span class="feat-chev">▾</span></button>
+      <div class="feat-body"><p class="feat-desc">عقد إيجار كامل بجميع التفاصيل جاهز في ثوانٍ — شاركه على واتساب أو اطبعه بدون كتابة يدوية.</p></div>
+    </div>
+    <div class="feat" id="f3">
+      <button class="feat-btn" onclick="tf('f3')"><span class="feat-num">03</span><div class="feat-ico" style="background:rgba(245,158,11,.1)">💰</div><div class="feat-info"><span class="feat-name">تقارير مالية لحظية</span><span class="feat-hint">ربح وخسارة في ثانية</span></div><span class="feat-chev">▾</span></button>
+      <div class="feat-body"><p class="feat-desc">اعرف أرباحك ومصروفاتك وصافي ربحك في أي لحظة. تقرير مالي كامل قابل للطباعة.</p></div>
+    </div>
+    <div class="feat" id="f4">
+      <button class="feat-btn" onclick="tf('f4')"><span class="feat-num">04</span><div class="feat-ico" style="background:rgba(139,92,246,.1)">🏢</div><div class="feat-info"><span class="feat-name">حالة الشقق فورياً</span><span class="feat-hint">شاغرة أو مشغولة بلمحة</span></div><span class="feat-chev">▾</span></button>
+      <div class="feat-body"><p class="feat-desc">اعرف أي شقة متاحة في أي تاريخ. ابحث عن شقق لعميل يريد تواريخ معينة — النتيجة فورية ودقيقة.</p></div>
+    </div>
+    <div class="feat" id="f5">
+      <button class="feat-btn" onclick="tf('f5')"><span class="feat-num">05</span><div class="feat-ico" style="background:rgba(236,72,153,.1)">👥</div><div class="feat-info"><span class="feat-name">موظف فرعي بصلاحيات محددة</span><span class="feat-hint">يعمل دون أن يرى أرقامك</span></div><span class="feat-chev">▾</span></button>
+      <div class="feat-body"><p class="feat-desc">أضف موظفاً يدير الحجوزات والعقود — بدون أن يرى أرباحك أو تقاريرك المالية.</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- STEPS -->
+<section class="steps-section">
+  <span class="s-label sr">كيف تبدأ</span>
+  <h2 class="s-title sr">٣ خطوات وأنت جاهز</h2>
+  <div id="steps-list">
+    <div class="step"><div class="step-col"><div class="step-num">١</div><div class="step-line"></div></div><div class="step-body"><div class="step-title">سجّل مجاناً</div><div class="step-desc">اسمك، اسم مبناك، عدد الشقق — الحساب جاهز في 60 ثانية. لا بطاقة ائتمانية.</div></div></div>
+    <div class="step"><div class="step-col"><div class="step-num">٢</div><div class="step-line"></div></div><div class="step-body"><div class="step-title">أضف شققك ومستأجريك</div><div class="step-desc">أدخل أرقام الشقق وبيانات المستأجرين مع صور هوياتهم، وابدأ تسجيل الحجوزات.</div></div></div>
+    <div class="step"><div class="step-col"><div class="step-num">٣</div><div class="step-line"></div></div><div class="step-body"><div class="step-title">تابع وادِر من جوالك</div><div class="step-desc">حجوزات، عقود، مدفوعات، وتقارير — كل شيء من مكان واحد في أي وقت.</div></div></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- TESTIMONIALS -->
+<section class="testi-section">
+  <span class="s-label sr">ماذا يقولون</span>
+  <h2 class="s-title sr" style="margin-bottom:20px">ملاك يثقون بمكان</h2>
+  <div class="testi-scroll">
+    <div class="testi-card"><div class="t-stars">★★★★★</div><p class="t-text">"قبل مكان كانت عندي أوراق في كل مكان. الحين كل شيء في جوالي."</p><div class="t-person"><div class="t-av" style="background:var(--accent)">خ</div><div><div class="t-name">خالد العامري</div><div class="t-role">مالك مبنى · مسقط</div></div></div></div>
+    <div class="testi-card"><div class="t-stars">★★★★★</div><p class="t-text">"الموظف عندي يدير الحجوزات وأنا أشوف الأرباح فقط. مريح جداً."</p><div class="t-person"><div class="t-av" style="background:var(--success)">س</div><div><div class="t-name">سعيد الهاشمي</div><div class="t-role">مالك مبنى · صلالة</div></div></div></div>
+    <div class="testi-card"><div class="t-stars">★★★★★</div><p class="t-text">"العقد يطلع في ثواني وأرسله على واتساب. ما عدت أكتب يدوياً أبداً."</p><div class="t-person"><div class="t-av" style="background:#8b5cf6">ف</div><div><div class="t-name">فاطمة الرواحي</div><div class="t-role">مالكة مبنى · نزوى</div></div></div></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PRICING -->
+<section class="pricing-section">
+  <span class="s-label sr">الأسعار</span>
+  <h2 class="s-title sr">ابدأ مجاناً — بدون أي التزام</h2>
+  <p class="s-body sr">جرّب كل المميزات مجاناً. ادفع فقط لو قرّرت الاستمرار.</p>
+  <div class="price-cards">
+    <div class="price-card pc-free sr">
+      <span class="pc-badge">مجاني</span>
+      <div class="pc-price">0 OMR</div>
+      <div class="pc-sub">٥ حجوزات كاملة بكل المميزات</div>
+      <ul class="pc-features">
+        <li><span class="pcheck">✓</span>جميع المميزات</li>
+        <li><span class="pcheck">✓</span>عقود PDF تلقائية</li>
+        <li><span class="pcheck">✓</span>تقارير مالية</li>
+        <li><span class="pcheck">✓</span>تقويم وتنبيهات</li>
+        <li><span class="pcheck">✓</span>بدون بطاقة ائتمانية</li>
+      </ul>
+    </div>
+    <div class="price-card pc-pro sr">
+      <span class="pc-badge">⭐ غير محدود</span>
+      <div class="pc-price">دفعة واحدة</div>
+      <div class="pc-sub">حجوزات غير محدودة للأبد</div>
+      <ul class="pc-features">
+        <li><span class="pcheck">✓</span>كل مميزات الخطة المجانية</li>
+        <li><span class="pcheck">✓</span>حجوزات بلا حدود</li>
+        <li><span class="pcheck">✓</span>موظف فرعي بصلاحيات خاصة</li>
+        <li><span class="pcheck">✓</span>دعم مباشر على واتساب</li>
+      </ul>
+      <div class="contact-cta">📞 للتفعيل: <b style="color:#93c5fd;direction:ltr;display:inline-block">+968 94313327</b></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FINAL CTA -->
+<section class="final-section">
+  <div class="final-logo">مكان</div>
+  <div class="final-tagline">ابدأ اليوم. مجاناً.</div>
+  <a href="https://makanpm.com" class="btn-final">🚀 سجّل مجاناً الآن</a>
+  <p class="final-note">٥ حجوزات مجانية · لا بطاقة ائتمانية · لا التزامات</p>
+</section>
+
+<footer>
+  <div style="font-size:1.1rem;font-weight:700;color:var(--accent);margin-bottom:6px">مكان · Makan</div>
+  نظام ذكي لإدارة المباني السكنية · سلطنة عُمان<br><br>
+  <a href="https://makanpm.com">makanpm.com</a>
+</footer>
+
+<script>
+// Demo counter
+let started=false;
+const phoneEl=document.querySelector('.phone');
+if(phoneEl){
+  new IntersectionObserver(e=>{
+    if(e[0].isIntersecting&&!started){
+      started=true;
+      anim('dc-inc',2840,3);anim('dc-exp',320,3);anim('dc-net',2520,3);anim('dc-in',4,0,false);
+    }
+  },{threshold:.3}).observe(phoneEl);
+}
+function anim(id,target,dec,isOMR=true){
+  const el=document.getElementById(id);if(!el)return;
+  let c=0;const s=target/55;
+  const t=setInterval(()=>{c=Math.min(c+s,target);el.textContent=isOMR?c.toFixed(dec):Math.round(c).toString();if(c>=target)clearInterval(t);},18);
+}
+
+// Demo tabs
+function dt(i){
+  document.querySelectorAll('.dtab').forEach((t,j)=>t.classList.toggle('active',j===i));
+  document.querySelectorAll('.dpanel').forEach((p,j)=>p.classList.toggle('active',j===i));
+}
+
+// Features accordion
+function tf(id){
+  const item=document.getElementById(id);
+  const wasOpen=item.classList.contains('open');
+  document.querySelectorAll('.feat').forEach(f=>f.classList.remove('open'));
+  if(!wasOpen)item.classList.add('open');
+}
+
+// Scroll reveal
+const obs=new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting){en.target.classList.add('in');obs.unobserve(en.target);}}),{threshold:.12});
+document.querySelectorAll('.sr').forEach(el=>obs.observe(el));
+
+// Pain items
+const painObs=new IntersectionObserver(e=>{
+  if(e[0].isIntersecting){
+    document.querySelectorAll('.pain').forEach((p,i)=>setTimeout(()=>p.classList.add('in'),i*110));
+    painObs.unobserve(e[0].target);
+  }
+},{threshold:.2});
+const pl=document.querySelector('.pain-list');if(pl)painObs.observe(pl);
+
+// Steps
+const stepsObs=new IntersectionObserver(e=>{
+  if(e[0].isIntersecting){
+    document.querySelectorAll('.step').forEach((s,i)=>setTimeout(()=>s.classList.add('in'),i*180));
+    stepsObs.unobserve(e[0].target);
+  }
+},{threshold:.15});
+const sl=document.getElementById('steps-list');if(sl)stepsObs.observe(sl);
+
+// Stats counter
+const statsObs=new IntersectionObserver(e=>{
+  if(e[0].isIntersecting){
+    document.querySelectorAll('[data-n]').forEach(el=>{
+      const n=parseInt(el.dataset.n);let c=0;const s=n/40;
+      const t=setInterval(()=>{c=Math.min(c+s,n);el.textContent=Math.round(c);if(c>=n)clearInterval(t);},30);
+    });
+    statsObs.unobserve(e[0].target);
+  }
+},{threshold:.4});
+const sg=document.querySelector('.stats-grid');if(sg)statsObs.observe(sg);
+
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    e.preventDefault();
+    const t=document.querySelector(a.getAttribute('href'));
+    if(t)t.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+});
+</script>
+</body>
+</html>
