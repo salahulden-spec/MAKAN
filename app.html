@@ -543,6 +543,17 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       <div id="subusers-list"></div>
     </div>
 
+    <!-- BUILDINGS -->
+    <div class="page" id="page-buildings">
+      <div class="page-header">
+        <div class="page-header-text">
+          <h1>مباني المالك / Buildings</h1>
+          <p>يمكنك إضافة حتى 3 مباني ضمن اشتراكك</p>
+        </div>
+      </div>
+      <div id="buildings-list-container"></div>
+    </div>
+
     <!-- ADMIN -->
     <div class="page" id="page-admin">
       <div class="page-header"><div class="page-header-text"><h1>لوحة الإدارة</h1><p>إدارة ملاك المباني المسجّلين</p></div></div>
@@ -765,6 +776,95 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
 
 <!-- UPGRADE MODAL -->
 <div class="modal-overlay" id="modal-upgrade">
+  <div class="modal" style="max-width:460px">
+    <div style="text-align:center;padding-bottom:20px;border-bottom:1px solid var(--warm);margin-bottom:20px">
+      <div style="font-size:2.2rem;margin-bottom:8px">🚀</div>
+      <h2 style="font-size:1.3rem;margin-bottom:6px">اشترك في مكان</h2>
+      <p style="color:var(--muted);font-size:.85rem">انتهت تجربتك المجانية — اشترك للاستمرار</p>
+    </div>
+    <div style="background:linear-gradient(135deg,#1e2535,#2d3748);border-radius:16px;padding:20px;margin-bottom:20px;text-align:center;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(79,126,248,.15)"></div>
+      <div style="font-size:.72rem;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:6px">الاشتراك الشهري</div>
+      <div style="font-size:2.8rem;font-weight:900;color:#fff;line-height:1;margin-bottom:4px;direction:ltr">10 <span style="font-size:1.2rem;color:rgba(255,255,255,.6)">OMR</span></div>
+      <div style="font-size:.8rem;color:rgba(255,255,255,.4);margin-bottom:16px">شهرياً · Monthly</div>
+      <div style="display:flex;flex-direction:column;gap:8px;text-align:right">
+        <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border-radius:8px;padding:8px 12px">
+          <span style="color:#4ade80">✓</span>
+          <span style="font-size:.82rem;color:rgba(255,255,255,.8)">حجوزات غير محدودة / Unlimited bookings</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border-radius:8px;padding:8px 12px">
+          <span style="color:#4ade80">✓</span>
+          <span style="font-size:.82rem;color:rgba(255,255,255,.8)">حتى 3 مباني / Up to 3 buildings</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border-radius:8px;padding:8px 12px">
+          <span style="color:#4ade80">✓</span>
+          <span style="font-size:.82rem;color:rgba(255,255,255,.8)">موظف فرعي + جميع المميزات</span>
+        </div>
+      </div>
+    </div>
+    <a href="https://wa.me/96894313327?text=%D8%A3%D8%B1%D9%8A%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B4%D8%AA%D8%B1%D8%A7%D9%83%20%D9%81%D9%8A%20%D9%85%D9%83%D8%A7%D9%86" target="_blank"
+      style="display:flex;align-items:center;justify-content:center;gap:10px;background:#25D366;color:#fff;border:none;border-radius:12px;padding:14px;font-family:var(--font);font-size:.95rem;font-weight:700;cursor:pointer;text-decoration:none;margin-bottom:12px;width:100%;box-sizing:border-box">
+      💬 تواصل للاشتراك — +968 94313327
+    </a>
+    <div style="background:var(--warm);border-radius:12px;padding:16px;margin-bottom:4px">
+      <div style="font-size:.78rem;font-weight:700;margin-bottom:10px">بعد الدفع — أدخل رمز التفعيل:</div>
+      <div style="direction:ltr;display:flex;gap:6px;justify-content:center;margin-bottom:10px" id="upgrade-code-inputs">
+        <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,0)" style="width:40px;height:46px;text-align:center;font-size:1.2rem;font-weight:700;border:2px solid var(--border);border-radius:8px;font-family:var(--font);background:#fff;color:var(--ink)">
+        <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,1)" style="width:40px;height:46px;text-align:center;font-size:1.2rem;font-weight:700;border:2px solid var(--border);border-radius:8px;font-family:var(--font);background:#fff;color:var(--ink)">
+        <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,2)" style="width:40px;height:46px;text-align:center;font-size:1.2rem;font-weight:700;border:2px solid var(--border);border-radius:8px;font-family:var(--font);background:#fff;color:var(--ink)">
+        <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,3)" style="width:40px;height:46px;text-align:center;font-size:1.2rem;font-weight:700;border:2px solid var(--border);border-radius:8px;font-family:var(--font);background:#fff;color:var(--ink)">
+        <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,4)" style="width:40px;height:46px;text-align:center;font-size:1.2rem;font-weight:700;border:2px solid var(--border);border-radius:8px;font-family:var(--font);background:#fff;color:var(--ink)">
+        <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,5)" style="width:40px;height:46px;text-align:center;font-size:1.2rem;font-weight:700;border:2px solid var(--border);border-radius:8px;font-family:var(--font);background:#fff;color:var(--ink)">
+      </div>
+      <div class="form-error" id="upgrade-error"></div>
+      <button class="btn btn-primary" style="width:100%;padding:12px" onclick="doUpgradeAccount()">
+        <span id="upgrade-btn-text">تفعيل الاشتراك</span>
+      </button>
+    </div>
+    <button onclick="tryClosePlanModal()" style="display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--muted);font-family:var(--font);font-size:.82rem;cursor:pointer;padding:6px">إغلاق</button>
+  </div>
+</div>
+
+<!-- TENANT DETAIL MODAL -->
+<div class="modal-overlay" id="modal-tenant-detail">
+  <div class="modal" style="max-width:520px">
+    <div id="tenant-detail-content"></div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--warm)">
+      <button class="btn btn-secondary" onclick="closeModal('modal-tenant-detail')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="modal-overlay" id="modal-payment">
+  <div class="modal" style="max-width:380px;text-align:right">
+    <h2 data-t="m_payment">💳 تسجيل الدفع</h2>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:16px">اختر نوع الدفع وطريقته:</p>
+    <div id="pay-modal-options"></div>
+    <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="closeModal('modal-payment')" data-t="btn_cancel">إلغاء</button>
+  </div>
+</div>
+
+<!-- MOVE TENANT MODAL -->
+<div class="modal-overlay" id="modal-move-tenant">
+  <div class="modal" style="max-width:420px">
+    <h2 data-t="m_move_tenant">🔄 نقل مستأجر</h2>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:16px" data-t="m_move_desc">نقل المستأجر إلى شقة أخرى — يجب أن تكون الشقة شاغرة في نفس الفترة</p>
+    <div id="move-booking-info" style="background:var(--paper);border-radius:8px;padding:12px;margin-bottom:16px;font-size:.85rem"></div>
+    <div class="form-group">
+      <label>الشقة الجديدة</label>
+      <select id="move-apt-select"><option value="">— اختر شقة —</option></select>
+      <div class="hint" id="move-apt-hint"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-move-tenant')" data-t="btn_cancel">إلغاء</button>
+      <button class="btn btn-primary" onclick="confirmMoveTenant()">نقل المستأجر</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPGRADE MODAL -->
+<div class="modal-overlay" id="modal-upgrade">
   <div class="modal" style="max-width:420px;text-align:center">
     <h2>🔓 ترقية الحساب</h2>
     <p style="font-size:.88rem;color:var(--muted);margin-bottom:16px">وصلت للحد الأقصى للخطة المجانية (5 حجوزات).<br>للاستمرار تواصل معنا للحصول على رمز التفعيل.</p>
@@ -939,7 +1039,7 @@ const T = {
     m_add_expense: 'إضافة مصروف', m_booking_detail: 'تفاصيل الحجز',
     m_move_tenant: 'نقل مستأجر', m_move_desc: 'نقل المستأجر إلى شقة أخرى — يجب أن تكون الشقة شاغرة في نفس الفترة',
     m_payment: 'تسجيل الدفع', m_payment_method: 'اختر طريقة الدفع:',
-    m_upgrade: 'ترقية الحساب', m_upgrade_desc: 'وصلت للحد الأقصى للخطة المجانية (5 حجوزات). للاستمرار تواصل معنا.',
+    m_upgrade: 'ترقية الحساب', m_upgrade_desc: 'وصلت للحد الأقصى للتجربة المجانية (5 حجوزات). اشترك بـ 10 OMR/شهر للحصول على حجوزات غير محدودة و3 مباني.',
     // Booking form hints/labels
     f_advance_hint: 'تُخصم من الإجمالي وتظهر في العقد والفاتورة',
     f_advance_method: 'طريقة الدفعة المقدمة',
@@ -977,7 +1077,7 @@ const T = {
     rep_expenses: 'المصروفات',
     // Admin
     adm_total: 'إجمالي الملاك', adm_registered: 'مالك مسجّل في المنصة',
-    adm_code_lbl: 'رمز الترقية الحالي', adm_code_sub: 'للمالك الذي تجاوز 5 حجوزات',
+    adm_code_lbl: 'رمز الترقية', adm_code_sub: 'للتفعيل اليدوي بعد الدفع',
     adm_reset_title: '🔑 إعادة تعيين كلمة مرور مالك',
     adm_reset_desc: 'أدخل البريد الإلكتروني للمالك وسيتم إرسال رابط إعادة التعيين تلقائياً',
     adm_email_placeholder: 'landlord@example.com',
@@ -989,9 +1089,9 @@ const T = {
     vac_vacant: 'شاغرة', vac_busy: 'مشغولة', vac_total: 'الكل',
     vac_available: 'متاحة ✓', vac_taken: 'مشغولة ✗',
     // Free plan banner
-    plan_free_msg: 'خطة مجانية — متبقي', plan_free_of: 'حجز من أصل 5',
-    plan_upgrade: 'ترقية الحساب', plan_locked: 'وصلت للحد الأقصى للخطة المجانية — 5 حجوزات',
-    plan_upgrade_now: 'ترقية الحساب الآن',
+    plan_free_msg: 'تجربة مجانية — متبقي ', plan_free_of: ' حجز من أصل 5',
+    plan_upgrade: 'اشترك الآن', plan_locked: 'انتهت التجربة المجانية — 5 حجوزات',
+    plan_upgrade_now: 'اشترك — 10 OMR/شهر',
     // Auth
     auth_login_title: 'تسجيل الدخول', auth_reg_title: 'تسجيل مالك جديد',
     auth_upgrade_code: 'رمز ترقية الحساب', auth_email: 'البريد الإلكتروني',
@@ -1071,7 +1171,7 @@ const T = {
     m_add_expense: 'Add Expense', m_booking_detail: 'Booking Details',
     m_move_tenant: 'Move Tenant', m_move_desc: 'Move tenant to another unit — the unit must be free during the same period',
     m_payment: 'Record Payment', m_payment_method: 'Select payment method:',
-    m_upgrade: 'Upgrade Account', m_upgrade_desc: 'You have reached the free plan limit (5 bookings). Contact us to continue.',
+    m_upgrade: 'Upgrade Account', m_upgrade_desc: 'You have reached the free trial limit (5 bookings). Subscribe for 10 OMR/month — unlimited bookings + up to 3 buildings.',
     f_advance_hint: 'Deducted from total, shown on contract & invoice',
     f_advance_method: 'Advance Payment Method',
     f_notes_placeholder: 'Any additional terms...',
@@ -1110,9 +1210,9 @@ const T = {
     vac_from: 'From date', vac_to: 'To date', vac_count: 'Number of units needed (optional)',
     vac_vacant: 'Vacant', vac_busy: 'Busy', vac_total: 'Total',
     vac_available: 'Available ✓', vac_taken: 'Busy ✗',
-    plan_free_msg: 'Free plan — ', plan_free_of: ' bookings of 5 remaining',
-    plan_upgrade: 'Upgrade Account', plan_locked: 'Free plan limit reached — 5 bookings',
-    plan_upgrade_now: 'Upgrade Now',
+    plan_free_msg: 'Free trial — ', plan_free_of: ' bookings of 5 remaining',
+    plan_upgrade: 'Subscribe Now', plan_locked: 'Free trial ended — 5 bookings',
+    plan_upgrade_now: 'Subscribe — 10 OMR/month',
     auth_login_title: 'Sign In', auth_reg_title: 'Register New Landlord',
     auth_upgrade_code: 'Account Upgrade Code', auth_email: 'Email',
     auth_password: 'Password', auth_login_btn: 'Sign In', auth_reg_btn: 'Create Free Account',
@@ -1248,6 +1348,7 @@ const exp = {
   togglePaid, renderFullReportPage, printFullReport,
   shareContractWhatsApp, submitUpgradeCode, upgradeCodeNext, renderVacancyChart,
   enforcePlanGate, unlockApp, toggleLang, applyLang, deleteLandlord, doContractSearch,
+  renderBuildingsPage, switchBuilding, openAddBuilding,
   editExpense, deleteExpense, printExpensesReport,
   loadTenantPhotoField, clearTenantPhoto, viewTenant, setCalView, renderCalendarList,
   openEditTenant, deleteTenant, loadTenantPhoto,
@@ -1331,7 +1432,7 @@ async function doRegisterDirect(){
       name,building,floors,perFloor,apartments:aptList,units:aptList.length,phone,email,
       role:'landlord',plan:'free',bookingCount:0,createdAt:serverTimestamp()
     });
-    showToast('تم إنشاء الحساب بنجاح 🎉 — لديك 5 حجوزات مجانية','success');
+    showToast('تم إنشاء الحساب 🎉 — 5 حجوزات مجانية، ثم 10 OMR/شهر للاستمرار','success');
   }catch(e){ showErr(err,translateAuthError(e.code)); btn.textContent='إنشاء الحساب مجاناً'; }
 }
 
@@ -1449,6 +1550,7 @@ function renderSidebar(isAdmin){
     {id:'page-invoices',   ic:'receipt',      label:t('nav_invoices'),   perm:'invoices', ownerOnly:false},
     {id:'page-fullreport', ic:'bar-chart',    label:t('nav_report'),     perm:'reports',  ownerOnly:false},
     {id:'page-subusers',   ic:'user-plus',    label:t('nav_subusers'),   perm:null,       ownerOnly:true},
+    {id:'page-buildings',  ic:'building',     label:t('nav_buildings'),  perm:null,       ownerOnly:true},
   ];
   const items=allItems.filter(i=>{
     if(i.ownerOnly && isSubuser) return false;
@@ -1527,7 +1629,7 @@ async function loadAdminData(){
           <div style="color:var(--muted);font-size:.8rem;margin-top:2px">${l.building} · ${l.units||0} شقة · ${l.phone||'—'}</div>
           <div style="color:var(--muted);font-size:.75rem">${l.email}</div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
-            <span class="badge ${l.plan==='unlimited'?'badge-active':'badge-ended'}">${l.plan==='unlimited'?'✓ Unlimited':'Free (5)'}</span>
+            <span class="badge ${l.plan==='unlimited'?'badge-active':'badge-ended'}">${l.plan==='unlimited'?'✓ مشترك — 10 OMR/شهر':'تجربة مجانية (5)'}</span>
             <span style="font-size:.78rem;font-weight:700;color:var(--accent)">📋 ${bCount} حجز</span>
             <span style="font-size:.72rem;color:var(--muted)">${pct}% من المنصة</span>
           </div>
@@ -2932,8 +3034,8 @@ function updatePlanBanner(){
   if(remaining>0){
     banner.style.transform='translateY(0)';
     banner.innerHTML=`<div style="background:var(--ink);color:var(--paper);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.84rem">
-      <span>🆓 خطة مجانية — متبقي <b>${remaining}</b> حجز${remaining===1?'':'ات'} من أصل 5</span>
-      <button onclick="showUpgradePrompt()" style="background:var(--accent);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer">ترقية الحساب</button>
+      <span>🆓 تجربة مجانية — متبقي <b>${remaining}</b> حجز${remaining===1?'':'ات'} من أصل 5</span>
+      <button onclick="showUpgradePrompt()" style="background:var(--accent);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer">اشترك — 10 OMR/شهر</button>
     </div>`;
   } else {
     banner.style.transform='translateY(0)';
@@ -3469,6 +3571,70 @@ function viewTenant(id){
   openModal('modal-tenant-detail');
 }
 
+// ── MULTI-BUILDING ───────────────────────────────────────────────────
+function renderBuildingsPage(){
+  const el=document.getElementById('buildings-list-container');
+  if(!el) return;
+  const isPaid=userProfile.plan==='unlimited';
+  const buildings=userProfile.buildings||[{name:userProfile.building,apartments:userProfile.apartments||[],apartmentData:userProfile.apartmentData||{},units:userProfile.units||0}];
+  const activeIdx=userProfile.activeBuildingIdx||0;
+  el.innerHTML=`
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-size:.82rem;color:var(--muted)">
+          ${buildings.length} ${buildings.length===1?'مبنى':'مباني'} من أصل 3
+        </div>
+        ${isPaid&&buildings.length<3?`<button class="btn btn-primary btn-sm" onclick="openAddBuilding()">＋ إضافة مبنى</button>`:`<span style="font-size:.75rem;color:var(--muted)">${!isPaid?'اشترك لإضافة مباني إضافية':'وصلت للحد الأقصى 3 مباني'}</span>`}
+      </div>
+      ${buildings.map((b,i)=>`
+        <div style="display:flex;align-items:center;gap:12px;padding:14px;background:${i===activeIdx?'var(--accent-light)':'var(--warm)'};border:${i===activeIdx?'1.5px solid var(--accent)':'1px solid var(--border)'};border-radius:12px;margin-bottom:10px;cursor:pointer" onclick="switchBuilding(${i})">
+          <div style="width:40px;height:40px;border-radius:10px;background:${i===activeIdx?'var(--accent)':'var(--border)'};display:flex;align-items:center;justify-content:center;font-size:1rem;color:${i===activeIdx?'#fff':'var(--muted)'};font-weight:700;flex-shrink:0">
+            ${i+1}
+          </div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:.95rem">${b.name}</div>
+            <div style="font-size:.75rem;color:var(--muted);margin-top:2px">${b.apartments?b.apartments.length:0} شقة</div>
+          </div>
+          ${i===activeIdx?'<span style="font-size:.72rem;font-weight:700;color:var(--accent);background:var(--accent-light);padding:3px 10px;border-radius:10px">نشط</span>':'<span style="font-size:.72rem;color:var(--muted)">تبديل ←</span>'}
+        </div>`).join('')}
+    </div>`;
+}
+
+async function switchBuilding(idx){
+  const buildings=userProfile.buildings||[{name:userProfile.building,apartments:userProfile.apartments||[],apartmentData:userProfile.apartmentData||{},units:userProfile.units||0}];
+  if(idx>=buildings.length) return;
+  const b=buildings[idx];
+  userProfile.activeBuildingIdx=idx;
+  userProfile.building=b.name;
+  userProfile.apartments=b.apartments||[];
+  userProfile.apartmentData=b.apartmentData||{};
+  userProfile.units=b.units||0;
+  await updateDoc(doc(db,'users',currentUser.uid),{activeBuildingIdx:idx});
+  showToast(`تم التبديل إلى ${b.name} ✓`,'success');
+  renderBuildingsPage();
+  await loadLandlordData();
+}
+
+function openAddBuilding(){
+  const isPaid=userProfile.plan==='unlimited';
+  if(!isPaid){showToast('يجب الاشتراك لإضافة مباني إضافية','error');return;}
+  const buildings=userProfile.buildings||[];
+  if(buildings.length>=3){showToast('الحد الأقصى 3 مباني','error');return;}
+  const name=prompt('اسم المبنى الجديد / New building name:');
+  if(!name||!name.trim()) return;
+  addNewBuilding(name.trim());
+}
+
+async function addNewBuilding(name){
+  const buildings=userProfile.buildings||[{name:userProfile.building,apartments:userProfile.apartments||[],apartmentData:userProfile.apartmentData||{},units:userProfile.units||0}];
+  const newBuilding={name,apartments:[],apartmentData:{},units:0};
+  buildings.push(newBuilding);
+  await updateDoc(doc(db,'users',currentUser.uid),{buildings});
+  userProfile.buildings=buildings;
+  showToast(`تم إضافة ${name} ✓`,'success');
+  renderBuildingsPage();
+}
+
 // ── UI HELPERS ────────────────────────────────────────────────────────
 function showScreen(s){
   document.getElementById('auth-screen').classList.toggle('active',s==='auth');
@@ -3486,6 +3652,7 @@ function showPage(pageId){
   // contracts handled above with search clear
   if(pageId==='page-notifications') renderNotificationsPage();
   if(pageId==='page-subusers') renderSubusers();
+  if(pageId==='page-buildings') renderBuildingsPage();
   if(pageId==='page-fullreport') renderFullReportPage();
   if(pageId==='page-contracts'){
     // Clear search on navigation, not on search button click
