@@ -808,7 +808,7 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
     </a>
     <div style="background:var(--warm);border-radius:12px;padding:16px;margin-bottom:4px">
       <div style="font-size:.78rem;font-weight:700;margin-bottom:10px">بعد الدفع — أدخل رمز التفعيل:</div>
-      <div style="direction:ltr;display:flex;gap:6px;justify-content:center;margin-bottom:10px" id="upgrade-code-inputs">
+      <div style="direction:ltr;display:flex;gap:6px;justify-content:center;margin-bottom:10px" id="modal-upgrade-code-inputs">
         <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,0)" style="width:40px;height:46px;text-align:center;font-size:1.2rem;font-weight:700;border:2px solid var(--border);border-radius:8px;font-family:var(--font);background:#fff;color:var(--ink)">
         <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,1)" style="width:40px;height:46px;text-align:center;font-size:1.2rem;font-weight:700;border:2px solid var(--border);border-radius:8px;font-family:var(--font);background:#fff;color:var(--ink)">
         <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,2)" style="width:40px;height:46px;text-align:center;font-size:1.2rem;font-weight:700;border:2px solid var(--border);border-radius:8px;font-family:var(--font);background:#fff;color:var(--ink)">
@@ -816,9 +816,9 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
         <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,4)" style="width:40px;height:46px;text-align:center;font-size:1.2rem;font-weight:700;border:2px solid var(--border);border-radius:8px;font-family:var(--font);background:#fff;color:var(--ink)">
         <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,5)" style="width:40px;height:46px;text-align:center;font-size:1.2rem;font-weight:700;border:2px solid var(--border);border-radius:8px;font-family:var(--font);background:#fff;color:var(--ink)">
       </div>
-      <div class="form-error" id="upgrade-error"></div>
+      <div class="form-error" id="modal-upgrade-error"></div>
       <button class="btn btn-primary" style="width:100%;padding:12px" onclick="doUpgradeAccount()">
-        <span id="upgrade-btn-text">تفعيل الاشتراك</span>
+        <span id="modal-upgrade-btn-text">تفعيل الاشتراك</span>
       </button>
     </div>
     <button onclick="tryClosePlanModal()" style="display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--muted);font-family:var(--font);font-size:.82rem;cursor:pointer;padding:6px">إغلاق</button>
@@ -1437,42 +1437,42 @@ async function doRegisterDirect(){
 }
 
 async function doUpgradeAccount(){
-  // Unified upgrade handler — works from both auth code-form and upgrade modal
-  // Detect which form is active
-  const fromModal = document.getElementById('modal-upgrade').classList.contains('open');
-  const inputSelector = fromModal ? '#upgrade-code-inputs input' : '#code-inputs input';
-  const errId = fromModal ? 'upgrade-error' : 'code-error';
-  const btnId = fromModal ? 'upgrade-btn-text' : 'code-btn-text';
+  // Detect source: modal overlay has display:flex when open
+  const modalOverlay = document.getElementById('modal-upgrade');
+  const fromModal = modalOverlay && window.getComputedStyle(modalOverlay).display !== 'none';
+
+  // Use unique IDs for modal vs auth-screen inputs
+  const inputSelector = fromModal ? '#modal-upgrade-code-inputs input' : '#code-inputs input';
+  const errId = fromModal ? 'modal-upgrade-error' : 'code-error';
+  const btnId = fromModal ? 'modal-upgrade-btn-text' : 'code-btn-text';
 
   const inputs=[...document.querySelectorAll(inputSelector)];
-  const code=inputs.map(i=>i.value).join('');
+  const code=inputs.map(i=>i.value.trim()).join('');
   const err=document.getElementById(errId);
   const btn=document.getElementById(btnId);
-  if(!err||!btn) return;
+  if(!err||!btn){ console.error('Missing elements',errId,btnId); return; }
   err.classList.remove('show');
   if(code.length!==6){ showErr(err,'الرمز 6 أرقام — 6-digit code required'); return; }
   btn.innerHTML='<span class="spinner"></span>';
   try{
     const snap=await getDoc(doc(db,'config','registration'));
     if(!snap.exists()||!snap.data().code){
-      showErr(err,'لا يوجد رمز نشط — No active code. Contact +968 94313327');
-      btn.textContent='تفعيل الحساب'; return;
+      showErr(err,'لا يوجد رمز نشط — Contact +968 94313327');
+      btn.textContent='تفعيل الاشتراك'; return;
     }
-    if(code.trim()!==snap.data().code.trim()){
+    if(code!==snap.data().code.trim()){
       showErr(err,'الرمز غير صحيح — Wrong code');
-      btn.textContent='تفعيل الحساب'; return;
+      btn.textContent='تفعيل الاشتراك'; return;
     }
-    // Code correct — only update the landlord's own user doc (they have permission)
-    // Admin manually generates a new code for the next landlord
+    // Code correct — update user's own doc
     await updateDoc(doc(db,'users',currentUser.uid),{plan:'unlimited'});
     userProfile.plan='unlimited';
-    closeModal('modal-upgrade');
-    unlockApp();
+    if(fromModal){ closeModal('modal-upgrade'); unlockApp(); }
     updatePlanBanner();
-    showToast('🎉 تم ترقية حسابك — Unlimited bookings unlocked','success');
+    showToast('🎉 تم تفعيل اشتراكك — Subscription activated!','success');
   }catch(e){
     showErr(err, e.code ? translateAuthError(e.code) : (e.message||'خطأ غير معروف'));
-    btn.textContent='تفعيل الحساب';
+    btn.textContent='تفعيل الاشتراك';
   }
 }
 
@@ -3059,6 +3059,9 @@ function upgradeCodeNext(input,idx){
 }
 
 async function submitUpgradeCode(){
+  return doUpgradeAccount();
+}
+async function submitUpgradeCode_orig(){
   // Just delegate to the unified handler
   await doUpgradeAccount();
 }
