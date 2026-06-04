@@ -568,14 +568,17 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
           <div class="stat-value income" id="admin-platform-bookings">—</div>
           <div class="stat-sub">عبر جميع الملاك على مكان</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">رمز الترقية الحالي</div>
-          <div class="stat-value" id="admin-code" style="font-size:1.5rem;letter-spacing:4px;direction:ltr">——————</div>
-          <div class="stat-sub">للمالك الذي تجاوز 5 حجوزات</div>
+        <div class="stat-card" style="grid-column:span 2">
+          <div class="stat-label">رمز التفعيل الحالي / Activation Code</div>
+          <div style="display:flex;align-items:center;gap:12px;margin:8px 0">
+            <div id="admin-code" style="font-size:2rem;font-weight:900;letter-spacing:8px;direction:ltr;color:var(--accent);font-variant-numeric:tabular-nums">——————</div>
+            <button onclick="copyAdminCode()" style="background:var(--warm);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:var(--font);font-size:.78rem;cursor:pointer;color:var(--ink)">📋 نسخ</button>
+          </div>
+          <div class="stat-sub" style="color:var(--muted)">أرسل هذا الرمز للمشترك بعد استلام الدفع</div>
         </div>
       </div>
       <div class="quick-actions" style="margin-bottom:24px">
-        <button class="btn btn-primary" onclick="generateNewCode()">🔄 توليد رمز ترقية جديد</button>
+        <button class="btn btn-primary" onclick="generateNewCode()">🔄 توليد رمز تفعيل جديد</button>
       </div>
       <div class="card" style="margin-bottom:20px">
         <div class="card-header"><span class="card-title">🔑 إعادة تعيين كلمة مرور مالك</span></div>
@@ -1348,7 +1351,7 @@ const exp = {
   togglePaid, renderFullReportPage, printFullReport,
   shareContractWhatsApp, submitUpgradeCode, upgradeCodeNext, renderVacancyChart,
   enforcePlanGate, unlockApp, toggleLang, applyLang, deleteLandlord, doContractSearch,
-  renderBuildingsPage, switchBuilding, openAddBuilding,
+  renderBuildingsPage, switchBuilding, openAddBuilding, copyAdminCode,
   editExpense, deleteExpense, printExpensesReport,
   loadTenantPhotoField, clearTenantPhoto, viewTenant, setCalView, renderCalendarList,
   openEditTenant, deleteTenant, loadTenantPhoto,
@@ -1460,8 +1463,9 @@ async function doUpgradeAccount(){
       showErr(err,'لا يوجد رمز نشط — Contact +968 94313327');
       btn.textContent='تفعيل الاشتراك'; return;
     }
-    if(code!==snap.data().code.trim()){
-      showErr(err,'الرمز غير صحيح — Wrong code');
+    const storedCode = (snap.data().code||'').trim();
+    if(code!==storedCode){
+      showErr(err,`الرمز غير صحيح — Wrong code (entered: ${code})`);
       btn.textContent='تفعيل الاشتراك'; return;
     }
     // Code correct — update user's own doc
@@ -1685,6 +1689,19 @@ async function deleteLandlord(uid, name){
   } catch(e){
     showToast('خطأ أثناء الحذف: ' + (e.message||e.code), 'error');
   }
+}
+
+function copyAdminCode(){
+  const code=document.getElementById('admin-code').textContent.trim();
+  if(code==='——————'||!code){showToast('لا يوجد رمز — ولّد رمزاً أولاً','error');return;}
+  navigator.clipboard.writeText(code).then(()=>showToast('تم نسخ الرمز: '+code+' ✓','success'))
+    .catch(()=>{
+      // Fallback
+      const ta=document.createElement('textarea');
+      ta.value=code; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      showToast('تم نسخ الرمز: '+code+' ✓','success');
+    });
 }
 
 async function generateNewCode(){
