@@ -1458,9 +1458,15 @@ async function doUpgradeAccount(){
   if(code.length!==6){ showErr(err,'الرمز 6 أرقام — 6-digit code required'); return; }
   btn.innerHTML='<span class="spinner"></span>';
   try{
-    const snap=await getDoc(doc(db,'config','registration'));
+    let snap;
+    try{
+      snap=await getDoc(doc(db,'config','registration'));
+    }catch(firestoreErr){
+      showErr(err,'خطأ في الاتصال — تأكد من اتصالك بالإنترنت');
+      btn.textContent='تفعيل الاشتراك'; return;
+    }
     if(!snap.exists()||!snap.data().code){
-      showErr(err,'لا يوجد رمز نشط — Contact +968 94313327');
+      showErr(err,'الرمز غير مفعّل بعد — تواصل مع المسؤول على +968 94313327');
       btn.textContent='تفعيل الاشتراك'; return;
     }
     const storedCode = (snap.data().code||'').trim();
@@ -1475,7 +1481,10 @@ async function doUpgradeAccount(){
     updatePlanBanner();
     showToast('🎉 تم تفعيل اشتراكك — Subscription activated!','success');
   }catch(e){
-    showErr(err, e.code ? translateAuthError(e.code) : (e.message||'خطأ غير معروف'));
+    const msg = e.code==='not-found' ? 'الرمز غير مفعّل بعد — تواصل مع المسؤول'
+              : e.code==='permission-denied' ? 'خطأ في الصلاحيات — permission denied'
+              : (e.message||e.code||'خطأ غير معروف');
+    showErr(err, msg);
     btn.textContent='تفعيل الاشتراك';
   }
 }
