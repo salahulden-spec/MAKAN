@@ -1453,7 +1453,7 @@ async function doUpgradeAccount(){
       showErr(err,'رمز خاطئ — Wrong code');
       btn.textContent='تفعيل الاشتراك'; return;
     }
-    await updateDoc(doc(db,'users',currentUser.uid),{plan:'unlimited'});
+    await setDoc(doc(db,'users',currentUser.uid),{plan:'unlimited'},{merge:true});
     userProfile.plan='unlimited';
     closeModal('modal-upgrade');
     unlockApp();
