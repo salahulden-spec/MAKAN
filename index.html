@@ -1340,7 +1340,7 @@ const exp = {
   togglePaid, renderFullReportPage, printFullReport,
   shareContractWhatsApp, submitUpgradeCode, upgradeCodeNext, renderVacancyChart,
   enforcePlanGate, unlockApp, toggleLang, applyLang, deleteLandlord, doContractSearch,
-  renderBuildingsPage, switchBuilding, openAddBuilding, addNewBuilding, copyAdminCode, checkStoredCode,
+  renderBuildingsPage, switchBuilding, openAddBuilding, addNewBuilding, copyAdminCode, checkStoredCode, updateBuildingSwitcher,
   editExpense, deleteExpense, printExpensesReport,
   loadTenantPhotoField, clearTenantPhoto, viewTenant, setCalView, renderCalendarList,
   openEditTenant, deleteTenant, loadTenantPhoto,
@@ -1431,49 +1431,37 @@ async function doRegisterDirect(){
 }
 
 async function doUpgradeAccount(){
-  // Collect code from whichever input set is visible
-  // Try modal first, fall back to auth screen
-  let inputs = [...document.querySelectorAll('#modal-upgrade-code-inputs input')];
-  let errId = 'modal-upgrade-error';
-  let btnId = 'modal-upgrade-btn-text';
-  // If modal inputs are empty, try auth screen inputs
-  if(inputs.every(i=>!i.value)){
-    const authInputs=[...document.querySelectorAll('#code-inputs input')];
-    if(authInputs.some(i=>i.value)){
-      inputs=authInputs; errId='code-error'; btnId='code-btn-text';
-    }
-  }
+  const inputs=[...document.querySelectorAll('#modal-upgrade-code-inputs input')];
   const code=inputs.map(i=>i.value.trim()).join('');
-  const err=document.getElementById(errId);
-  const btn=document.getElementById(btnId);
-  if(!err||!btn){ showToast('خطأ في الواجهة — refresh the page','error'); return; }
+  const err=document.getElementById('modal-upgrade-error');
+  const btn=document.getElementById('modal-upgrade-btn-text');
+  if(!err||!btn) return;
   err.classList.remove('show');
-  if(code.length!==6){ showErr(err,'أدخل الرمز كاملاً — 6 digits required'); return; }
+  if(code.length!==6){ showErr(err,'أدخل الرمز كاملاً (6 أرقام)'); return; }
   btn.innerHTML='<span class="spinner"></span>';
   try{
-    const snap=await getDoc(doc(db,'config','registration'));
-    if(!snap||!snap.exists()||!snap.data().code){
-      showErr(err,'لا يوجد رمز نشط — تواصل مع المسؤول +968 94313327');
+    const ref=doc(db,'config','registration');
+    const snap=await getDoc(ref);
+    console.log('snap.exists:',snap.exists(),'data:',snap.data());
+    if(!snap.exists()){
+      showErr(err,'الرمز غير مفعّل — تواصل: +968 94313327');
       btn.textContent='تفعيل الاشتراك'; return;
     }
-    const stored=(snap.data().code||'').toString().trim();
-    console.log('Code entered:',code,'Stored:',stored);
+    const stored=String(snap.data().code||'').trim();
+    console.log('entered:',code,'stored:',stored,'match:',code===stored);
     if(code!==stored){
-      showErr(err,'الرمز غير صحيح — incorrect code');
+      showErr(err,'رمز خاطئ — Wrong code');
       btn.textContent='تفعيل الاشتراك'; return;
     }
-    await updateDoc(doc(db,'users',currentUser.uid),{plan:'unlimited'});
+    await setDoc(doc(db,'users',currentUser.uid),{plan:'unlimited'},{merge:true});
     userProfile.plan='unlimited';
     closeModal('modal-upgrade');
     unlockApp();
     updatePlanBanner();
     showToast('🎉 تم تفعيل اشتراكك!','success');
   }catch(e){
-    console.error('doUpgradeAccount error:',e);
-    const msg=e.code==='permission-denied'?'خطأ في الصلاحيات'
-             :e.code==='not-found'?'مستند الرمز غير موجود'
-             :(e.message||e.code||'خطأ غير معروف');
-    showErr(err,msg);
+    console.error('upgrade error:',e.code,e.message);
+    showErr(err,e.code==='permission-denied'?'خطأ صلاحيات':(e.message||e.code||'خطأ'));
     btn.textContent='تفعيل الاشتراك';
   }
 }
@@ -1571,22 +1559,42 @@ function renderSidebar(isAdmin){
 
 // ── DATA ──────────────────────────────────────────────────────────────
 async function loadLandlordData(){
-  // Sub-users share ALL data with their parent — use parent's UID to query
   const isSubuser = userProfile && userProfile.role==='subuser';
   const uid = isSubuser ? (userProfile.parentUid || currentUser.uid) : currentUser.uid;
+
+  // Update active building apartments in userProfile
+  const buildings=userProfile.buildings||[];
+  if(buildings.length>0){
+    const activeIdx=userProfile.activeBuildingIdx||0;
+    const activeBld=buildings[activeIdx]||buildings[0];
+    userProfile.building=activeBld.name||userProfile.building;
+    userProfile.buildingAddress=activeBld.address||userProfile.buildingAddress||'';
+    userProfile.apartments=activeBld.apartments||userProfile.apartments||[];
+    userProfile.apartmentData=activeBld.apartmentData||userProfile.apartmentData||{};
+    userProfile.units=activeBld.units||userProfile.units||0;
+  }
+
   const [tS,bS,eS]=await Promise.all([
     getDocs(query(collection(db,'tenants'),where('uid','==',uid))),
     getDocs(query(collection(db,'bookings'),where('uid','==',uid))),
     getDocs(query(collection(db,'expenses'),where('uid','==',uid))),
   ]);
   allTenants=tS.docs.map(d=>({id:d.id,...d.data()}));
-  allBookings=bS.docs.map(d=>({id:d.id,...d.data()}));
+  // Filter bookings to active building only
+  const allBkgs=bS.docs.map(d=>({id:d.id,...d.data()}));
+  const activeBldName=userProfile.building;
+  const activeApts=userProfile.apartments||[];
+  // If multi-building: filter bookings by active building's apartments
+  allBookings = buildings.length>1
+    ? allBkgs.filter(b=>activeApts.includes(b.apartment)||b.building===activeBldName)
+    : allBkgs;
   allExpenses=eS.docs.map(d=>({id:d.id,...d.data()}));
   renderDashboard();renderTenants();renderBookings();renderExpenses();
   const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
   renderCalendar();
   updateNotifBadge();
   if(!isSubuser){ updatePlanBanner(); enforcePlanGate(); }
+  updateBuildingSwitcher();
 }
 
 async function loadAdminData(){
@@ -1722,14 +1730,14 @@ async function checkStoredCode(){
 async function generateNewCode(){
   const code=Math.floor(100000+Math.random()*900000).toString();
   try{
-    await setDoc(doc(db,'config','registration'),{code,updatedAt:serverTimestamp()});
+    // Use merge:true to create OR update the document
+    await setDoc(doc(db,'config','registration'),{code,updatedAt:serverTimestamp()},{merge:true});
     document.getElementById('admin-code').textContent=code;
-    showToast('✓ الرمز الجديد: '+code,'success');
+    showToast('✓ الرمز: '+code,'success');
+    console.log('Code saved to Firestore:',code);
   }catch(e){
-    // setDoc failed — show the code anyway so admin can manually set it
-    document.getElementById('admin-code').textContent=code;
-    showToast('خطأ في الحفظ ('+( e.code||e.message)+') — الرمز: '+code,'error');
-    console.error('generateNewCode failed:',e);
+    console.error('generateNewCode error:',e.code, e.message);
+    showToast('فشل الحفظ: '+(e.code||e.message),'error');
   }
 }
 
@@ -2196,7 +2204,7 @@ async function saveBooking(){
     const advancePaidNow=advance>0;
     const _saveUid=(userProfile&&userProfile.role==='subuser')?(userProfile.parentUid||currentUser.uid):currentUser.uid;
     await addDoc(collection(db,'bookings'),{
-      uid:_saveUid,apartment:apt,tenantId,tenantName:tenant?.name||'',
+      uid:_saveUid,building:userProfile.building||'',apartment:apt,tenantId,tenantName:tenant?.name||'',
       tenantIdNumber:tenant?.idNumber||'',checkIn,checkOut,dailyRate,totalRent,
       advance,remaining:parseFloat((totalRent-advance).toFixed(3)),
       notes,checkedIn:false,paid:false,
@@ -3642,6 +3650,28 @@ function viewTenant(id){
 }
 
 // ── MULTI-BUILDING ───────────────────────────────────────────────────
+function updateBuildingSwitcher(){
+  const buildings=userProfile.buildings||[];
+  const bar=document.getElementById('building-switcher-bar');
+  const nameEl=document.getElementById('active-building-name');
+  const btnsEl=document.getElementById('building-switcher-btns');
+  if(!bar) return;
+  if(buildings.length<=1||userProfile.role==='subuser'){
+    bar.classList.remove('visible');
+    return;
+  }
+  const activeIdx=userProfile.activeBuildingIdx||0;
+  bar.classList.add('visible');
+  if(nameEl) nameEl.textContent=buildings[activeIdx]?.name||'';
+  if(btnsEl){
+    btnsEl.innerHTML=buildings.map((b,i)=>i===activeIdx?'':`
+      <button onclick="switchBuilding(${i})"
+        style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-family:var(--font);font-size:.72rem;font-weight:700;cursor:pointer">
+        ${b.name}
+      </button>`).join('');
+  }
+}
+
 function renderBuildingsPage(){
   const el=document.getElementById('buildings-list-container');
   if(!el) return;
@@ -3679,9 +3709,10 @@ async function switchBuilding(idx){
   userProfile.apartments=b.apartments||[];
   userProfile.apartmentData=b.apartmentData||{};
   userProfile.units=b.units||0;
-  await updateDoc(doc(db,'users',currentUser.uid),{activeBuildingIdx:idx});
+  await setDoc(doc(db,'users',currentUser.uid),{activeBuildingIdx:idx},{merge:true});
   showToast(`تم التبديل إلى ${b.name} ✓`,'success');
   renderBuildingsPage();
+  updateBuildingSwitcher();
   await loadLandlordData();
 }
 
@@ -3712,7 +3743,7 @@ async function addNewBuilding(){
   }];
   const newBuilding={name,address,floors,perFloor,apartments:aptList,apartmentData:{},units:aptList.length};
   buildings.push(newBuilding);
-  await updateDoc(doc(db,'users',currentUser.uid),{buildings});
+  await setDoc(doc(db,'users',currentUser.uid),{buildings},{merge:true});
   userProfile.buildings=buildings;
   closeModal('modal-add-building');
   clear(['new-bld-name','new-bld-address','new-bld-floors','new-bld-per-floor']);
