@@ -335,15 +335,16 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
     <div id="register-form" style="display:none">
       <div class="auth-title">تسجيل مالك جديد</div>
       <div class="error-msg" id="reg-error"></div>
-      <div class="form-group"><label>اسم المالك</label><input type="text" id="reg-name" placeholder="الاسم الكامل"></div>
-      <div class="form-group"><label>اسم المبنى</label><input type="text" id="reg-building" placeholder="مبنى الياسمين"></div>
+      <div class="form-group"><label>اسم المالك / Owner Name</label><input type="text" id="reg-name" placeholder="الاسم الكامل"></div>
+      <div class="form-group"><label>اسم المبنى / Building Name</label><input type="text" id="reg-building" placeholder="مبنى الياسمين"></div>
+      <div class="form-group"><label>عنوان المبنى / Building Address</label><input type="text" id="reg-address" placeholder="مثال: مسقط، الخوير، شارع 18"></div>
       <div class="form-row">
         <div class="form-group">
-          <label>عدد الطوابق</label>
+          <label>عدد الطوابق / Floors</label>
           <input type="number" id="reg-floors" placeholder="3" min="1" max="30" dir="ltr" oninput="previewApartments()">
         </div>
         <div class="form-group">
-          <label>شقق في كل طابق</label>
+          <label>شقق بكل طابق / Units/Floor</label>
           <input type="number" id="reg-per-floor" placeholder="4" min="1" max="20" dir="ltr" oninput="previewApartments()">
         </div>
       </div>
@@ -749,6 +750,36 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
   </div>
 </div>
 
+<!-- ADD BUILDING MODAL -->
+<div class="modal-overlay" id="modal-add-building">
+  <div class="modal" style="max-width:480px">
+    <h2>🏢 إضافة مبنى جديد / Add Building</h2>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px">أدخل تفاصيل المبنى — يمكنك إضافة حتى 3 مباني</p>
+    <div class="form-group">
+      <label>اسم المبنى / Building Name</label>
+      <input type="text" id="new-bld-name" placeholder="مبنى الورود">
+    </div>
+    <div class="form-group">
+      <label>عنوان المبنى / Building Address</label>
+      <input type="text" id="new-bld-address" placeholder="مثال: مسقط، الخوير، شارع 18">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>عدد الطوابق / Floors</label>
+        <input type="number" id="new-bld-floors" placeholder="3" min="1" max="30" dir="ltr">
+      </div>
+      <div class="form-group">
+        <label>شقق بكل طابق / Units/Floor</label>
+        <input type="number" id="new-bld-per-floor" placeholder="4" min="1" max="20" dir="ltr">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-building')">إلغاء</button>
+      <button class="btn btn-primary" onclick="addNewBuilding()">إضافة المبنى ✓</button>
+    </div>
+  </div>
+</div>
+
 <!-- PAYMENT MODAL -->
 <div class="modal-overlay" id="modal-payment">
   <div class="modal" style="max-width:380px;text-align:right">
@@ -834,6 +865,36 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
     <div id="tenant-detail-content"></div>
     <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--warm)">
       <button class="btn btn-secondary" onclick="closeModal('modal-tenant-detail')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD BUILDING MODAL -->
+<div class="modal-overlay" id="modal-add-building">
+  <div class="modal" style="max-width:480px">
+    <h2>🏢 إضافة مبنى جديد / Add Building</h2>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px">أدخل تفاصيل المبنى — يمكنك إضافة حتى 3 مباني</p>
+    <div class="form-group">
+      <label>اسم المبنى / Building Name</label>
+      <input type="text" id="new-bld-name" placeholder="مبنى الورود">
+    </div>
+    <div class="form-group">
+      <label>عنوان المبنى / Building Address</label>
+      <input type="text" id="new-bld-address" placeholder="مثال: مسقط، الخوير، شارع 18">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>عدد الطوابق / Floors</label>
+        <input type="number" id="new-bld-floors" placeholder="3" min="1" max="30" dir="ltr">
+      </div>
+      <div class="form-group">
+        <label>شقق بكل طابق / Units/Floor</label>
+        <input type="number" id="new-bld-per-floor" placeholder="4" min="1" max="20" dir="ltr">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-building')">إلغاء</button>
+      <button class="btn btn-primary" onclick="addNewBuilding()">إضافة المبنى ✓</button>
     </div>
   </div>
 </div>
@@ -940,6 +1001,10 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
         </div>
       </div>
     </div>
+    <div class="form-group" id="su-buildings-group" style="display:none">
+      <label style="font-weight:700;font-size:.85rem;display:block;margin-bottom:10px">🏢 الوصول إلى المباني / Building Access</label>
+      <div id="su-buildings-checkboxes" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-subuser')">إلغاء</button>
       <button class="btn btn-primary" onclick="saveSubUser()">إنشاء المستخدم ✓</button>
@@ -990,7 +1055,7 @@ const T = {
     nav_dashboard: 'لوحة التحكم', nav_tenants: 'المستأجرون', nav_bookings: 'الحجوزات',
     nav_apartments: 'الشقق', nav_calendar: 'التقويم', nav_expenses: 'المصروفات',
     nav_invoices: 'الفواتير', nav_contracts: 'العقود', nav_notifications: 'التنبيهات',
-    nav_report: 'التقرير الكامل', nav_admin: 'إدارة الملاك', nav_subusers: 'المستخدمون',
+    nav_report: 'التقرير الكامل', nav_admin: 'إدارة الملاك', nav_subusers: 'المستخدمون', nav_buildings: 'المباني',
     // Page headers
     ph_dashboard: 'لوحة التحكم', ph_dashboard_sub: 'نظرة عامة على المبنى والأداء المالي',
     ph_tenants: 'المستأجرون', ph_tenants_sub: 'قائمة المستأجرين المسجّلين',
@@ -1130,7 +1195,7 @@ const T = {
     nav_dashboard: 'Dashboard', nav_tenants: 'Tenants', nav_bookings: 'Bookings',
     nav_apartments: 'Apartments', nav_calendar: 'Calendar', nav_expenses: 'Expenses',
     nav_invoices: 'Invoices', nav_contracts: 'Contracts', nav_notifications: 'Alerts',
-    nav_report: 'Full Report', nav_admin: 'Admin Panel', nav_subusers: 'Sub-Users',
+    nav_report: 'Full Report', nav_admin: 'Admin Panel', nav_subusers: 'Sub-Users', nav_buildings: 'Buildings',
     ph_dashboard: 'Dashboard', ph_dashboard_sub: 'Building overview and financial performance',
     ph_tenants: 'Tenants', ph_tenants_sub: 'Registered tenants list',
     ph_bookings: 'Bookings', ph_bookings_sub: 'All apartment bookings',
@@ -1351,7 +1416,7 @@ const exp = {
   togglePaid, renderFullReportPage, printFullReport,
   shareContractWhatsApp, submitUpgradeCode, upgradeCodeNext, renderVacancyChart,
   enforcePlanGate, unlockApp, toggleLang, applyLang, deleteLandlord, doContractSearch,
-  renderBuildingsPage, switchBuilding, openAddBuilding, copyAdminCode,
+  renderBuildingsPage, switchBuilding, openAddBuilding, addNewBuilding, copyAdminCode,
   editExpense, deleteExpense, printExpensesReport,
   loadTenantPhotoField, clearTenantPhoto, viewTenant, setCalView, renderCalendarList,
   openEditTenant, deleteTenant, loadTenantPhoto,
@@ -1418,6 +1483,7 @@ function previewApartments(){
 
 async function doRegisterDirect(){
   const name=v('reg-name'), building=v('reg-building'),
+        address=v('reg-address')||'',
         floors=parseInt(document.getElementById('reg-floors').value)||0,
         perFloor=parseInt(document.getElementById('reg-per-floor').value)||0,
         phone=v('reg-phone'), email=v('reg-email'), pass=v('reg-pass');
@@ -1432,7 +1498,8 @@ async function doRegisterDirect(){
     const aptList=generateAptList(floors,perFloor);
     const cred=await createUserWithEmailAndPassword(auth,email,pass);
     await setDoc(doc(db,'users',cred.user.uid),{
-      name,building,floors,perFloor,apartments:aptList,units:aptList.length,phone,email,
+      name,building,buildingAddress:address,floors,perFloor,
+      apartments:aptList,units:aptList.length,phone,email,
       role:'landlord',plan:'free',bookingCount:0,createdAt:serverTimestamp()
     });
     showToast('تم إنشاء الحساب 🎉 — 5 حجوزات مجانية، ثم 10 OMR/شهر للاستمرار','success');
@@ -3486,11 +3553,26 @@ function openAddSubuser(){
     showToast('يمكنك إضافة مستخدم فرعي واحد فقط — Only one sub-user allowed','error');
     return;
   }
-  // Reset form
   clear(['su-email','su-pass']);
   ['tenants','contracts'].forEach(k=>{
     const cb=document.getElementById('su-p-'+k); if(cb){cb.checked=true; updatePermRow(k,true);}
   });
+  // Populate building access checkboxes
+  const buildings=userProfile.buildings||[{name:userProfile.building}];
+  const grp=document.getElementById('su-buildings-group');
+  const cbx=document.getElementById('su-buildings-checkboxes');
+  if(grp && cbx){
+    if(buildings.length>1){
+      grp.style.display='';
+      cbx.innerHTML=buildings.map((b,i)=>`
+        <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--paper);border:1.5px solid var(--accent);border-radius:8px;cursor:pointer">
+          <input type="checkbox" id="su-bld-${i}" checked style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
+          <span style="font-size:.85rem;font-weight:600">${b.name}${b.address?` · <small style='color:var(--muted)'>${b.address}</small>`:''}</span>
+        </label>`).join('');
+    } else {
+      grp.style.display='none';
+    }
+  }
   openModal('modal-subuser');
 }
 
@@ -3531,12 +3613,20 @@ async function saveSubUser(){
       return;
     }
     const subUid=data.localId;
+    // Get building access
+    const allBuildings=userProfile.buildings||[{name:userProfile.building,apartments:userProfile.apartments||[]}];
+    const buildingAccess=allBuildings.length>1
+      ? allBuildings.map((b,i)=>({...b,allowed:document.getElementById('su-bld-'+i)?.checked!==false})).filter(b=>b.allowed)
+      : allBuildings;
+    const primaryBld=buildingAccess[0]||allBuildings[0];
     const subEntry={
       uid:subUid, email, permissions:perms,
       parentUid:currentUser.uid,
-      building:userProfile.building||'',
-      apartments:userProfile.apartments||[],
-      apartmentData:userProfile.apartmentData||{},
+      building:primaryBld.name||userProfile.building||'',
+      buildingAddress:primaryBld.address||userProfile.buildingAddress||'',
+      apartments:primaryBld.apartments||userProfile.apartments||[],
+      apartmentData:primaryBld.apartmentData||userProfile.apartmentData||{},
+      buildingAccess:buildingAccess.map(b=>b.name),
       plan:'unlimited', role:'subuser',
       createdAt:new Date().toISOString()
     };
@@ -3629,7 +3719,7 @@ function renderBuildingsPage(){
           </div>
           <div style="flex:1">
             <div style="font-weight:700;font-size:.95rem">${b.name}</div>
-            <div style="font-size:.75rem;color:var(--muted);margin-top:2px">${b.apartments?b.apartments.length:0} شقة</div>
+            <div style="font-size:.75rem;color:var(--muted);margin-top:2px">${b.apartments?b.apartments.length:0} شقة${b.address?` · ${b.address}`:''}</div>
           </div>
           ${i===activeIdx?'<span style="font-size:.72rem;font-weight:700;color:var(--accent);background:var(--accent-light);padding:3px 10px;border-radius:10px">نشط</span>':'<span style="font-size:.72rem;color:var(--muted)">تبديل ←</span>'}
         </div>`).join('')}
@@ -3656,17 +3746,32 @@ function openAddBuilding(){
   if(!isPaid){showToast('يجب الاشتراك لإضافة مباني إضافية','error');return;}
   const buildings=userProfile.buildings||[];
   if(buildings.length>=3){showToast('الحد الأقصى 3 مباني','error');return;}
-  const name=prompt('اسم المبنى الجديد / New building name:');
-  if(!name||!name.trim()) return;
-  addNewBuilding(name.trim());
+  openModal('modal-add-building');
 }
 
-async function addNewBuilding(name){
-  const buildings=userProfile.buildings||[{name:userProfile.building,apartments:userProfile.apartments||[],apartmentData:userProfile.apartmentData||{},units:userProfile.units||0}];
-  const newBuilding={name,apartments:[],apartmentData:{},units:0};
+async function addNewBuilding(){
+  const name=v('new-bld-name');
+  const address=v('new-bld-address');
+  const floors=parseInt(document.getElementById('new-bld-floors').value)||0;
+  const perFloor=parseInt(document.getElementById('new-bld-per-floor').value)||0;
+  if(!name){showToast('أدخل اسم المبنى','error');return;}
+  if(!floors||!perFloor){showToast('أدخل عدد الطوابق والشقق','error');return;}
+  const aptList=generateAptList(floors,perFloor);
+  const buildings=userProfile.buildings||[{
+    name:userProfile.building,
+    address:userProfile.buildingAddress||'',
+    apartments:userProfile.apartments||[],
+    apartmentData:userProfile.apartmentData||{},
+    units:userProfile.units||0,
+    floors:userProfile.floors||floors,
+    perFloor:userProfile.perFloor||perFloor
+  }];
+  const newBuilding={name,address,floors,perFloor,apartments:aptList,apartmentData:{},units:aptList.length};
   buildings.push(newBuilding);
   await updateDoc(doc(db,'users',currentUser.uid),{buildings});
   userProfile.buildings=buildings;
+  closeModal('modal-add-building');
+  clear(['new-bld-name','new-bld-address','new-bld-floors','new-bld-per-floor']);
   showToast(`تم إضافة ${name} ✓`,'success');
   renderBuildingsPage();
 }
