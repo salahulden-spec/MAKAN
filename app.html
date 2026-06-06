@@ -1715,9 +1715,16 @@ function copyAdminCode(){
 
 async function generateNewCode(){
   const code=Math.floor(100000+Math.random()*900000).toString();
-  await setDoc(doc(db,'config','registration'),{code,updatedAt:serverTimestamp()});
-  document.getElementById('admin-code').textContent=code;
-  showToast('تم توليد رمز جديد: '+code,'success');
+  try{
+    await setDoc(doc(db,'config','registration'),{code,updatedAt:serverTimestamp()});
+    document.getElementById('admin-code').textContent=code;
+    showToast('✓ الرمز الجديد: '+code,'success');
+  }catch(e){
+    // setDoc failed — show the code anyway so admin can manually set it
+    document.getElementById('admin-code').textContent=code;
+    showToast('خطأ في الحفظ ('+( e.code||e.message)+') — الرمز: '+code,'error');
+    console.error('generateNewCode failed:',e);
+  }
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────
