@@ -580,6 +580,7 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
       </div>
       <div class="quick-actions" style="margin-bottom:24px">
         <button class="btn btn-primary" onclick="generateNewCode()">🔄 توليد رمز تفعيل جديد</button>
+        <button class="btn btn-secondary btn-sm" onclick="checkStoredCode()" style="margin-top:8px">🔍 تحقق من الرمز المخزن</button>
       </div>
       <div class="card" style="margin-bottom:20px">
         <div class="card-header"><span class="card-title">🔑 إعادة تعيين كلمة مرور مالك</span></div>
@@ -1416,7 +1417,7 @@ const exp = {
   togglePaid, renderFullReportPage, printFullReport,
   shareContractWhatsApp, submitUpgradeCode, upgradeCodeNext, renderVacancyChart,
   enforcePlanGate, unlockApp, toggleLang, applyLang, deleteLandlord, doContractSearch,
-  renderBuildingsPage, switchBuilding, openAddBuilding, addNewBuilding, copyAdminCode,
+  renderBuildingsPage, switchBuilding, openAddBuilding, addNewBuilding, copyAdminCode, checkStoredCode,
   editExpense, deleteExpense, printExpensesReport,
   loadTenantPhotoField, clearTenantPhoto, viewTenant, setCalView, renderCalendarList,
   openEditTenant, deleteTenant, loadTenantPhoto,
@@ -1778,6 +1779,23 @@ function copyAdminCode(){
       ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
       showToast('تم نسخ الرمز: '+code+' ✓','success');
     });
+}
+
+async function checkStoredCode(){
+  try{
+    const snap=await getDoc(doc(db,'config','registration'));
+    if(!snap.exists()){
+      showToast('المستند غير موجود في Firestore — Document does not exist','error');
+      return;
+    }
+    const data=snap.data();
+    const stored=data.code||'(فارغ)';
+    showToast(`الرمز المخزن حالياً: ${stored}`,'success');
+    document.getElementById('admin-code').textContent=stored;
+    console.log('Stored data:',data);
+  }catch(e){
+    showToast('خطأ: '+(e.code||e.message),'error');
+  }
 }
 
 async function generateNewCode(){
