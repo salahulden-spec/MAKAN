@@ -3086,9 +3086,14 @@ function updatePlanBanner(){
 }
 
 function showUpgradePrompt(){
+  // Clear inputs
   document.querySelectorAll('#modal-upgrade-code-inputs input').forEach(i=>i.value='');
-  document.getElementById('upgrade-error').classList.remove('show');
-  document.getElementById('upgrade-btn-text').textContent='تفعيل الحساب';
+  // Clear error (use correct ID)
+  const err=document.getElementById('modal-upgrade-error');
+  if(err) err.classList.remove('show');
+  // Reset button text (use correct ID)
+  const btn=document.getElementById('modal-upgrade-btn-text');
+  if(btn) btn.textContent='تفعيل الاشتراك';
   openModal('modal-upgrade');
 }
 
