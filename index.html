@@ -1562,10 +1562,10 @@ async function loadLandlordData(){
   const isSubuser = userProfile && userProfile.role==='subuser';
   const uid = isSubuser ? (userProfile.parentUid || currentUser.uid) : currentUser.uid;
 
-  // Update active building apartments in userProfile
+  // Set active building context
   const buildings=userProfile.buildings||[];
+  const activeIdx=userProfile.activeBuildingIdx||0;
   if(buildings.length>0){
-    const activeIdx=userProfile.activeBuildingIdx||0;
     const activeBld=buildings[activeIdx]||buildings[0];
     userProfile.building=activeBld.name||userProfile.building;
     userProfile.buildingAddress=activeBld.address||userProfile.buildingAddress||'';
@@ -1574,21 +1574,30 @@ async function loadLandlordData(){
     userProfile.units=activeBld.units||userProfile.units||0;
   }
 
+  const activeBldIdx=String(activeIdx);
+  const isMulti=buildings.length>1;
+
   const [tS,bS,eS]=await Promise.all([
     getDocs(query(collection(db,'tenants'),where('uid','==',uid))),
     getDocs(query(collection(db,'bookings'),where('uid','==',uid))),
     getDocs(query(collection(db,'expenses'),where('uid','==',uid))),
   ]);
-  allTenants=tS.docs.map(d=>({id:d.id,...d.data()}));
-  // Filter bookings to active building only
-  const allBkgs=bS.docs.map(d=>({id:d.id,...d.data()}));
-  const activeBldName=userProfile.building;
-  const activeApts=userProfile.apartments||[];
-  // If multi-building: filter bookings by active building's apartments
-  allBookings = buildings.length>1
-    ? allBkgs.filter(b=>activeApts.includes(b.apartment)||b.building===activeBldName)
-    : allBkgs;
-  allExpenses=eS.docs.map(d=>({id:d.id,...d.data()}));
+
+  // Filter each collection to active building only (if multi-building)
+  allTenants = isMulti
+    ? tS.docs.map(d=>({id:d.id,...d.data()})).filter(t=>
+        t.buildingId===activeBldIdx || (!t.buildingId && activeIdx===0))
+    : tS.docs.map(d=>({id:d.id,...d.data()}));
+
+  allBookings = isMulti
+    ? bS.docs.map(d=>({id:d.id,...d.data()})).filter(b=>
+        b.buildingId===activeBldIdx || (!b.buildingId && activeIdx===0))
+    : bS.docs.map(d=>({id:d.id,...d.data()}));
+
+  allExpenses = isMulti
+    ? eS.docs.map(d=>({id:d.id,...d.data()})).filter(e=>
+        e.buildingId===activeBldIdx || (!e.buildingId && activeIdx===0))
+    : eS.docs.map(d=>({id:d.id,...d.data()}));
   renderDashboard();renderTenants();renderBookings();renderExpenses();
   const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
   renderCalendar();
@@ -2116,8 +2125,10 @@ async function saveTenant(){
       showToast('تم تعديل بيانات المستأجر ✓','success');
     } else {
       const _tUid=(userProfile&&userProfile.role==='subuser')?(userProfile.parentUid||currentUser.uid):currentUser.uid;
-      const ref=await addDoc(collection(db,'tenants'),{uid:_tUid,...payload,createdAt:serverTimestamp()});
-      allTenants.push({id:ref.id,uid:_tUid,...payload});
+      const _tBldIdx=String(userProfile.activeBuildingIdx||0);
+      const tBldData={buildingId:_tBldIdx,building:userProfile.building||''};
+      const ref=await addDoc(collection(db,'tenants'),{uid:_tUid,...payload,...tBldData,createdAt:serverTimestamp()});
+      allTenants.push({id:ref.id,uid:_tUid,...payload,...tBldData});
       showToast('تم إضافة المستأجر ✓','success');
     }
     closeModal('modal-tenant');
@@ -2203,8 +2214,9 @@ async function saveBooking(){
   } else {
     const advancePaidNow=advance>0;
     const _saveUid=(userProfile&&userProfile.role==='subuser')?(userProfile.parentUid||currentUser.uid):currentUser.uid;
+    const _activeBldIdx=String(userProfile.activeBuildingIdx||0);
     await addDoc(collection(db,'bookings'),{
-      uid:_saveUid,building:userProfile.building||'',apartment:apt,tenantId,tenantName:tenant?.name||'',
+      uid:_saveUid,building:userProfile.building||'',buildingId:_activeBldIdx,apartment:apt,tenantId,tenantName:tenant?.name||'',
       tenantIdNumber:tenant?.idNumber||'',checkIn,checkOut,dailyRate,totalRent,
       advance,remaining:parseFloat((totalRent-advance).toFixed(3)),
       notes,checkedIn:false,paid:false,
@@ -2242,7 +2254,8 @@ async function saveExpense(){
     if(titleEl) titleEl.textContent='إضافة مصروف';
   } else {
     const _eUid=(userProfile&&userProfile.role==='subuser')?(userProfile.parentUid||currentUser.uid):currentUser.uid;
-    const ref=await addDoc(collection(db,'expenses'),{uid:_eUid,date,description:desc,amount,createdAt:serverTimestamp()});
+    const _eBldIdx=String(userProfile.activeBuildingIdx||0);
+    const ref=await addDoc(collection(db,'expenses'),{uid:_eUid,buildingId:_eBldIdx,building:userProfile.building||'',date,description:desc,amount,createdAt:serverTimestamp()});
     allExpenses.push({id:ref.id,uid:currentUser.uid,date,description:desc,amount});
     showToast('تم إضافة المصروف ✓','success');
   }
@@ -3652,24 +3665,26 @@ function viewTenant(id){
 // ── MULTI-BUILDING ───────────────────────────────────────────────────
 function updateBuildingSwitcher(){
   const buildings=userProfile.buildings||[];
-  const bar=document.getElementById('building-switcher-bar');
-  const nameEl=document.getElementById('active-building-name');
-  const btnsEl=document.getElementById('building-switcher-btns');
-  if(!bar) return;
+  const switcher=document.getElementById('sidebar-building-switcher');
+  const btnsEl=document.getElementById('sidebar-bld-btns');
+  if(!switcher||!btnsEl) return;
   if(buildings.length<=1||userProfile.role==='subuser'){
-    bar.classList.remove('visible');
+    switcher.style.display='none';
     return;
   }
+  switcher.style.display='';
   const activeIdx=userProfile.activeBuildingIdx||0;
-  bar.classList.add('visible');
-  if(nameEl) nameEl.textContent=buildings[activeIdx]?.name||'';
-  if(btnsEl){
-    btnsEl.innerHTML=buildings.map((b,i)=>i===activeIdx?'':`
-      <button onclick="switchBuilding(${i})"
-        style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-family:var(--font);font-size:.72rem;font-weight:700;cursor:pointer">
-        ${b.name}
-      </button>`).join('');
-  }
+  btnsEl.innerHTML=buildings.map((b,i)=>`
+    <button onclick="switchBuilding(${i})"
+      style="display:flex;align-items:center;gap:8px;width:100%;background:${i===activeIdx?'rgba(79,126,248,.2)':'rgba(255,255,255,.05)'};
+             border:1px solid ${i===activeIdx?'rgba(79,126,248,.4)':'rgba(255,255,255,.08)'};
+             border-radius:8px;padding:8px 10px;font-family:var(--font);font-size:.78rem;
+             font-weight:${i===activeIdx?'700':'400'};cursor:pointer;
+             color:${i===activeIdx?'#93c5fd':'rgba(255,255,255,.6)'};text-align:right">
+      <span style="font-size:.9rem">${i===activeIdx?'🏢':'🏗️'}</span>
+      <span style="flex:1">${b.name}</span>
+      ${i===activeIdx?'<span style="font-size:.6rem;background:rgba(79,126,248,.3);padding:2px 6px;border-radius:4px">نشط</span>':''}
+    </button>`).join('');
 }
 
 function renderBuildingsPage(){
@@ -3701,19 +3716,15 @@ function renderBuildingsPage(){
 }
 
 async function switchBuilding(idx){
-  const buildings=userProfile.buildings||[{name:userProfile.building,apartments:userProfile.apartments||[],apartmentData:userProfile.apartmentData||{},units:userProfile.units||0}];
-  if(idx>=buildings.length) return;
-  const b=buildings[idx];
+  const buildings=userProfile.buildings||[];
+  if(!buildings.length||idx>=buildings.length) return;
   userProfile.activeBuildingIdx=idx;
-  userProfile.building=b.name;
-  userProfile.apartments=b.apartments||[];
-  userProfile.apartmentData=b.apartmentData||{};
-  userProfile.units=b.units||0;
   await setDoc(doc(db,'users',currentUser.uid),{activeBuildingIdx:idx},{merge:true});
-  showToast(`تم التبديل إلى ${b.name} ✓`,'success');
-  renderBuildingsPage();
+  showToast(`🏢 ${buildings[idx].name}`,'success');
   updateBuildingSwitcher();
+  toggleSidebar(false);
   await loadLandlordData();
+  showPage('page-dashboard');
 }
 
 function openAddBuilding(){
