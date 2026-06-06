@@ -861,95 +861,18 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
 </div>
 
 <!-- TENANT DETAIL MODAL -->
-<div class="modal-overlay" id="modal-tenant-detail">
-  <div class="modal" style="max-width:520px">
-    <div id="tenant-detail-content"></div>
-    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--warm)">
-      <button class="btn btn-secondary" onclick="closeModal('modal-tenant-detail')">إغلاق</button>
-    </div>
-  </div>
-</div>
+
 
 <!-- ADD BUILDING MODAL -->
-<div class="modal-overlay" id="modal-add-building">
-  <div class="modal" style="max-width:480px">
-    <h2>🏢 إضافة مبنى جديد / Add Building</h2>
-    <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px">أدخل تفاصيل المبنى — يمكنك إضافة حتى 3 مباني</p>
-    <div class="form-group">
-      <label>اسم المبنى / Building Name</label>
-      <input type="text" id="new-bld-name" placeholder="مبنى الورود">
-    </div>
-    <div class="form-group">
-      <label>عنوان المبنى / Building Address</label>
-      <input type="text" id="new-bld-address" placeholder="مثال: مسقط، الخوير، شارع 18">
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>عدد الطوابق / Floors</label>
-        <input type="number" id="new-bld-floors" placeholder="3" min="1" max="30" dir="ltr">
-      </div>
-      <div class="form-group">
-        <label>شقق بكل طابق / Units/Floor</label>
-        <input type="number" id="new-bld-per-floor" placeholder="4" min="1" max="20" dir="ltr">
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-add-building')">إلغاء</button>
-      <button class="btn btn-primary" onclick="addNewBuilding()">إضافة المبنى ✓</button>
-    </div>
-  </div>
-</div>
+
 
 <!-- PAYMENT MODAL -->
-<div class="modal-overlay" id="modal-payment">
-  <div class="modal" style="max-width:380px;text-align:right">
-    <h2 data-t="m_payment">💳 تسجيل الدفع</h2>
-    <p style="font-size:.85rem;color:var(--muted);margin-bottom:16px">اختر نوع الدفع وطريقته:</p>
-    <div id="pay-modal-options"></div>
-    <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="closeModal('modal-payment')" data-t="btn_cancel">إلغاء</button>
-  </div>
-</div>
+
 
 <!-- MOVE TENANT MODAL -->
-<div class="modal-overlay" id="modal-move-tenant">
-  <div class="modal" style="max-width:420px">
-    <h2 data-t="m_move_tenant">🔄 نقل مستأجر</h2>
-    <p style="font-size:.85rem;color:var(--muted);margin-bottom:16px" data-t="m_move_desc">نقل المستأجر إلى شقة أخرى — يجب أن تكون الشقة شاغرة في نفس الفترة</p>
-    <div id="move-booking-info" style="background:var(--paper);border-radius:8px;padding:12px;margin-bottom:16px;font-size:.85rem"></div>
-    <div class="form-group">
-      <label>الشقة الجديدة</label>
-      <select id="move-apt-select"><option value="">— اختر شقة —</option></select>
-      <div class="hint" id="move-apt-hint"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-move-tenant')" data-t="btn_cancel">إلغاء</button>
-      <button class="btn btn-primary" onclick="confirmMoveTenant()">نقل المستأجر</button>
-    </div>
-  </div>
-</div>
+
 
 <!-- UPGRADE MODAL -->
-<div class="modal-overlay" id="modal-upgrade">
-  <div class="modal" style="max-width:420px;text-align:center">
-    <h2>🔓 ترقية الحساب</h2>
-    <p style="font-size:.88rem;color:var(--muted);margin-bottom:16px">وصلت للحد الأقصى للخطة المجانية (5 حجوزات).<br>للاستمرار تواصل معنا للحصول على رمز التفعيل.</p>
-    <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:14px;margin-bottom:20px">
-      <div style="font-size:.82rem;color:var(--muted);margin-bottom:4px">تواصل عبر واتساب</div>
-      <div style="font-size:1.2rem;font-weight:900;direction:ltr">+968 94313327</div>
-    </div>
-    <div class="error-msg" id="upgrade-error"></div>
-    <div class="code-inputs" id="upgrade-code-inputs">
-      <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,0)">
-      <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,1)">
-      <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,2)">
-      <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,3)">
-      <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,4)">
-      <input type="tel" maxlength="1" oninput="upgradeCodeNext(this,5)">
-    </div>
-    <button class="btn btn-primary btn-full" style="margin-top:16px" onclick="submitUpgradeCode()"><span id="upgrade-btn-text">تفعيل الحساب</span></button>
-    <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="tryClosePlanModal()" data-t="btn_later">لاحقاً</button>
-  </div>
-</div>
 
 <!-- SUB-USER MODAL -->
 <div class="modal-overlay" id="modal-subuser">
@@ -1508,51 +1431,49 @@ async function doRegisterDirect(){
 }
 
 async function doUpgradeAccount(){
-  // Detect source: modal overlay has display:flex when open
-  const modalOverlay = document.getElementById('modal-upgrade');
-  const fromModal = modalOverlay && window.getComputedStyle(modalOverlay).display !== 'none';
-
-  // Use unique IDs for modal vs auth-screen inputs
-  const inputSelector = fromModal ? '#modal-upgrade-code-inputs input' : '#code-inputs input';
-  const errId = fromModal ? 'modal-upgrade-error' : 'code-error';
-  const btnId = fromModal ? 'modal-upgrade-btn-text' : 'code-btn-text';
-
-  const inputs=[...document.querySelectorAll(inputSelector)];
+  // Collect code from whichever input set is visible
+  // Try modal first, fall back to auth screen
+  let inputs = [...document.querySelectorAll('#modal-upgrade-code-inputs input')];
+  let errId = 'modal-upgrade-error';
+  let btnId = 'modal-upgrade-btn-text';
+  // If modal inputs are empty, try auth screen inputs
+  if(inputs.every(i=>!i.value)){
+    const authInputs=[...document.querySelectorAll('#code-inputs input')];
+    if(authInputs.some(i=>i.value)){
+      inputs=authInputs; errId='code-error'; btnId='code-btn-text';
+    }
+  }
   const code=inputs.map(i=>i.value.trim()).join('');
   const err=document.getElementById(errId);
   const btn=document.getElementById(btnId);
-  if(!err||!btn){ console.error('Missing elements',errId,btnId); return; }
+  if(!err||!btn){ showToast('خطأ في الواجهة — refresh the page','error'); return; }
   err.classList.remove('show');
-  if(code.length!==6){ showErr(err,'الرمز 6 أرقام — 6-digit code required'); return; }
+  if(code.length!==6){ showErr(err,'أدخل الرمز كاملاً — 6 digits required'); return; }
   btn.innerHTML='<span class="spinner"></span>';
   try{
-    let snap;
-    try{
-      snap=await getDoc(doc(db,'config','registration'));
-    }catch(firestoreErr){
-      showErr(err,'خطأ في الاتصال — تأكد من اتصالك بالإنترنت');
+    const snap=await getDoc(doc(db,'config','registration'));
+    if(!snap||!snap.exists()||!snap.data().code){
+      showErr(err,'لا يوجد رمز نشط — تواصل مع المسؤول +968 94313327');
       btn.textContent='تفعيل الاشتراك'; return;
     }
-    if(!snap.exists()||!snap.data().code){
-      showErr(err,'الرمز غير مفعّل بعد — تواصل مع المسؤول على +968 94313327');
+    const stored=(snap.data().code||'').toString().trim();
+    console.log('Code entered:',code,'Stored:',stored);
+    if(code!==stored){
+      showErr(err,'الرمز غير صحيح — incorrect code');
       btn.textContent='تفعيل الاشتراك'; return;
     }
-    const storedCode = (snap.data().code||'').trim();
-    if(code!==storedCode){
-      showErr(err,`الرمز غير صحيح — Wrong code (entered: ${code})`);
-      btn.textContent='تفعيل الاشتراك'; return;
-    }
-    // Code correct — update user's own doc
     await updateDoc(doc(db,'users',currentUser.uid),{plan:'unlimited'});
     userProfile.plan='unlimited';
-    if(fromModal){ closeModal('modal-upgrade'); unlockApp(); }
+    closeModal('modal-upgrade');
+    unlockApp();
     updatePlanBanner();
-    showToast('🎉 تم تفعيل اشتراكك — Subscription activated!','success');
+    showToast('🎉 تم تفعيل اشتراكك!','success');
   }catch(e){
-    const msg = e.code==='not-found' ? 'الرمز غير مفعّل بعد — تواصل مع المسؤول'
-              : e.code==='permission-denied' ? 'خطأ في الصلاحيات — permission denied'
-              : (e.message||e.code||'خطأ غير معروف');
-    showErr(err, msg);
+    console.error('doUpgradeAccount error:',e);
+    const msg=e.code==='permission-denied'?'خطأ في الصلاحيات'
+             :e.code==='not-found'?'مستند الرمز غير موجود'
+             :(e.message||e.code||'خطأ غير معروف');
+    showErr(err,msg);
     btn.textContent='تفعيل الاشتراك';
   }
 }
@@ -3165,7 +3086,7 @@ function updatePlanBanner(){
 }
 
 function showUpgradePrompt(){
-  document.querySelectorAll('#upgrade-code-inputs input').forEach(i=>i.value='');
+  document.querySelectorAll('#modal-upgrade-code-inputs input').forEach(i=>i.value='');
   document.getElementById('upgrade-error').classList.remove('show');
   document.getElementById('upgrade-btn-text').textContent='تفعيل الحساب';
   openModal('modal-upgrade');
@@ -3173,7 +3094,7 @@ function showUpgradePrompt(){
 
 function upgradeCodeNext(input,idx){
   input.value=input.value.replace(/\D/g,'');
-  if(input.value&&idx<5) document.querySelectorAll('#upgrade-code-inputs input')[idx+1].focus();
+  if(input.value&&idx<5) document.querySelectorAll('#modal-upgrade-code-inputs input')[idx+1].focus();
 }
 
 async function submitUpgradeCode(){
