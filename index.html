@@ -395,6 +395,11 @@ hr.divider{border:none;border-top:1px solid var(--warm);margin:16px 0}
         🌐 <span id="lang-toggle-label">English</span>
       </button>
     </div>
+    <!-- Building Switcher — shown when user has 2+ buildings -->
+    <div id="sidebar-building-switcher" style="display:none;padding:10px 12px 6px;border-top:1px solid rgba(255,255,255,.06)">
+      <div style="font-size:.6rem;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,.25);text-transform:uppercase;margin-bottom:6px;padding:0 4px">المبنى الحالي / BUILDING</div>
+      <div id="sidebar-bld-btns"></div>
+    </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar-init">م</div>
       <div class="user-info">
@@ -1583,21 +1588,27 @@ async function loadLandlordData(){
     getDocs(query(collection(db,'expenses'),where('uid','==',uid))),
   ]);
 
-  // Filter each collection to active building only (if multi-building)
-  allTenants = isMulti
-    ? tS.docs.map(d=>({id:d.id,...d.data()})).filter(t=>
-        t.buildingId===activeBldIdx || (!t.buildingId && activeIdx===0))
-    : tS.docs.map(d=>({id:d.id,...d.data()}));
+  // Filter by buildingId (new data) OR by apartment list (legacy data without buildingId)
+  const activeAptSet = new Set(userProfile.apartments||[]);
 
-  allBookings = isMulti
-    ? bS.docs.map(d=>({id:d.id,...d.data()})).filter(b=>
-        b.buildingId===activeBldIdx || (!b.buildingId && activeIdx===0))
-    : bS.docs.map(d=>({id:d.id,...d.data()}));
-
-  allExpenses = isMulti
-    ? eS.docs.map(d=>({id:d.id,...d.data()})).filter(e=>
-        e.buildingId===activeBldIdx || (!e.buildingId && activeIdx===0))
-    : eS.docs.map(d=>({id:d.id,...d.data()}));
+  if(isMulti){
+    allTenants = tS.docs.map(d=>({id:d.id,...d.data()})).filter(t=>
+      t.buildingId===activeBldIdx ||                          // new: has buildingId tag
+      (!t.buildingId && activeIdx===0)                        // legacy: no tag → belongs to building 0
+    );
+    allBookings = bS.docs.map(d=>({id:d.id,...d.data()})).filter(b=>
+      b.buildingId===activeBldIdx ||                          // new: has buildingId tag
+      (!b.buildingId && (activeAptSet.has(b.apartment) || activeIdx===0)) // legacy: match by apartment
+    );
+    allExpenses = eS.docs.map(d=>({id:d.id,...d.data()})).filter(e=>
+      e.buildingId===activeBldIdx ||
+      (!e.buildingId && activeIdx===0)
+    );
+  } else {
+    allTenants  = tS.docs.map(d=>({id:d.id,...d.data()}));
+    allBookings = bS.docs.map(d=>({id:d.id,...d.data()}));
+    allExpenses = eS.docs.map(d=>({id:d.id,...d.data()}));
+  }
   renderDashboard();renderTenants();renderBookings();renderExpenses();
   const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
   renderCalendar();
@@ -3672,18 +3683,23 @@ function updateBuildingSwitcher(){
     switcher.style.display='none';
     return;
   }
-  switcher.style.display='';
+  switcher.style.display='block';
   const activeIdx=userProfile.activeBuildingIdx||0;
   btnsEl.innerHTML=buildings.map((b,i)=>`
     <button onclick="switchBuilding(${i})"
-      style="display:flex;align-items:center;gap:8px;width:100%;background:${i===activeIdx?'rgba(79,126,248,.2)':'rgba(255,255,255,.05)'};
-             border:1px solid ${i===activeIdx?'rgba(79,126,248,.4)':'rgba(255,255,255,.08)'};
-             border-radius:8px;padding:8px 10px;font-family:var(--font);font-size:.78rem;
+      style="display:flex;align-items:center;gap:8px;width:100%;
+             background:${i===activeIdx?'rgba(79,126,248,.2)':'rgba(255,255,255,.04)'};
+             border:1.5px solid ${i===activeIdx?'rgba(79,126,248,.5)':'rgba(255,255,255,.07)'};
+             border-radius:9px;padding:9px 12px;margin-bottom:5px;
+             font-family:var(--font);font-size:.8rem;
              font-weight:${i===activeIdx?'700':'400'};cursor:pointer;
-             color:${i===activeIdx?'#93c5fd':'rgba(255,255,255,.6)'};text-align:right">
-      <span style="font-size:.9rem">${i===activeIdx?'🏢':'🏗️'}</span>
+             color:${i===activeIdx?'#93c5fd':'rgba(255,255,255,.55)'};text-align:right;
+             transition:background .2s">
+      <span>${i===activeIdx?'🏢':'🏗️'}</span>
       <span style="flex:1">${b.name}</span>
-      ${i===activeIdx?'<span style="font-size:.6rem;background:rgba(79,126,248,.3);padding:2px 6px;border-radius:4px">نشط</span>':''}
+      ${i===activeIdx
+        ?'<span style="font-size:.6rem;background:rgba(79,126,248,.4);color:#93c5fd;padding:2px 7px;border-radius:4px;font-weight:700">نشط</span>'
+        :'<span style="font-size:.65rem;color:rgba(255,255,255,.3)">تبديل</span>'}
     </button>`).join('');
 }
 
@@ -3718,11 +3734,23 @@ function renderBuildingsPage(){
 async function switchBuilding(idx){
   const buildings=userProfile.buildings||[];
   if(!buildings.length||idx>=buildings.length) return;
+  // Update active building in profile BEFORE loading data
+  const bld=buildings[idx];
   userProfile.activeBuildingIdx=idx;
+  userProfile.building=bld.name||'';
+  userProfile.buildingAddress=bld.address||'';
+  userProfile.apartments=bld.apartments||[];
+  userProfile.apartmentData=bld.apartmentData||{};
+  userProfile.units=bld.units||0;
+  // Save to Firestore
   await setDoc(doc(db,'users',currentUser.uid),{activeBuildingIdx:idx},{merge:true});
-  showToast(`🏢 ${buildings[idx].name}`,'success');
+  showToast(`🏢 ${bld.name}`,'success');
   updateBuildingSwitcher();
   toggleSidebar(false);
+  // Update sidebar role to show current building
+  const roleEl=document.getElementById('sidebar-role');
+  if(roleEl) roleEl.textContent=bld.name;
+  // Reload all data filtered to new building
   await loadLandlordData();
   showPage('page-dashboard');
 }
