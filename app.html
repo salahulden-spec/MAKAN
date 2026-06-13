@@ -460,6 +460,11 @@ body {
   justify-content: center;
 }
 
+.sidebar-nav {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
 .sidebar-user {
   padding: 14px 20px;
   border-top: 1px solid rgba(255,255,255,.07);
@@ -3762,24 +3767,26 @@ function updatePlanBanner(){
   const count=allBookings.length;
   const remaining=Math.max(0,5-count);
   let banner=document.getElementById('plan-banner');
+  // Banner lives inside the sidebar above the user row — no overlay
   if(!banner){
     banner=document.createElement('div');
     banner.id='plan-banner';
-    banner.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:300;transition:transform .3s';
-    document.body.appendChild(banner);
+    // Insert before .sidebar-user (last child before closing tag)
+    const sidebarUser=document.querySelector('.sidebar-user');
+    if(sidebarUser) sidebarUser.parentNode.insertBefore(banner,sidebarUser);
+    else document.body.appendChild(banner);
   }
-  if(plan==='unlimited'){ banner.style.transform='translateY(100%)'; return; }
+  if(plan==='unlimited'){ banner.style.display='none'; return; }
+  banner.style.display='block';
   if(remaining>0){
-    banner.style.transform='translateY(0)';
-    banner.innerHTML=`<div style="background:var(--ink);color:var(--paper);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.84rem">
-      <span>🆓 تجربة مجانية — متبقي <b>${remaining}</b> حجز${remaining===1?'':'ات'} من أصل 5</span>
-      <button onclick="showUpgradePrompt()" style="background:var(--accent);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer">اشترك — 10 OMR/شهر</button>
+    banner.innerHTML=`<div style="margin:0 12px 10px;background:rgba(79,126,248,.12);border:1px solid rgba(79,126,248,.25);border-radius:12px;padding:10px 14px;font-size:.75rem;">
+      <div style="color:rgba(255,255,255,.8);margin-bottom:7px">🆓 تجربة مجانية — متبقي <b style="color:#93c5fd">${remaining}</b> من أصل 5</div>
+      <button onclick="showUpgradePrompt()" style="width:100%;background:var(--accent);color:#fff;border:none;padding:7px 0;border-radius:8px;font-family:var(--font);font-size:.78rem;font-weight:700;cursor:pointer">اشترك — 10 OMR/شهر</button>
     </div>`;
   } else {
-    banner.style.transform='translateY(0)';
-    banner.innerHTML=`<div style="background:var(--danger);color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.84rem">
-      <span>🔒 وصلت للحد الأقصى للخطة المجانية — 5 حجوزات</span>
-      <button onclick="showUpgradePrompt()" style="background:#fff;color:var(--danger);border:none;padding:7px 16px;border-radius:6px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer">ترقية الحساب الآن</button>
+    banner.innerHTML=`<div style="margin:0 12px 10px;background:rgba(224,60,60,.15);border:1px solid rgba(224,60,60,.3);border-radius:12px;padding:10px 14px;font-size:.75rem;">
+      <div style="color:rgba(255,255,255,.8);margin-bottom:7px">🔒 انتهت التجربة المجانية — 5 حجوزات</div>
+      <button onclick="showUpgradePrompt()" style="width:100%;background:#e03c3c;color:#fff;border:none;padding:7px 0;border-radius:8px;font-family:var(--font);font-size:.78rem;font-weight:700;cursor:pointer">اشترك الآن</button>
     </div>`;
   }
 }
