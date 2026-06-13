@@ -985,17 +985,17 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
 
     <!-- LOGIN -->
     <div id="login-form">
-      <div class="auth-title">تسجيل الدخول</div>
+      <div class="auth-title" data-t="auth_login_title">تسجيل الدخول</div>
       <div class="error-msg" id="login-error"></div>
-      <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="login-email" placeholder="you@example.com" dir="ltr" autocomplete="email"></div>
-      <div class="form-group"><label>كلمة المرور</label><input type="password" id="login-pass" placeholder="••••••••" dir="ltr" autocomplete="current-password"></div>
-      <button class="btn btn-primary btn-full" onclick="doLogin()"><span id="login-btn-text">دخول</span></button>
-      <div class="auth-switch">ما عندك حساب؟ <a onclick="showRegister()">سجّل الآن</a></div>
+      <div class="form-group"><label data-t="auth_email">البريد الإلكتروني</label><input type="email" id="login-email" placeholder="you@example.com" dir="ltr" autocomplete="email"></div>
+      <div class="form-group"><label data-t="auth_password">كلمة المرور</label><input type="password" id="login-pass" placeholder="••••••••" dir="ltr" autocomplete="current-password"></div>
+      <button class="btn btn-primary btn-full" onclick="doLogin()"><span id="login-btn-text" data-t="auth_login_btn">دخول</span></button>
+      <div class="auth-switch"><span data-t="auth_no_account">ما عندك حساب؟</span> <a onclick="showRegister()" data-t="auth_register_link">سجّل الآن</a></div>
     </div>
 
     <!-- REGISTER STEP 1 -->
     <div id="register-form" style="display:none">
-      <div class="auth-title">تسجيل مالك جديد</div>
+      <div class="auth-title" data-t="auth_register_title">تسجيل مالك جديد</div>
       <div class="error-msg" id="reg-error"></div>
       <div class="form-group"><label>اسم المالك / Owner Name</label><input type="text" id="reg-name" placeholder="الاسم الكامل"></div>
       <div class="form-group"><label>اسم المبنى / Building Name</label><input type="text" id="reg-building" placeholder="مبنى الياسمين"></div>
@@ -1014,11 +1014,11 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
         <span style="font-weight:700;color:var(--ink);display:block;margin-bottom:4px">الشقق المُولَّدة تلقائياً:</span>
         <span id="apt-preview-list" dir="ltr"></span>
       </div>
-      <div class="form-group"><label>رقم الهاتف</label><input type="tel" id="reg-phone" placeholder="+968 9X XXX XXX" dir="ltr"></div>
-      <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="reg-email" placeholder="you@example.com" dir="ltr" autocomplete="email"></div>
-      <div class="form-group"><label>كلمة المرور</label><input type="password" id="reg-pass" placeholder="6 أحرف على الأقل" dir="ltr" autocomplete="new-password"></div>
-      <button class="btn btn-primary btn-full" onclick="doRegisterDirect()"><span id="reg-btn-text">إنشاء الحساب مجاناً</span></button>
-      <div class="auth-switch">عندك حساب؟ <a onclick="showLogin()">سجّل دخول</a></div>
+      <div class="form-group"><label data-t="f_phone_simple">رقم الهاتف</label><input type="tel" id="reg-phone" placeholder="+968 9X XXX XXX" dir="ltr"></div>
+      <div class="form-group"><label data-t="auth_email">البريد الإلكتروني</label><input type="email" id="reg-email" placeholder="you@example.com" dir="ltr" autocomplete="email"></div>
+      <div class="form-group"><label data-t="auth_password">كلمة المرور</label><input type="password" id="reg-pass" placeholder="6 أحرف على الأقل" dir="ltr" autocomplete="new-password"></div>
+      <button class="btn btn-primary btn-full" onclick="doRegisterDirect()"><span id="reg-btn-text" data-t="auth_register_btn">إنشاء الحساب مجاناً</span></button>
+      <div class="auth-switch"><span data-t="auth_have_account">عندك حساب؟</span> <a onclick="showLogin()" data-t="auth_login_link">سجّل دخول</a></div>
     </div>
 
     <!-- UPGRADE CODE FORM -->
@@ -1079,7 +1079,7 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     <!-- DASHBOARD -->
     <div class="page" id="page-dashboard">
       <div class="page-header">
-        <div class="page-header-text"><h1>لوحة التحكم</h1><p>نظرة عامة على المبنى والأداء المالي</p></div>
+        <div class="page-header-text"><h1 data-t="ph_dashboard">لوحة التحكم</h1><p data-t="ph_dashboard_sub">نظرة عامة على المبنى والأداء المالي</p></div>
       </div>
       <div class="stats-grid" id="dashboard-stats"></div>
       <div class="quick-actions">
@@ -1096,7 +1096,7 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     <!-- TENANTS -->
     <div class="page" id="page-tenants">
       <div class="page-header">
-        <div class="page-header-text"><h1>المستأجرون</h1><p>قائمة المستأجرين المسجّلين</p></div>
+        <div class="page-header-text"><h1 data-t="ph_tenants">المستأجرون</h1><p data-t="ph_tenants_sub">قائمة المستأجرين المسجّلين</p></div>
         <button class="btn btn-primary" data-t="btn_add_tenant" onclick="openModal('modal-tenant')">＋ إضافة مستأجر</button>
       </div>
       <div class="card"><div class="table-wrap" id="tenants-table"></div></div>
@@ -1105,7 +1105,7 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     <!-- BOOKINGS -->
     <div class="page" id="page-bookings">
       <div class="page-header">
-        <div class="page-header-text"><h1>الحجوزات</h1><p>جميع حجوزات الشقق</p></div>
+        <div class="page-header-text"><h1 data-t="ph_bookings">الحجوزات</h1><p data-t="ph_bookings_sub">جميع حجوزات الشقق</p></div>
         <button class="btn btn-primary" data-t="btn_new_booking" onclick="openModal('modal-booking')">＋ حجز جديد</button>
       </div>
       <div class="card"><div class="table-wrap" id="bookings-table"></div></div>
@@ -1114,17 +1114,17 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     <!-- CALENDAR -->
     <div class="page" id="page-calendar">
       <div class="page-header">
-        <div class="page-header-text"><h1>التقويم</h1><p>جدول الحجوزات الشهري</p></div>
+        <div class="page-header-text"><h1 data-t="ph_calendar">التقويم</h1><p data-t="ph_calendar_sub">جدول الحجوزات الشهري</p></div>
         <div style="display:flex;gap:8px">
-          <button class="btn btn-secondary btn-sm" id="cal-view-grid" onclick="setCalView('grid')" title="عرض شبكي">⊞</button>
-          <button class="btn btn-secondary btn-sm" id="cal-view-list" onclick="setCalView('list')" title="عرض قائمة">☰</button>
+          <button class="btn btn-secondary btn-sm" id="cal-view-grid" onclick="setCalView('grid')" title="Grid">⊞</button>
+          <button class="btn btn-secondary btn-sm" id="cal-view-list" onclick="setCalView('list')" title="List">☰</button>
         </div>
       </div>
       <div class="card">
         <div class="cal-nav">
-          <button class="btn btn-secondary btn-sm" onclick="calPrev()">‹ السابق</button>
+          <button class="btn btn-secondary btn-sm" onclick="calPrev()" data-t="cal_prev">‹ السابق</button>
           <h3 id="cal-title" style="font-size:1rem"></h3>
-          <button class="btn btn-secondary btn-sm" onclick="calNext()">التالي ›</button>
+          <button class="btn btn-secondary btn-sm" onclick="calNext()" data-t="cal_next">التالي ›</button>
         </div>
         <!-- Legend -->
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;font-size:.76rem" id="cal-legend">
@@ -1146,8 +1146,8 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     <!-- EXPENSES -->
     <div class="page" id="page-expenses">
       <div class="page-header">
-        <div class="page-header-text"><h1>المصروفات</h1><p>متابعة نفقات المبنى</p></div>
-        <button class="btn btn-primary" onclick="openModal('modal-expense')">＋ إضافة مصروف</button>
+        <div class="page-header-text"><h1 data-t="ph_expenses">المصروفات</h1><p data-t="ph_expenses_sub">متابعة نفقات المبنى</p></div>
+        <button class="btn btn-primary" onclick="openModal('modal-expense')" data-t="btn_add_expense">＋ إضافة مصروف</button>
       </div>
       <div class="card"><div class="table-wrap" id="expenses-table"></div></div>
     </div>
@@ -1155,7 +1155,7 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     <!-- APARTMENTS -->
     <div class="page" id="page-apartments">
       <div class="page-header">
-        <div class="page-header-text"><h1>الشقق</h1><p>إدارة شقق المبنى وأنواع الإيجار</p></div>
+        <div class="page-header-text"><h1 data-t="ph_apartments">الشقق</h1><p data-t="ph_apartments_sub">إدارة شقق المبنى وأنواع الإيجار</p></div>
       </div>
       <div class="card" id="apartments-list"></div>
     </div>
@@ -1163,7 +1163,7 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     <!-- INVOICES -->
     <div class="page" id="page-invoices">
       <div class="page-header">
-        <div class="page-header-text"><h1>الفواتير</h1><p>جميع فواتير الحجوزات</p></div>
+        <div class="page-header-text"><h1 data-t="ph_invoices">الفواتير</h1><p data-t="ph_invoices_sub">جميع فواتير الحجوزات</p></div>
       </div>
       <div class="card"><div class="table-wrap" id="invoices-table"></div></div>
     </div>
@@ -1171,14 +1171,14 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     <!-- CONTRACTS -->
     <div class="page" id="page-contracts">
       <div class="page-header">
-        <div class="page-header-text"><h1>العقود</h1><p>جميع عقود الإيجار</p></div>
+        <div class="page-header-text"><h1 data-t="ph_contracts">العقود</h1><p data-t="ph_contracts_sub">جميع عقود الإيجار</p></div>
       </div>
       <div class="card">
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
           <input type="text" id="contract-search" placeholder="🔍 اسم المستأجر / رقم الهوية / رقم الشقة" style="flex:1;min-width:200px;padding:9px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:.9rem;outline:none" onkeydown="if(event.key==='Enter')doContractSearch()">
           <input type="date" id="contract-from" dir="ltr" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;outline:none">
           <input type="date" id="contract-to" dir="ltr" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:.88rem;outline:none">
-          <button class="btn btn-primary btn-sm" onclick="doContractSearch()">🔍 بحث</button>
+          <button class="btn btn-primary btn-sm" onclick="doContractSearch()" data-t="btn_search">🔍 بحث</button>
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('contract-search').value='';document.getElementById('contract-from').value='';document.getElementById('contract-to').value='';renderContractsPage()">✕ مسح</button>
         </div>
         <div class="table-wrap" id="contracts-table"></div>
@@ -1188,7 +1188,7 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     <!-- NOTIFICATIONS -->
     <div class="page" id="page-notifications">
       <div class="page-header">
-        <div class="page-header-text"><h1>التنبيهات</h1><p>مستأجرون قادمون ومغادرون قريباً</p></div>
+        <div class="page-header-text"><h1 data-t="ph_notifications">التنبيهات</h1><p data-t="ph_notifications_sub">مستأجرون قادمون ومغادرون قريباً</p></div>
       </div>
       <div id="notifications-content"></div>
     </div>
@@ -1196,7 +1196,7 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     <!-- FULL REPORT -->
     <div class="page" id="page-fullreport">
       <div class="page-header">
-        <div class="page-header-text"><h1>التقرير الكامل</h1><p>ملخص شامل لجميع الحجوزات والمدفوعات</p></div>
+        <div class="page-header-text"><h1 data-t="ph_report">التقرير الكامل</h1><p data-t="ph_report_sub">ملخص شامل لجميع الحجوزات والمدفوعات</p></div>
         <button class="btn btn-primary" data-t="btn_print_report" onclick="printFullReport()">🖨️ طباعة التقرير</button>
       </div>
       <div id="fullreport-content"></div>
@@ -1206,7 +1206,7 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     <div class="page" id="page-subusers">
       <div class="page-header">
         <div class="page-header-text"><h1>المستخدم الفرعي / Sub-User</h1><p>مستخدم واحد يتشارك بياناتك بصلاحيات محددة</p></div>
-        <button class="btn btn-primary" id="btn-add-subuser" onclick="openAddSubuser()">＋ إضافة مستخدم</button>
+        <button class="btn btn-primary" id="btn-add-subuser" onclick="openAddSubuser()" data-t="btn_add_subuser">＋ إضافة مستخدم</button>
       </div>
       <div id="subusers-list"></div>
     </div>
@@ -1647,6 +1647,16 @@ const T = {
     nav_apartments: 'الشقق', nav_calendar: 'التقويم', nav_expenses: 'المصروفات',
     nav_invoices: 'الفواتير', nav_contracts: 'العقود', nav_notifications: 'التنبيهات',
     nav_report: 'التقرير الكامل', nav_admin: 'إدارة الملاك', nav_subusers: 'المستخدمون', nav_buildings: 'المباني',
+    // Auth + extra UI
+    auth_login_title: 'تسجيل الدخول', auth_register_title: 'تسجيل مالك جديد',
+    auth_email: 'البريد الإلكتروني', auth_password: 'كلمة المرور',
+    auth_login_btn: 'دخول', auth_register_btn: 'إنشاء الحساب مجاناً',
+    cal_prev: '‹ السابق', cal_next: 'التالي ›',
+    btn_add_expense: '＋ إضافة مصروف', btn_search: '🔍 بحث', btn_add_subuser: '＋ إضافة مستخدم',
+    stat_total_bookings: 'الحجوزات الكلية', th_id: 'الهوية',
+    btn_print_expenses: '🖨️ طباعة تقرير المصروفات', empty_contracts: 'لا توجد عقود بعد',
+    auth_no_account: 'ما عندك حساب؟', auth_register_link: 'سجّل الآن',
+    auth_have_account: 'عندك حساب؟', auth_login_link: 'سجّل دخول', f_phone_simple: 'رقم الهاتف',
     // Page headers
     ph_dashboard: 'لوحة التحكم', ph_dashboard_sub: 'نظرة عامة على المبنى والأداء المالي',
     ph_tenants: 'المستأجرون', ph_tenants_sub: 'قائمة المستأجرين المسجّلين',
@@ -1787,6 +1797,16 @@ const T = {
     nav_apartments: 'Apartments', nav_calendar: 'Calendar', nav_expenses: 'Expenses',
     nav_invoices: 'Invoices', nav_contracts: 'Contracts', nav_notifications: 'Alerts',
     nav_report: 'Full Report', nav_admin: 'Admin Panel', nav_subusers: 'Sub-Users', nav_buildings: 'Buildings',
+    // Auth + extra UI
+    auth_login_title: 'Sign In', auth_register_title: 'Register as Landlord',
+    auth_email: 'Email', auth_password: 'Password',
+    auth_login_btn: 'Sign In', auth_register_btn: 'Create Free Account',
+    cal_prev: '‹ Prev', cal_next: 'Next ›',
+    btn_add_expense: '＋ Add Expense', btn_search: '🔍 Search', btn_add_subuser: '＋ Add User',
+    stat_total_bookings: 'Total Bookings', th_id: 'ID',
+    btn_print_expenses: '🖨️ Print Expenses Report', empty_contracts: 'No contracts yet',
+    auth_no_account: "Don't have an account?", auth_register_link: 'Register',
+    auth_have_account: 'Have an account?', auth_login_link: 'Sign In', f_phone_simple: 'Phone Number',
     ph_dashboard: 'Dashboard', ph_dashboard_sub: 'Building overview and financial performance',
     ph_tenants: 'Tenants', ph_tenants_sub: 'Registered tenants list',
     ph_bookings: 'Bookings', ph_bookings_sub: 'All apartment bookings',
@@ -1919,6 +1939,14 @@ function applyLang(){
   // Toggle button label
   const lbl=document.getElementById('lang-toggle-label');
   if(lbl) lbl.textContent=t('lang_switch');
+  // Apply all data-t attributes FIRST (works on auth screen too, no login needed)
+  document.querySelectorAll('[data-t]').forEach(el=>{
+    const key=el.dataset.t;
+    const val=t(key);
+    if(val && val!==key) el.textContent=val;
+  });
+  // If not logged in (auth screen), we're done — skip app-only rendering
+  if(!currentUser){ return; }
   // Sidebar nav labels (re-render)
   const isAdmin=currentUser&&currentUser.email===ADMIN_EMAIL;
   renderSidebar(isAdmin);
@@ -1969,10 +1997,6 @@ function applyLang(){
   const modalBtns={
     'booking-modal-title': document.getElementById('b-edit-id')?.value ? t('btn_edit') : t('btn_new_booking'),
   };
-  // Update save buttons text
-  document.querySelectorAll('[data-t]').forEach(el=>{
-    el.textContent=t(el.dataset.t);
-  });
   // Re-render all data tables (they use t() calls)
   // Update calendar legend labels
   ['active','in','upcoming','ended'].forEach(k=>{
@@ -2048,6 +2072,7 @@ function hideLoader(){
   setTimeout(()=>{ document.getElementById('loader').classList.add('hidden'); }, 150);
 }
 
+applyLang(); // Apply saved language on load
 // Safety timeout — max 5s before showing auth regardless of Firebase
 const _loaderTimeout = setTimeout(()=>{ hideLoader(); showScreen('auth'); }, 5000);
 
@@ -2442,7 +2467,7 @@ function renderDashboard(){
   const _isSub=userProfile&&userProfile.role==='subuser';
   document.getElementById('dashboard-stats').innerHTML=_isSub?`
     <div class="stat-card"><div class="stat-label">${t('stat_active')}</div><div class="stat-value">${active}</div><div class="stat-sub">${upcoming} ${t('s_upcoming')} · ${allBookings.length} إجمالي</div></div>
-    <div class="stat-card"><div class="stat-label">الحجوزات الكلية / Total Bookings</div><div class="stat-value">${allBookings.length}</div></div>
+    <div class="stat-card"><div class="stat-label">${t('stat_total_bookings')}</div><div class="stat-value">${allBookings.length}</div></div>
   `:`
     <div class="stat-card"><div class="stat-label">${t('stat_income')}</div><div class="stat-value income">${fmt(totalIncome)}</div><div class="stat-sub">OMR</div></div>
     <div class="stat-card"><div class="stat-label">${t('stat_expenses')}</div><div class="stat-value expense">${fmt(totalExpense)}</div><div class="stat-sub">OMR</div></div>
@@ -2465,7 +2490,7 @@ function renderTenants(){
       <th>${t('f_name')}</th>
       <th>${t('f_id')}</th>
       <th>${t('f_phone')}</th>
-      <th>الهوية</th>
+      <th>${t('th_id')}</th>
       ${!isSub?'<th></th>':''}
     </tr></thead>
     <tbody>
@@ -2541,7 +2566,7 @@ function bookingsTable(list){
 
 function renderExpenses(){
   const el=document.getElementById('expenses-table');
-  if(!allExpenses.length){el.innerHTML='<div class="empty-state"><div class="icon">💸</div><p>لا توجد مصروفات مسجّلة</p></div>';return;}
+  if(!allExpenses.length){el.innerHTML='<div class="empty-state"><div class="icon">💸</div><p>'+t('empty_expenses')+'</p></div>';return;}
   const sorted=[...allExpenses].sort((a,b)=>new Date(b.date)-new Date(a.date));
   const total=allExpenses.reduce((s,e)=>s+(e.amount||0),0);
   el.innerHTML=`
@@ -2550,7 +2575,7 @@ function renderExpenses(){
       <span style="font-size:1.3rem;font-weight:900;color:var(--danger);direction:ltr">${fmt(total)} OMR</span>
     </div>
     <div style="margin-bottom:12px;display:flex;gap:10px">
-      <button class="btn btn-secondary btn-sm" onclick="printExpensesReport()">🖨️ طباعة تقرير المصروفات</button>
+      <button class="btn btn-secondary btn-sm" onclick="printExpensesReport()">${t('btn_print_expenses')}</button>
     </div>
     <table><thead><tr><th>التاريخ / Date</th><th>التفاصيل / Details</th><th>المبلغ / Amount (OMR)</th><th></th></tr></thead><tbody>
     ${sorted.map(e=>`<tr>
@@ -3546,7 +3571,7 @@ function doContractSearch(){
 function renderContractsPage(){
   const el=document.getElementById('contracts-table');
   // Clear search on page entry if called from showPage (not from search button)
-  if(!allBookings.length){el.innerHTML='<div class="empty-state"><div class="icon">📋</div><p>لا توجد عقود بعد</p></div>';return;}
+  if(!allBookings.length){el.innerHTML='<div class="empty-state"><div class="icon">📋</div><p>'+t('empty_contracts')+'</p></div>';return;}
   const q=(document.getElementById('contract-search')?.value||'').toLowerCase().trim();
   const cf=document.getElementById('contract-from')?.value;
   const ct=document.getElementById('contract-to')?.value;
