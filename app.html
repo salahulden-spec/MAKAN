@@ -2025,10 +2025,40 @@ const exp = {
 Object.entries(exp).forEach(([k,v])=>window[k]=v);
 
 // ── AUTH STATE ────────────────────────────────────────────────────────
+function hideLoader(){
+  const l = document.getElementById('loader');
+  if(l) l.classList.add('hidden');
+}
+
+// Safety timeout — max 5s, then show auth no matter what
+const _loaderTimeout = setTimeout(()=>{
+  hideLoader();
+  showScreen('auth');
+}, 5000);
+
+// Loader message cycling
+const _loaderMsgs = ['جارٍ تحميل بياناتك...','جارٍ الاتصال...','لحظة من فضلك...'];
+let _loaderMsgIdx = 0;
+const _loaderMsgEl = document.getElementById('loader-msg');
+const _loaderMsgTimer = setInterval(()=>{
+  _loaderMsgIdx = (_loaderMsgIdx+1) % _loaderMsgs.length;
+  if(_loaderMsgEl){
+    _loaderMsgEl.style.opacity='0';
+    setTimeout(()=>{ if(_loaderMsgEl){ _loaderMsgEl.textContent=_loaderMsgs[_loaderMsgIdx]; _loaderMsgEl.style.opacity='1'; }},250);
+  }
+}, 2200);
+
 onAuthStateChanged(auth, async user=>{
-  document.getElementById('loader').classList.add('hidden');
-  if(user){ currentUser=user; await loadProfile(); initApp(); }
-  else showScreen('auth');
+  clearTimeout(_loaderTimeout);
+  clearInterval(_loaderMsgTimer);
+  // Fill progress bar to 100% before hiding
+  const bar = document.getElementById('loader-bar');
+  if(bar){ bar.style.animation='none'; bar.style.width='100%'; bar.style.transition='width .2s ease'; }
+  setTimeout(()=>{
+    hideLoader();
+    if(user){ currentUser=user; loadProfile().then(()=>initApp()); }
+    else showScreen('auth');
+  }, 200);
 });
 
 function showForm(id){
