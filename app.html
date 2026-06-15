@@ -1316,39 +1316,54 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     <input type="hidden" id="b-edit-id">
     <div class="form-row">
       <div class="form-group">
-        <label id="lbl-checkin" data-t="f_checkin_lbl">تاريخ الدخول (2:00 م)</label>
-        <input type="date" id="b-checkin" dir="ltr" onchange="calcRent()"
-          style="font-size:1rem;padding:10px;width:100%;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font)">
+        <div style="position:relative">
+          <label id="lbl-checkin" data-t="f_checkin_lbl"
+            style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.82rem;pointer-events:none;transition:all .2s;z-index:1">
+            📅 تاريخ الدخول
+          </label>
+          <input type="date" id="b-checkin" dir="ltr" onchange="calcRent();this.previousElementSibling.style.display='none'"
+            style="font-size:1rem;padding:12px;width:100%;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font);background:var(--warm)">
+        </div>
       </div>
       <div class="form-group">
-        <label id="lbl-checkout" data-t="f_checkout_lbl">تاريخ الخروج (12:00 م)</label>
-        <input type="date" id="b-checkout" dir="ltr" onchange="calcRent()"
-          style="font-size:1rem;padding:10px;width:100%;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font)">
+        <div style="position:relative">
+          <label id="lbl-checkout" data-t="f_checkout_lbl"
+            style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.82rem;pointer-events:none;z-index:1">
+            📅 تاريخ الخروج
+          </label>
+          <input type="date" id="b-checkout" dir="ltr" onchange="calcRent();this.previousElementSibling.style.display='none'"
+            style="font-size:1rem;padding:12px;width:100%;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font);background:var(--warm)">
+        </div>
       </div>
     </div>
     <div class="form-group">
-      <label id="lbl-apt"></label>
-      <select id="b-apt" onchange="checkAptAvailability()"><option value="">— اختر شقة —</option></select>
+      <select id="b-apt" onchange="checkAptAvailability()"
+        style="font-size:1rem;padding:12px;width:100%;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font);background:var(--warm);color:var(--ink)">
+        <option value="">🏠 اختر الشقة —</option>
+      </select>
       <div class="hint" id="apt-availability-hint"></div>
     </div>
     <div class="form-group">
-      <label id="lbl-tenant"></label>
-      <select id="b-tenant"><option value="">— اختر مستأجر —</option></select>
+      <select id="b-tenant"
+        style="font-size:1rem;padding:12px;width:100%;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font);background:var(--warm);color:var(--ink)">
+        <option value="">👤 اختر المستأجر —</option>
+      </select>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label id="lbl-daily"></label>
-        <input type="number" id="b-daily-rate" placeholder="20.000" step="0.001" min="0" dir="ltr" oninput="calcRent()">
+        <input type="number" id="b-daily-rate" placeholder="💰 السعر اليومي (OMR)" step="0.001" min="0" dir="ltr" oninput="calcRent()"
+          style="font-size:1rem;padding:12px;width:100%;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font);background:var(--warm)">
       </div>
       <div class="form-group">
-        <label id="lbl-total"></label>
-        <input type="text" id="b-total-rent" placeholder="يُحسب تلقائياً" dir="ltr" readonly style="background:var(--warm);font-weight:700">
+        <input type="text" id="b-total-rent" placeholder="الإجمالي (يُحسب تلقائياً)" dir="ltr" readonly
+          style="font-size:1rem;padding:12px;width:100%;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font);background:var(--warm);font-weight:700;color:var(--accent)">
       </div>
     </div>
     <div class="form-group">
-      <label id="lbl-advance"></label>
-      <input type="number" id="b-advance" placeholder="0.000" step="0.001" min="0" dir="ltr" oninput="calcRent();toggleAdvanceMethod()">
-      <div class="hint">تُخصم من الإجمالي وتظهر في العقد والفاتورة · Deducted from total, shown on contract & invoice</div>
+      <input type="number" id="b-advance" placeholder="💵 الدفعة المقدمة (OMR) — اختياري" step="0.001" min="0" dir="ltr"
+        oninput="calcRent();toggleAdvanceMethod()"
+        style="font-size:1rem;padding:12px;width:100%;border:1.5px solid var(--border);border-radius:10px;font-family:var(--font);background:var(--warm)">
+      <div class="hint" style="margin-top:4px">تُخصم من الإجمالي وتظهر في العقد والفاتورة</div>
     </div>
     <div id="advance-method-row" style="display:none">
       <div class="form-group">
@@ -2398,11 +2413,14 @@ async function loadAdminData(){
           </div>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
-          <button onclick="toggleLandlordStatus('${l.id}','${l.disabled}')"
-            style="background:${l.disabled?'rgba(34,160,107,.1)':'rgba(224,60,60,.08)'};border:1.5px solid ${l.disabled?'rgba(34,160,107,.4)':'rgba(224,60,60,.25)'};color:${l.disabled?'#22a06b':'var(--danger)'};border-radius:8px;padding:6px 10px;font-family:var(--font);font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap">
-            ${l.disabled?'✓ تفعيل':'⊘ تعطيل'}
+          <button id="btn-toggle-${l.id}"
+            data-uid="${l.id}" data-disabled="${l.disabled===true?'1':'0'}"
+            onclick="toggleLandlordStatus(this)"
+            style="background:${l.disabled===true?'rgba(34,160,107,.1)':'rgba(224,60,60,.08)'};border:1.5px solid ${l.disabled===true?'rgba(34,160,107,.4)':'rgba(224,60,60,.25)'};color:${l.disabled===true?'#22a06b':'var(--danger)'};border-radius:8px;padding:6px 10px;font-family:var(--font);font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap">
+            ${l.disabled===true?'✓ تفعيل':'⊘ تعطيل'}
           </button>
-          <button onclick="openEditLandlord('${l.id}','${l.email||''}','${l.phone||''}')"
+          <button
+            onclick="openEditLandlord('${l.id}','${(l.email||'').replace(/'/g,'')}','${(l.phone||'').replace(/'/g,'')}')"
             style="background:rgba(79,126,248,.08);border:1.5px solid rgba(79,126,248,.25);color:var(--accent);border-radius:8px;padding:6px 10px;font-family:var(--font);font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap">
             ✏️ تعديل
           </button>
@@ -2413,14 +2431,15 @@ async function loadAdminData(){
 }
 
 // ── ADMIN: Toggle landlord enabled/disabled ──────────────────
-async function toggleLandlordStatus(uid, currentlyDisabled){
-  const isDisabled = currentlyDisabled === 'true' || currentlyDisabled === true;
+async function toggleLandlordStatus(btn){
+  const uid = btn.dataset.uid;
+  const isDisabled = btn.dataset.disabled === '1';
   const action = isDisabled ? 'تفعيل' : 'تعطيل';
   if(!confirm(`هل تريد ${action} هذا الحساب؟`)) return;
   try{
     await setDoc(doc(db,'users',uid), {disabled: !isDisabled}, {merge:true});
     showToast(`تم ${action} الحساب ✓`, 'success');
-    loadAdminData(); // refresh
+    loadAdminData();
   }catch(e){
     showToast('خطأ: '+(e.message||e.code),'error');
   }
