@@ -1316,12 +1316,14 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     <input type="hidden" id="b-edit-id">
     <div class="form-row">
       <div class="form-group">
-        <label id="lbl-checkin"></label>
-        <input type="date" id="b-checkin" dir="ltr" onchange="calcRent()">
+        <label id="lbl-checkin" data-t="f_checkin_lbl">تاريخ الدخول (2:00 م)</label>
+        <input type="date" id="b-checkin" dir="ltr" onchange="calcRent()"
+          style="font-size:1rem;padding:10px;width:100%;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font)">
       </div>
       <div class="form-group">
-        <label id="lbl-checkout"></label>
-        <input type="date" id="b-checkout" dir="ltr" onchange="calcRent()">
+        <label id="lbl-checkout" data-t="f_checkout_lbl">تاريخ الخروج (12:00 م)</label>
+        <input type="date" id="b-checkout" dir="ltr" onchange="calcRent()"
+          style="font-size:1rem;padding:10px;width:100%;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font)">
       </div>
     </div>
     <div class="form-group">
@@ -1599,6 +1601,30 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-subuser')">إلغاء</button>
       <button class="btn btn-primary" onclick="saveSubUser()">إنشاء المستخدم ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT LANDLORD MODAL -->
+<div class="modal-overlay" id="modal-edit-landlord">
+  <div class="modal" style="max-width:420px">
+    <h2>✏️ تعديل بيانات المالك</h2>
+    <input type="hidden" id="edit-landlord-uid">
+    <div class="form-group" style="margin-bottom:14px">
+      <label>البريد الإلكتروني / Email</label>
+      <input type="email" id="edit-landlord-email" dir="ltr"
+        placeholder="email@example.com"
+        style="font-size:1rem;padding:10px;width:100%;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font)">
+    </div>
+    <div class="form-group" style="margin-bottom:20px">
+      <label>رقم الهاتف / Phone</label>
+      <input type="tel" id="edit-landlord-phone" dir="ltr"
+        placeholder="+968 9XXXXXXX"
+        style="font-size:1rem;padding:10px;width:100%;border:1.5px solid var(--border);border-radius:8px;font-family:var(--font)">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" style="flex:1" onclick="saveEditLandlord()">حفظ التغييرات</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-landlord')">إلغاء</button>
     </div>
   </div>
 </div>
@@ -2347,7 +2373,7 @@ async function loadAdminData(){
     const bCount=bookingCounts[l.id]||0;
     const pct=platformTotal>0?Math.round((bCount/platformTotal)*100):0;
     return `
-    <div class="card" id="landlord-card-${l.id}" style="margin-bottom:12px">
+    <div class="card" id="landlord-card-${l.id}" style="margin-bottom:12px;${l.disabled?'opacity:.55;border:1.5px solid rgba(224,60,60,.3)':''}"> 
       <div style="display:flex;align-items:flex-start;gap:14px">
         <div class="user-avatar" style="width:44px;height:44px;font-size:1rem;flex-shrink:0">${(l.name||'م')[0]}</div>
         <div style="flex:1;min-width:0">
@@ -2371,15 +2397,57 @@ async function loadAdminData(){
             </div>`).join('')}
           </div>`:''}
         </div>
-        <button onclick="deleteLandlord('${l.id}','${l.name}')"
-          style="background:rgba(224,60,60,.08);border:1.5px solid rgba(224,60,60,.25);color:var(--danger);border-radius:8px;padding:7px 12px;font-family:var(--font);font-size:.8rem;font-weight:700;cursor:pointer;flex-shrink:0"
-          onmouseover="this.style.background='rgba(224,60,60,.18)'"
-          onmouseout="this.style.background='rgba(224,60,60,.08)'">
-          🗑️
-        </button>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          <button onclick="toggleLandlordStatus('${l.id}','${l.disabled}')"
+            style="background:${l.disabled?'rgba(34,160,107,.1)':'rgba(224,60,60,.08)'};border:1.5px solid ${l.disabled?'rgba(34,160,107,.4)':'rgba(224,60,60,.25)'};color:${l.disabled?'#22a06b':'var(--danger)'};border-radius:8px;padding:6px 10px;font-family:var(--font);font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap">
+            ${l.disabled?'✓ تفعيل':'⊘ تعطيل'}
+          </button>
+          <button onclick="openEditLandlord('${l.id}','${l.email||''}','${l.phone||''}')"
+            style="background:rgba(79,126,248,.08);border:1.5px solid rgba(79,126,248,.25);color:var(--accent);border-radius:8px;padding:6px 10px;font-family:var(--font);font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap">
+            ✏️ تعديل
+          </button>
+        </div>
       </div>
     </div>`;
   }).join('');
+}
+
+// ── ADMIN: Toggle landlord enabled/disabled ──────────────────
+async function toggleLandlordStatus(uid, currentlyDisabled){
+  const isDisabled = currentlyDisabled === 'true' || currentlyDisabled === true;
+  const action = isDisabled ? 'تفعيل' : 'تعطيل';
+  if(!confirm(`هل تريد ${action} هذا الحساب؟`)) return;
+  try{
+    await setDoc(doc(db,'users',uid), {disabled: !isDisabled}, {merge:true});
+    showToast(`تم ${action} الحساب ✓`, 'success');
+    loadAdminData(); // refresh
+  }catch(e){
+    showToast('خطأ: '+(e.message||e.code),'error');
+  }
+}
+
+// ── ADMIN: Open edit modal ────────────────────────────────────
+function openEditLandlord(uid, email, phone){
+  document.getElementById('edit-landlord-uid').value = uid;
+  document.getElementById('edit-landlord-email').value = email;
+  document.getElementById('edit-landlord-phone').value = phone;
+  openModal('modal-edit-landlord');
+}
+
+// ── ADMIN: Save edited email/phone ────────────────────────────
+async function saveEditLandlord(){
+  const uid   = document.getElementById('edit-landlord-uid').value;
+  const email = document.getElementById('edit-landlord-email').value.trim();
+  const phone = document.getElementById('edit-landlord-phone').value.trim();
+  if(!uid) return;
+  try{
+    await setDoc(doc(db,'users',uid), {email, phone}, {merge:true});
+    showToast('تم حفظ التغييرات ✓','success');
+    closeModal('modal-edit-landlord');
+    loadAdminData();
+  }catch(e){
+    showToast('خطأ: '+(e.message||e.code),'error');
+  }
 }
 
 async function deleteLandlord(uid, name){
@@ -4610,7 +4678,7 @@ function fmtDate(d){return d?new Date(d+'T14:00:00').toLocaleDateString('ar-OM',
 function fmtDateFull(d,time){return d?`${new Date(d+'T14:00:00').toLocaleDateString('ar-OM',{year:'numeric',month:'long',day:'numeric'})} — ${time}`:'—';}
 function translateAuthError(code){
   const m={'auth/user-not-found':'البريد غير مسجّل','auth/wrong-password':'كلمة المرور غير صحيحة',
-    'auth/email-already-in-use':'البريد مستخدم بالفعل','auth/weak-password':'كلمة المرور ضعيفة — 6 أحرف على الأقل',
+    'auth/email-already-in-use':'هذا البريد مسجّل — إذا حُذف حسابك تواصل مع الدعم','auth/weak-password':'كلمة المرور ضعيفة — 6 أحرف على الأقل',
     'auth/invalid-email':'بريد إلكتروني غير صالح','auth/invalid-credential':'بيانات الدخول غير صحيحة'};
   return m[code]||`خطأ: ${code}`;
 }
