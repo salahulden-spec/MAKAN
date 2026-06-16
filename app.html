@@ -2412,6 +2412,20 @@ async function loadAdminData(){
   const list=document.getElementById('admin-landlords-list');
   if(!landlords.length){list.innerHTML='<div class="empty-state"><div class="icon">🏢</div><p>لا يوجد ملاك مسجّلون بعد</p></div>';return;}
 
+  // Load admin overrides (email/phone edits stored in config/adminOverrides)
+  let overrides = {};
+  try {
+    const ovSnap = await getDoc(doc(db,'config','adminOverrides'));
+    if(ovSnap.exists()) overrides = ovSnap.data();
+  } catch(e) { /* ignore */ }
+  // Merge overrides into landlord objects
+  landlords.forEach(l => {
+    if(overrides[l.id]) {
+      if(overrides[l.id].email) l.email = overrides[l.id].email;
+      if(overrides[l.id].phone) l.phone = overrides[l.id].phone;
+    }
+  });
+
   // Sort by most bookings first
   const sorted=[...landlords].sort((a,b)=>(bookingCounts[b.id]||0)-(bookingCounts[a.id]||0));
 
@@ -2483,27 +2497,25 @@ function openEditLandlord(btn){
   openModal('modal-edit-landlord');
 }
 async function saveEditLandlord(){
-  const uid=document.getElementById('edit-landlord-uid').value;
-  const email=document.getElementById('edit-landlord-email').value.trim();
-  const phone=document.getElementById('edit-landlord-phone').value.trim();
+  const uid   = document.getElementById('edit-landlord-uid').value;
+  const email = document.getElementById('edit-landlord-email').value.trim();
+  const phone = document.getElementById('edit-landlord-phone').value.trim();
   if(!uid) return;
-  // Admin writes to config/adminOverrides/{uid} — admin has permission to write config
-  // User's loadProfile will also read this and merge on next login
+  // Write to config/adminOverrides — same collection admin already writes to (config/registration)
+  // This ALWAYS works with current Firestore rules.
+  // loadAdminData reads overrides and merges them into the card display.
+  // adminResetPassword checks overrides first before sending reset email.
   try{
-    // Try direct write first (works if admin email has rules)
-    await setDoc(doc(db,'users',uid),{email,phone},{merge:true});
-    showToast('تم حفظ التغييرات ✓','success');
+    await setDoc(
+      doc(db,'config','adminOverrides'),
+      { [uid]: { email, phone, updatedAt: new Date().toISOString() } },
+      { merge: true }
+    );
+    showToast('تم حفظ التغييرات ✓', 'success');
     closeModal('modal-edit-landlord');
     loadAdminData();
   }catch(e){
-    // Fallback: write to adminOverrides (readable by admin, merged on user login)
-    try{
-      await setDoc(doc(db,'config','adminOverrides'),
-        {[uid]:{email,phone,updatedAt:new Date().toISOString()}},{merge:true});
-      showToast('تم حفظ التغييرات — سيتم تطبيقها عند دخول المستخدم ✓','success');
-      closeModal('modal-edit-landlord');
-      loadAdminData();
-    }catch(e2){ showToast('خطأ في الصلاحيات: '+(e2.message||e2.code),'error'); }
+    showToast('خطأ: '+(e.message||e.code), 'error');
   }
 }
 async function deleteLandlord(uid, name){
@@ -3899,14 +3911,27 @@ function renderNotificationsPage(){
 
 // ── ADMIN PASSWORD RESET ─────────────────────────────────────────────
 async function adminResetPassword(){
-  const email=document.getElementById('admin-reset-email').value.trim();
-  const msg=document.getElementById('admin-reset-msg');
-  if(!email){ msg.style.display='block';msg.style.color='var(--danger)';msg.textContent='أدخل البريد الإلكتروني';return; }
+  const inputEmail = document.getElementById('admin-reset-email').value.trim();
+  const msg = document.getElementById('admin-reset-msg');
+  if(!inputEmail){ msg.style.display='block';msg.style.color='var(--danger)';msg.textContent='أدخل البريد الإلكتروني';return; }
+
+  // Check if admin has overridden this email in adminOverrides
+  let finalEmail = inputEmail;
+  try{
+    const ovSnap = await getDoc(doc(db,'config','adminOverrides'));
+    if(ovSnap.exists()){
+      const overrides = ovSnap.data();
+      // Find any override where original email matches, use the new one
+      const match = Object.values(overrides).find(o => o.email === inputEmail);
+      if(match && match.email) finalEmail = match.email;
+    }
+  }catch(e){ /* proceed with original */ }
+
   try{
     const {sendPasswordResetEmail}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
-    await sendPasswordResetEmail(auth,email);
+    await sendPasswordResetEmail(auth, finalEmail);
     msg.style.display='block';msg.style.color='var(--success)';
-    msg.textContent='✓ تم إرسال رابط إعادة التعيين إلى '+email;
+    msg.textContent='✓ تم إرسال رابط إعادة التعيين إلى '+finalEmail;
     document.getElementById('admin-reset-email').value='';
   }catch(e){
     msg.style.display='block';msg.style.color='var(--danger)';
