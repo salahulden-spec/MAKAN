@@ -2144,6 +2144,15 @@ onAuthStateChanged(auth, async user=>{
     currentUser=user;
     if(_loaderMsgEl) _loaderMsgEl.textContent='مرحباً بك 👋';
     await loadProfile();
+    // Block disabled users (except admin)
+    if(userProfile && userProfile.disabled===true && user.email!==ADMIN_EMAIL){
+      await signOut(auth);
+      currentUser=null; userProfile=null;
+      hideLoader();
+      showScreen('auth');
+      setTimeout(()=>showToast('حسابك موقوف مؤقتاً — تواصل مع الدعم','error'),400);
+      return;
+    }
     hideLoader();
     initApp();
   } else {
@@ -2372,7 +2381,8 @@ async function loadLandlordData(){
   renderCalendar();
   updateNotifBadge();
   updateBuildingSwitcher();
-  if(!isSubuser){ updatePlanBanner(); enforcePlanGate(); }
+  if(!isSubuser){ updateSidebarLogo();
+  updatePlanBanner(); enforcePlanGate(); }
 }
 
 async function loadAdminData(){
@@ -2477,12 +2487,24 @@ async function saveEditLandlord(){
   const email=document.getElementById('edit-landlord-email').value.trim();
   const phone=document.getElementById('edit-landlord-phone').value.trim();
   if(!uid) return;
+  // Admin writes to config/adminOverrides/{uid} — admin has permission to write config
+  // User's loadProfile will also read this and merge on next login
   try{
+    // Try direct write first (works if admin email has rules)
     await setDoc(doc(db,'users',uid),{email,phone},{merge:true});
     showToast('تم حفظ التغييرات ✓','success');
     closeModal('modal-edit-landlord');
     loadAdminData();
-  }catch(e){ showToast('خطأ: '+(e.message||e.code),'error'); }
+  }catch(e){
+    // Fallback: write to adminOverrides (readable by admin, merged on user login)
+    try{
+      await setDoc(doc(db,'config','adminOverrides'),
+        {[uid]:{email,phone,updatedAt:new Date().toISOString()}},{merge:true});
+      showToast('تم حفظ التغييرات — سيتم تطبيقها عند دخول المستخدم ✓','success');
+      closeModal('modal-edit-landlord');
+      loadAdminData();
+    }catch(e2){ showToast('خطأ في الصلاحيات: '+(e2.message||e2.code),'error'); }
+  }
 }
 async function deleteLandlord(uid, name){
   if(!confirm(`حذف حساب "${name}" بشكل نهائي؟\nسيتم حذف جميع بياناته من المنصة.\nهذا الإجراء لا يمكن التراجع عنه.`)) return;
@@ -3296,8 +3318,12 @@ function printContract(){
   const b=allBookings.find(x=>x.id===activeBookingId);
   if(!b) return;
   const nights=calcNights(b.checkIn,b.checkOut);
+  const _contractLogo = userProfile.logoBase64
+    ? `<img src="${userProfile.logoBase64}" style="max-height:56px;max-width:180px;object-fit:contain;display:block;margin:0 auto 8px" alt="logo">`
+    : '';
   const html=`<div class="print-doc">
-    <div style="text-align:center;margin-bottom:20px">
+    <div style="text-align:center;margin-bottom:16px">
+      ${_contractLogo}
       <div style="font-size:1.5rem;font-weight:900;color:#111;margin-bottom:4px">${b.landlordBuilding||userProfile.building||''}</div>
       <div style="font-size:1rem;font-weight:700;color:#444;margin-bottom:2px">${currentLang==='ar'?'عقد إيجار':'Lease Contract'}</div>
       <div style="height:2px;background:linear-gradient(90deg,transparent,#1e2535,transparent);margin:8px auto;max-width:200px"></div>
@@ -4811,14 +4837,17 @@ function handleLogoUpload(e){
 window.handleLogoUpload = handleLogoUpload;
 
 async function saveLogo(){
-  const b64 = window._pendingLogo || (userProfile.logoBase64 ? null : undefined);
-  if(b64 === undefined){ closeModal('modal-logo-upload'); return; }
+  // Only save if a new logo was picked — don't overwrite if nothing changed
+  if(!window._pendingLogo){ closeModal('modal-logo-upload'); return; }
+  const b64 = window._pendingLogo;
   try{
     await setDoc(doc(db,'users',currentUser.uid),{logoBase64: b64||null},{merge:true});
     userProfile.logoBase64 = b64||null;
     window._pendingLogo = null;
     showToast('تم حفظ الشعار ✓','success');
     closeModal('modal-logo-upload');
+    // Refresh sidebar logo display
+    updateSidebarLogo();
   }catch(e){ showToast('خطأ: '+(e.message||e.code),'error'); }
 }
 window.saveLogo = saveLogo;
@@ -4834,14 +4863,37 @@ async function removeLogo(){
     await setDoc(doc(db,'users',currentUser.uid),{logoBase64:null},{merge:true});
     userProfile.logoBase64 = null;
     showToast('تم حذف الشعار','success');
+    updateSidebarLogo();
   }catch(e){ showToast('خطأ','error'); }
 }
 window.removeLogo = removeLogo;
+
+// ── LOGO SIDEBAR DISPLAY ─────────────────────────────────────────────
+function updateSidebarLogo(){
+  let el = document.getElementById('sidebar-user-logo');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'sidebar-user-logo';
+    el.style.cssText = 'margin-top:8px;text-align:center';
+    const logoDiv = document.querySelector('.sidebar-logo');
+    if(logoDiv) logoDiv.appendChild(el);
+  }
+  if(userProfile && userProfile.logoBase64){
+    el.innerHTML = '<img src="' + userProfile.logoBase64 + '" alt="شعار" style="max-height:36px;max-width:140px;object-fit:contain;border-radius:4px;background:#fff;padding:4px">';
+  } else {
+    el.innerHTML = '';
+  }
+}
 
 // Expose admin functions to global scope (required for onclick in innerHTML)
 window.toggleLandlordStatus = toggleLandlordStatus;
 window.openEditLandlord     = openEditLandlord;
 window.saveEditLandlord     = saveEditLandlord;
+// Logo modal
+window.openLogoUpload = openLogoUpload;
+window.handleLogoUpload = handleLogoUpload;
+window.saveLogo = saveLogo;
+window.removeLogo = removeLogo;
 </script>
 
 <style>
