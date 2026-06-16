@@ -4691,6 +4691,11 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{
   if(o.id==='modal-upgrade') return; // upgrade modal not closeable by clicking overlay
   o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});
 });
+
+// Expose admin functions to global scope (required for onclick in innerHTML)
+window.toggleLandlordStatus = toggleLandlordStatus;
+window.openEditLandlord     = openEditLandlord;
+window.saveEditLandlord     = saveEditLandlord;
 </script>
 
 <style>
