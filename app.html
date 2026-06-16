@@ -813,26 +813,26 @@ tbody tr:hover td { background: var(--accent-light); transition: background .15s
 .print-doc {
   font-family: 'Cairo', sans-serif;
   direction: rtl;
-  padding: 36px;
+  padding: 24px 30px;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  line-height: 1.9;
+  line-height: 1.55;
   color: #111;
-  font-size: .88rem;
+  font-size: .84rem;
 }
-.print-doc h1 { text-align: center; font-size: 1.35rem; font-weight: 900; margin-bottom: 4px; }
-.print-doc .doc-subtitle { text-align: center; color: var(--muted); font-size: .78rem; margin-bottom: 28px; letter-spacing: 1px; }
-.print-doc .doc-section { margin-bottom: 18px; }
-.print-doc .doc-section h3 { font-weight: 700; border-bottom: 1px solid var(--warm); padding-bottom: 5px; margin-bottom: 10px; color: var(--accent); font-size: .9rem; }
-.print-doc .doc-row { display: flex; gap: 14px; margin-bottom: 5px; }
-.print-doc .doc-label { font-weight: 700; min-width: 130px; flex-shrink: 0; font-size: .84rem; }
-.print-doc .doc-value { flex: 1; border-bottom: 1px dotted var(--border); font-size: .84rem; padding-bottom: 1px; }
-.print-doc .doc-terms ol { padding-right: 18px; }
-.print-doc .doc-terms li { margin-bottom: 7px; font-size: .82rem; }
-.print-doc .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; margin-top: 40px; }
+.print-doc h1 { text-align: center; font-size: 1.25rem; font-weight: 900; margin-bottom: 4px; }
+.print-doc .doc-subtitle { text-align: center; color: var(--muted); font-size: .75rem; margin-bottom: 16px; letter-spacing: 1px; }
+.print-doc .doc-section { margin-bottom: 12px; }
+.print-doc .doc-section h3 { font-weight: 700; border-bottom: 1px solid var(--warm); padding-bottom: 3px; margin-bottom: 7px; color: var(--accent); font-size: .86rem; }
+.print-doc .doc-row { display: flex; gap: 10px; margin-bottom: 3px; }
+.print-doc .doc-label { font-weight: 700; min-width: 120px; flex-shrink: 0; font-size: .82rem; }
+.print-doc .doc-value { flex: 1; border-bottom: 1px dotted var(--border); font-size: .82rem; padding-bottom: 1px; }
+.print-doc .doc-terms ol { padding-right: 16px; margin: 0; }
+.print-doc .doc-terms li { margin-bottom: 4px; font-size: .78rem; }
+.print-doc .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 20px; page-break-inside: avoid; }
 .print-doc .sig-block { text-align: center; }
-.print-doc .sig-line { border-top: 1px solid var(--ink); padding-top: 7px; margin-top: 36px; font-weight: 700; font-size: .8rem; }
+.print-doc .sig-line { border-top: 1px solid var(--ink); padding-top: 6px; margin-top: 28px; font-weight: 700; font-size: .78rem; }
 .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid var(--accent); }
 .invoice-logo { font-family: var(--serif); font-size: 2rem; color: var(--ink); }
 .invoice-meta { text-align: left; font-size: .78rem; color: var(--muted); }
@@ -945,8 +945,30 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
 /* ── PRINT ── */
 @media print {
   body > *:not(#print-area) { display: none !important; }
-  #print-area { display: block !important; position: fixed; inset: 0; background: #fff; z-index: 99999; padding: 20px; overflow: auto; }
+  #print-area {
+    display: block !important;
+    position: fixed; inset: 0;
+    background: #fff;
+    z-index: 99999;
+    padding: 0;
+    overflow: visible;
+  }
   #print-area .no-print { display: none !important; }
+  /* Force single page — keep signature with content */
+  .print-doc {
+    padding: 16px 24px !important;
+    line-height: 1.4 !important;
+    font-size: .78rem !important;
+  }
+  .print-doc .doc-section { margin-bottom: 8px !important; }
+  .print-doc .doc-section h3 { padding-bottom: 2px !important; margin-bottom: 5px !important; }
+  .print-doc .doc-row { margin-bottom: 2px !important; }
+  .print-doc .doc-terms li { margin-bottom: 3px !important; font-size: .74rem !important; }
+  .print-doc .signatures { margin-top: 16px !important; }
+  .print-doc .sig-line { margin-top: 20px !important; }
+  @page { size: A4 portrait; margin: 10mm 12mm; }
+  .signatures { page-break-inside: avoid !important; }
+  .doc-terms { page-break-inside: avoid !important; }
 }
 #print-area { display: none; }
 </style>
@@ -3679,6 +3701,16 @@ function printContractDirect(id){
 async function markCheckedOut(){
   if(!activeBookingId) return;
   const bid=activeBookingId;
+  // ── Block checkout if not fully paid ──────────────
+  const booking=allBookings.find(x=>x.id===bid);
+  if(booking){
+    const isPaid = booking.paid===true;
+    const remaining = booking.remaining||0;
+    if(!isPaid || remaining>0){
+      showToast('⚠️ لا يمكن تسجيل الخروج — المستأجر لم يدفع المبلغ كاملاً بعد','error');
+      return;
+    }
+  }
   await updateDoc(doc(db,'bookings',bid),{
     checkedOut:true, checkedOutAt:new Date().toISOString(),
     history:arrayUnion({action:'تسجيل خروج',by:userProfile.name,at:new Date().toISOString(),note:'غادر المستأجر الشقة'})
