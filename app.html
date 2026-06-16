@@ -3256,10 +3256,7 @@ function viewBooking(id){
     ${b.notes?`<div style="background:var(--paper);border-radius:8px;padding:12px;font-size:.85rem;margin-bottom:8px"><b>ملاحظات:</b> ${b.notes}</div>`:''}
     <div style="background:var(--paper);border-radius:8px;padding:10px 12px;font-size:.84rem;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
       <span><b>حالة الدفع:</b></span>
-      <div style="display:flex;gap:8px;align-items:center">
-        <span class="badge ${b.paid?'badge-active':'badge-ended'}">${b.paid?'مدفوع':'غير مدفوع'}</span>
-        <button class="btn btn-ghost btn-sm" onclick="togglePaid('${b.id}')">${b.paid?'تعيين: غير مدفوع':'تعيين: مدفوع'}</button>
-      </div>
+      <span class="badge ${b.paid?'badge-active':'badge-ended'}">${b.paid?'مدفوع':'غير مدفوع'}</span>
     </div>
     ${b.checkedIn?`<div style="background:rgba(58,125,90,.1);border-radius:8px;padding:10px;font-size:.84rem;color:var(--success);margin-bottom:8px">✅ المستأجر دخل الشقة — ${b.checkedInAt?new Date(b.checkedInAt).toLocaleString('ar-OM'):''}</div>`:''}
     ${b.checkedOut?`<div style="background:rgba(192,57,43,.08);border-radius:8px;padding:10px;font-size:.84rem;color:var(--danger);margin-bottom:8px">🚪 المستأجر غادر — ${b.checkedOutAt?new Date(b.checkedOutAt).toLocaleString('ar-OM'):''}</div>`:''}`;
@@ -3791,9 +3788,11 @@ async function markCheckedOut(){
   // ── Block checkout if not fully paid ──────────────
   const booking=allBookings.find(x=>x.id===bid);
   if(booking){
+    // Block if not marked as paid AND still has remaining balance
     const isPaid = booking.paid===true;
-    const remaining = booking.remaining||0;
-    if(!isPaid || remaining>0){
+    const remaining = Number(booking.remaining)||0;
+    // Allow checkout if: fully paid OR no advance (simple booking, paid flag is enough)
+    if(!isPaid){
       showToast('⚠️ لا يمكن تسجيل الخروج — المستأجر لم يدفع المبلغ كاملاً بعد','error');
       return;
     }
@@ -4170,9 +4169,9 @@ async function confirmPayment(type, method){
     b.advancePaid=true; b.advancePaidMethod=method;
     showToast(`تم تسجيل الدفعة المقدمة ${fmt(b.advance)} OMR — ${note} ✓`,'success');
   } else if(type==='full'){
-    update={paid:true, paidMethod:method, paidAt:at, advancePaid:true,
+    update={paid:true, paidMethod:method, paidAt:at, advancePaid:true, remaining:0,
       history:arrayUnion({action:'استلام كامل المبلغ',by:userProfile.name,at,note:`${fmt(b.totalRent||0)} OMR — ${note}`})};
-    b.paid=true; b.paidMethod=method; b.advancePaid=true;
+    b.paid=true; b.paidMethod=method; b.advancePaid=true; b.remaining=0;
     showToast(`تم تسجيل الدفع الكامل ${fmt(b.totalRent||0)} OMR — ${note} ✓`,'success');
   } else {
     update={paid:false,advancePaid:false,paidMethod:'',advancePaidMethod:''};
