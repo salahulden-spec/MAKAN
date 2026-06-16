@@ -1415,14 +1415,26 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
       <div id="booking-history" style="display:none;margin-top:8px"></div>
     </div>
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--warm)">
-      <!-- Status action row — check-in / check-out -->
-      <div id="booking-status-actions" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap"></div>
-      <!-- Main actions row -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <button onclick="printContract()" style="background:var(--accent);color:#fff;border:none;padding:9px 16px;border-radius:8px;font-family:var(--font);font-size:.84rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">🖨️ <span data-t="btn_contract_label">العقد</span></button>
-        <button onclick="shareContractWhatsApp()" style="background:#25D366;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-family:var(--font);font-size:.84rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">💬 <span data-t="btn_whatsapp_label">واتساب</span></button>
-        <span id="owner-only-btns" style="display:flex;gap:8px;flex-wrap:wrap"></span>
-        <button onclick="closeModal('modal-booking-detail')" style="background:var(--warm);border:none;padding:9px 16px;border-radius:8px;font-family:var(--font);font-size:.84rem;font-weight:700;cursor:pointer;margin-right:auto"><span data-t="btn_close">إغلاق</span></button>
+      <!-- Zone A: Check-in / Check-out — full width, prominent -->
+      <div id="booking-status-actions" style="display:flex;gap:8px;margin-bottom:12px"></div>
+      <!-- Zone B: Primary document actions -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <button onclick="printContract()"
+          style="background:var(--accent);color:#fff;border:none;padding:11px 0;border-radius:10px;font-family:var(--font);font-size:.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;letter-spacing:.2px">
+          🖨️ <span data-t="btn_contract_label">العقد</span>
+        </button>
+        <button onclick="shareContractWhatsApp()"
+          style="background:#25D366;color:#fff;border:none;padding:11px 0;border-radius:10px;font-family:var(--font);font-size:.88rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px">
+          💬 <span data-t="btn_whatsapp_label">واتساب</span>
+        </button>
+      </div>
+      <!-- Zone C: Secondary actions (owner only) + close -->
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="owner-only-btns" style="display:flex;gap:8px;flex:1;flex-wrap:wrap"></span>
+        <button onclick="closeModal('modal-booking-detail')"
+          style="background:var(--warm);border:1.5px solid var(--border);color:var(--muted);padding:9px 20px;border-radius:10px;font-family:var(--font);font-size:.84rem;font-weight:600;cursor:pointer;white-space:nowrap">
+          <span data-t="btn_close">إغلاق</span>
+        </button>
       </div>
     </div>
   </div>
@@ -3222,10 +3234,10 @@ function viewBooking(id){
   if(statusDiv){
     statusDiv.innerHTML='';
     if(showCheckin){
-      statusDiv.innerHTML+=`<button onclick="markCheckedIn()" style="background:rgba(0,184,160,.85);color:#fff;border:none;padding:10px 18px;border-radius:8px;font-family:var(--font);font-size:.86rem;font-weight:700;cursor:pointer;flex:1;min-width:140px">✅ ${t('btn_checkin_label')}</button>`;
+      statusDiv.innerHTML+=`<button onclick="markCheckedIn()" style="background:linear-gradient(135deg,#00c896,#00a67e);color:#fff;border:none;padding:13px 0;border-radius:10px;font-family:var(--font);font-size:.92rem;font-weight:700;cursor:pointer;width:100%;letter-spacing:.3px;box-shadow:0 4px 14px rgba(0,184,160,.25)">✅ ${t('btn_checkin_label')}</button>`;
     }
     if(showCheckout){
-      statusDiv.innerHTML+=`<button onclick="markCheckedOut()" style="background:var(--danger);color:#fff;border:none;padding:10px 18px;border-radius:8px;font-family:var(--font);font-size:.86rem;font-weight:700;cursor:pointer;flex:1;min-width:140px">🚪 ${t('btn_checkout_label')}</button>`;
+      statusDiv.innerHTML+=`<button onclick="markCheckedOut()" style="background:linear-gradient(135deg,#e03c3c,#c0392b);color:#fff;border:none;padding:13px 0;border-radius:10px;font-family:var(--font);font-size:.92rem;font-weight:700;cursor:pointer;width:100%;letter-spacing:.3px;box-shadow:0 4px 14px rgba(224,60,60,.25)">🚪 ${t('btn_checkout_label')}</button>`;
     }
   }
   // Inject owner-only buttons
@@ -3236,9 +3248,18 @@ function viewBooking(id){
       ownerBtns.innerHTML='';
     } else {
       ownerBtns.innerHTML=
-        `<button onclick="editBookingFromDetail()" style="background:var(--warm);border:none;padding:9px 14px;border-radius:8px;font-family:var(--font);font-size:.84rem;font-weight:700;cursor:pointer">✏️ ${t('btn_edit_label')}</button>
-         <button onclick="openMoveTenant()" style="background:var(--warm);border:none;padding:9px 14px;border-radius:8px;font-family:var(--font);font-size:.84rem;font-weight:700;cursor:pointer">🔄 ${t('btn_move_label')}</button>
-         <button onclick="confirmDeleteBooking()" style="background:rgba(224,60,60,.1);border:1.5px solid rgba(224,60,60,.3);color:var(--danger);padding:9px 14px;border-radius:8px;font-family:var(--font);font-size:.84rem;font-weight:700;cursor:pointer">🗑️</button>`;
+        `<button onclick="editBookingFromDetail()"
+            style="background:var(--warm);border:1.5px solid var(--border);color:var(--ink);padding:9px 14px;border-radius:10px;font-family:var(--font);font-size:.84rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px">
+            ✏️ ${t('btn_edit_label')}
+          </button>
+          <button onclick="openMoveTenant()"
+            style="background:var(--warm);border:1.5px solid var(--border);color:var(--ink);padding:9px 14px;border-radius:10px;font-family:var(--font);font-size:.84rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px">
+            🔄 ${t('btn_move_label')}
+          </button>
+          <button onclick="confirmDeleteBooking()"
+            style="background:rgba(224,60,60,.06);border:1.5px solid rgba(224,60,60,.2);color:var(--danger);padding:9px 13px;border-radius:10px;font-family:var(--font);font-size:.88rem;cursor:pointer">
+            🗑️
+          </button>`;
     }
   }
   document.getElementById('booking-detail-content').innerHTML=`
@@ -3359,7 +3380,7 @@ function printContract(){
       <div class="doc-row"><span class="doc-label">${t('ct_daily')}</span><span class="doc-value" dir="ltr">${fmt(b.dailyRate||0)} OMR</span></div>
       <div class="doc-row"><span class="doc-label">${t('ct_total')}</span><span class="doc-value" dir="ltr"><b>${fmt(b.totalRent||b.rent||0)} OMR</b></span></div>
       ${b.advance>0?`<div class="doc-row"><span class="doc-label">${t('ct_advance')}</span><span class="doc-value" dir="ltr" style="color:green">- ${fmt(b.advance)} OMR</span></div>
-      <div class="doc-row"><span class="doc-label">${t('ct_remaining')}</span><span class="doc-value" dir="ltr"><b>${fmt(b.remaining||0)} OMR</b></span></div>`:''}
+      <div class="doc-row"><span class="doc-label">${t('ct_remaining')}</span><span class="doc-value" dir="ltr"><b style="color:${b.paid?'#22a06b':'#e03c3c'}">${b.paid?'0.000':fmt(b.remaining||0)} OMR${b.paid?' ✓':''}</b></span></div>`:''}
     </div>
     <div class="doc-section doc-terms">
       <h3>${t('ct_terms')}</h3>
