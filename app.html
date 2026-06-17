@@ -2245,13 +2245,11 @@ async function doUpgradeAccount(){
   try{
     const ref=doc(db,'config','registration');
     const snap=await getDoc(ref);
-    console.log('snap.exists:',snap.exists(),'data:',snap.data());
     if(!snap.exists()){
       showErr(err,'الرمز غير مفعّل — تواصل: +968 94313327');
       btn.textContent='تفعيل الاشتراك'; return;
     }
     const stored=String(snap.data().code||'').trim();
-    console.log('entered:',code,'stored:',stored,'match:',code===stored);
     if(code!==stored){
       showErr(err,'رمز خاطئ — Wrong code');
       btn.textContent='تفعيل الاشتراك'; return;
@@ -2456,7 +2454,7 @@ async function loadAdminData(){
       <div style="display:flex;align-items:flex-start;gap:14px">
         <div class="user-avatar" style="width:44px;height:44px;font-size:1rem;flex-shrink:0">${(l.name||'م')[0]}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-weight:700;font-size:1rem">${l.name}</div>
+          <div style="font-weight:700;font-size:1rem">${escapeHtml(l.name)}</div>
           <div style="color:var(--muted);font-size:.8rem;margin-top:2px">${l.building} · ${l.units||0} شقة · ${l.phone||'—'}</div>
           <div style="color:var(--muted);font-size:.75rem">${l.email}</div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
@@ -2486,8 +2484,8 @@ async function loadAdminData(){
           </button>
           <button
             data-uid="${l.id}"
-            data-email="${l.email||''}"
-            data-phone="${l.phone||''}"
+            data-email="${escapeHtml(l.email||'')}"
+            data-phone="${escapeHtml(l.phone||'')}"
             onclick="openEditLandlord(this)"
             style="background:rgba(79,126,248,.08);border:1.5px solid rgba(79,126,248,.25);color:var(--accent);border-radius:8px;padding:8px 12px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap;min-width:80px">
             ✏️ تعديل
@@ -2605,7 +2603,6 @@ async function generateNewCode(){
     await setDoc(doc(db,'config','registration'),{code,updatedAt:serverTimestamp()},{merge:true});
     document.getElementById('admin-code').textContent=code;
     showToast('✓ الرمز: '+code,'success');
-    console.log('Code saved to Firestore:',code);
   }catch(e){
     console.error('generateNewCode error:',e.code, e.message);
     showToast('فشل الحفظ: '+(e.code||e.message),'error');
@@ -2803,7 +2800,7 @@ function renderCalendarList(year, month, bookings){
         return `<div onclick="viewBooking('${b.id}')" style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-right:3px solid ${col};border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--warm)'" onmouseout="this.style.background='var(--card)'">
           <div style="font-size:1rem;font-weight:900;color:${col};min-width:32px">${b.apartment}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:.84rem;font-weight:700;color:var(--ink)">${b.tenantName}</div>
+            <div style="font-size:.84rem;font-weight:700;color:var(--ink)">${escapeHtml(b.tenantName)}</div>
             <div style="font-size:.72rem;color:var(--muted);margin-top:1px">${fmtDate(b.checkIn)} — ${fmtDate(b.checkOut)}</div>
           </div>
           <span style="background:${col};color:#fff;padding:3px 8px;border-radius:6px;font-size:.68rem;font-weight:700;white-space:nowrap">${bookingStatusAr(s)}</span>
@@ -3271,7 +3268,7 @@ function viewBooking(id){
   document.getElementById('booking-detail-content').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
       <div class="stat-card" style="padding:14px"><div class="stat-label">الشقة</div><div style="font-size:1.4rem;font-weight:900">${b.apartment}</div></div>
-      <div class="stat-card" style="padding:14px"><div class="stat-label">المستأجر</div><div style="font-size:1rem;font-weight:700;margin-top:4px">${b.tenantName}</div></div>
+      <div class="stat-card" style="padding:14px"><div class="stat-label">المستأجر</div><div style="font-size:1rem;font-weight:700;margin-top:4px">${escapeHtml(b.tenantName)}</div></div>
       <div class="stat-card" style="padding:14px"><div class="stat-label">الدخول (2:00 م)</div><div style="font-size:.9rem;font-weight:600;margin-top:4px">${fmtDate(b.checkIn)}</div></div>
       <div class="stat-card" style="padding:14px"><div class="stat-label">الخروج (12:00 م)</div><div style="font-size:.9rem;font-weight:600;margin-top:4px">${fmtDate(b.checkOut)}</div></div>
       <div class="stat-card" style="padding:14px"><div class="stat-label">عدد الليالي</div><div class="stat-value">${nights}</div></div>
@@ -3281,7 +3278,7 @@ function viewBooking(id){
       <span><b>دفعة مقدمة:</b> ${fmt(b.advance)} OMR</span>
       <span><b>المتبقي:</b> <span style="color:var(--danger)">${fmt(b.remaining||0)} OMR</span></span>
     </div>`:''}
-    ${b.notes?`<div style="background:var(--paper);border-radius:8px;padding:12px;font-size:.85rem;margin-bottom:8px"><b>ملاحظات:</b> ${b.notes}</div>`:''}
+    ${b.notes?`<div style="background:var(--paper);border-radius:8px;padding:12px;font-size:.85rem;margin-bottom:8px"><b>ملاحظات:</b> ${escapeHtml(b.notes)}</div>`:''}
     <div style="background:var(--paper);border-radius:8px;padding:10px 12px;font-size:.84rem;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
       <span><b>حالة الدفع:</b></span>
       <span class="badge ${b.paid?'badge-active':'badge-ended'}">${b.paid?'مدفوع':'غير مدفوع'}</span>
@@ -3361,7 +3358,7 @@ function printContract(){
   const html=`<div class="print-doc">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
       <div style="flex:1;text-align:center">
-        <div style="font-size:1.5rem;font-weight:900;color:#111;margin-bottom:4px">${b.landlordBuilding||userProfile.building||''}</div>
+        <div style="font-size:1.5rem;font-weight:900;color:#111;margin-bottom:4px">${escapeHtml(b.landlordBuilding||userProfile.building||'')}</div>
         <div style="font-size:1rem;font-weight:700;color:#444;margin-bottom:2px">${currentLang==='ar'?'عقد إيجار':'Lease Contract'}</div>
         <div style="height:2px;background:linear-gradient(90deg,transparent,#1e2535,transparent);margin:8px auto;max-width:200px"></div>
       </div>
@@ -3369,14 +3366,14 @@ function printContract(){
     </div>
     <div class="doc-section">
       <h3>${t('ct_landlord')}</h3>
-      <div class="doc-row"><span class="doc-label">${t('ct_name')}</span><span class="doc-value">${b.landlordName||userProfile.name}</span></div>
+      <div class="doc-row"><span class="doc-label">${t('ct_name')}</span><span class="doc-value">${escapeHtml(b.landlordName||userProfile.name)}</span></div>
       <div class="doc-row"><span class="doc-label">${t('ct_building')}</span><span class="doc-value">${b.landlordBuilding||userProfile.building}</span></div>
       <div class="doc-row"><span class="doc-label">${t('ct_apt_num')}</span><span class="doc-value">${b.apartment}</span></div>
     </div>
     <div class="doc-section">
       <h3>${t('ct_tenant_party')}</h3>
-      <div class="doc-row"><span class="doc-label">${t('ct_name')}</span><span class="doc-value">${b.tenantName}</span></div>
-      <div class="doc-row"><span class="doc-label">${t('ct_id')}</span><span class="doc-value" dir="ltr">${b.tenantIdNumber}</span></div>
+      <div class="doc-row"><span class="doc-label">${t('ct_name')}</span><span class="doc-value">${escapeHtml(b.tenantName)}</span></div>
+      <div class="doc-row"><span class="doc-label">${t('ct_id')}</span><span class="doc-value" dir="ltr">${escapeHtml(b.tenantIdNumber)}</span></div>
     </div>
     <div class="doc-section">
       <h3>${t('ct_details')}</h3>
@@ -3395,7 +3392,7 @@ function printContract(){
         <li>${t('ct4')}</li><li>${t('ct5')}</li><li>${t('ct6')}</li><li>${t('ct7')}</li>
       </ol>
     </div>
-    ${b.notes?`<div class="doc-section"><h3>${t('ct_notes_lbl')}</h3><p>${b.notes}</p></div>`:''}
+    ${b.notes?`<div class="doc-section"><h3>${t('ct_notes_lbl')}</h3><p>${escapeHtml(b.notes)}</p></div>`:''}
     <div class="signatures" style="margin-top:32px">
       <div class="sig-block"><div class="sig-line">${t('ct_sig_tenant')}</div></div>
       <div class="sig-block"><div class="sig-line">${t('ct_sig_stamp')}</div></div>
@@ -3449,8 +3446,8 @@ function printInvoice(id){
     </div>
     <div class="doc-section">
       <h3>${currentLang==='ar'?'بيانات المستأجر':'Tenant Information'}</h3>
-      <div class="doc-row"><span class="doc-label">${currentLang==='ar'?'الاسم:':'Name:'}</span><span class="doc-value">${b.tenantName}</span></div>
-      <div class="doc-row"><span class="doc-label">${currentLang==='ar'?'رقم الهوية:':'ID:'}</span><span class="doc-value" dir="ltr">${b.tenantIdNumber}</span></div>
+      <div class="doc-row"><span class="doc-label">${currentLang==='ar'?'الاسم:':'Name:'}</span><span class="doc-value">${escapeHtml(b.tenantName)}</span></div>
+      <div class="doc-row"><span class="doc-label">${currentLang==='ar'?'رقم الهوية:':'ID:'}</span><span class="doc-value" dir="ltr">${escapeHtml(b.tenantIdNumber)}</span></div>
       <div class="doc-row"><span class="doc-label">${currentLang==='ar'?'الشقة:':'Unit:'}</span><span class="doc-value">${b.apartment}</span></div>
     </div>
     <table class="invoice-table">
@@ -3464,7 +3461,7 @@ function printInvoice(id){
             <td>${nights} ${currentLang==='ar'?'ليلة':'nights'} × ${fmt(b.dailyRate||0)} OMR</td>
             <td dir="ltr">${fmt(total)}</td></tr>
         ${paymentLines}
-        ${b.notes?`<tr><td colspan="2">${currentLang==='ar'?'ملاحظات':'Notes'}: ${b.notes}</td><td>—</td></tr>`:''}
+        ${b.notes?`<tr><td colspan="2">${currentLang==='ar'?'ملاحظات':'Notes'}: ${escapeHtml(b.notes)}</td><td>—</td></tr>`:''}
       </tbody>
       <tfoot>
         <tr style="font-size:1rem">
@@ -3507,8 +3504,8 @@ function printReport(){
     <div class="doc-section">
       <h3>ملخص الحجز</h3>
       <div class="doc-row"><span class="doc-label">رقم الشقة:</span><span class="doc-value">${b.apartment}</span></div>
-      <div class="doc-row"><span class="doc-label">المستأجر:</span><span class="doc-value">${b.tenantName}</span></div>
-      <div class="doc-row"><span class="doc-label">رقم الهوية:</span><span class="doc-value" dir="ltr">${b.tenantIdNumber}</span></div>
+      <div class="doc-row"><span class="doc-label">المستأجر:</span><span class="doc-value">${escapeHtml(b.tenantName)}</span></div>
+      <div class="doc-row"><span class="doc-label">رقم الهوية:</span><span class="doc-value" dir="ltr">${escapeHtml(b.tenantIdNumber)}</span></div>
       <div class="doc-row"><span class="doc-label">الدخول:</span><span class="doc-value">${fmtDateFull(b.checkIn,'2:00 م')}</span></div>
       <div class="doc-row"><span class="doc-label">الخروج:</span><span class="doc-value">${fmtDateFull(b.checkOut,'12:00 م')}</span></div>
       <div class="doc-row"><span class="doc-label">عدد الليالي:</span><span class="doc-value">${nights}</span></div>
@@ -3517,7 +3514,7 @@ function printReport(){
       ${b.advance>0?`<div class="doc-row"><span class="doc-label">دفعة مقدمة:</span><span class="doc-value" dir="ltr" style="color:green">- ${fmt(b.advance)} OMR</span></div>
       <div class="doc-row"><span class="doc-label">المبلغ المتبقي:</span><span class="doc-value" dir="ltr"><b>${fmt(b.remaining||0)} OMR</b></span></div>`:''}
       <div class="doc-row"><span class="doc-label">الحالة:</span><span class="doc-value">${b.checkedIn?'دخل المستأجر ✓':'لم يدخل بعد'}</span></div>
-      ${b.notes?`<div class="doc-row"><span class="doc-label">ملاحظات:</span><span class="doc-value">${b.notes}</span></div>`:''}
+      ${b.notes?`<div class="doc-row"><span class="doc-label">ملاحظات:</span><span class="doc-value">${escapeHtml(b.notes)}</span></div>`:''}
     </div>
     <div class="doc-section">
       <h3>سجل التعديلات (${history.length})</h3>
@@ -3732,7 +3729,7 @@ function renderInvoicesPage(){
   el.innerHTML=`<table><thead><tr><th>${t('th_apt')}</th><th>${t('th_tenant')}</th><th>${t('th_checkin')}</th><th>${t('th_checkout')}</th><th>${t('th_advance')}</th><th>${t('th_remaining')}</th><th>${t('th_total')}</th><th>${t('th_payment')}</th><th></th></tr></thead><tbody>
     ${sorted.map(b=>`<tr>
       <td><b>${b.apartment}</b></td>
-      <td>${b.tenantName}</td>
+      <td>${escapeHtml(b.tenantName)}</td>
       <td dir="ltr">${fmtDate(b.checkIn)}</td>
       <td dir="ltr">${fmtDate(b.checkOut)}</td>
       <td dir="ltr">${b.advance>0?fmt(b.advance):'—'}</td>
@@ -3795,7 +3792,7 @@ function renderContractsPage(){
       const sAr=bookingStatusAr(s);
       return `<tr>
         <td><b>${b.apartment}</b></td>
-        <td>${b.tenantName}</td>
+        <td>${escapeHtml(b.tenantName)}</td>
         <td dir="ltr">${fmtDate(b.checkIn)}</td>
         <td dir="ltr">${fmtDate(b.checkOut)}</td>
         <td dir="ltr"><b>${fmt(b.totalRent||b.rent||0)} OMR</b></td>
@@ -3847,7 +3844,7 @@ function confirmDeleteBooking(){
   }
   const b=allBookings.find(x=>x.id===activeBookingId);
   if(!b) return;
-  if(!confirm(`حذف حجز شقة ${b.apartment} للمستأجر ${b.tenantName}؟\nهذا الإجراء لا يمكن التراجع عنه.`)) return;
+  if(!confirm(`حذف حجز شقة ${b.apartment} للمستأجر ${escapeHtml(b.tenantName)}؟\nهذا الإجراء لا يمكن التراجع عنه.`)) return;
   deleteBooking(activeBookingId);
 }
 
@@ -4093,7 +4090,7 @@ function shareContractWhatsApp(){
     `📋 ${isEn?'LEASE CONTRACT':'*عقد إيجار*'}`,
     `🏢 *${b.landlordBuilding||userProfile.building}*`,
     D,
-    `👤 ${isEn?'Tenant':'المستأجر'}: *${b.tenantName}*`,
+    `👤 ${isEn?'Tenant':'المستأجر'}: *${escapeHtml(b.tenantName)}*`,
     `🪪 ${isEn?'ID':'الهوية'}: ${b.tenantIdNumber||'—'}`,
     `🏠 ${isEn?'Unit':'الشقة'}: *${b.apartment}*`,
     D,
@@ -4149,7 +4146,7 @@ function openMoveTenant(){
   const b=allBookings.find(x=>x.id===activeBookingId);
   if(!b){showToast('افتح تفاصيل الحجز أولاً','error');return;}
   document.getElementById('move-booking-info').innerHTML=
-    `<b>${b.tenantName}</b> — شقة ${b.apartment}<br>من ${fmtDate(b.checkIn)} إلى ${fmtDate(b.checkOut)}`;
+    `<b>${escapeHtml(b.tenantName)}</b> — شقة ${b.apartment}<br>من ${fmtDate(b.checkIn)} إلى ${fmtDate(b.checkOut)}`;
   // Populate available apts (no conflict in same period)
   const apts=userProfile.apartments||[];
   const available=apts.filter(a=>{
@@ -4180,7 +4177,7 @@ async function confirmMoveTenant(){
     history:arrayUnion({action:'نقل',by:userProfile.name,at:new Date().toISOString(),note:`نقل من شقة ${oldApt} إلى شقة ${newApt}`})
   });
   b.apartment=newApt;
-  showToast(`تم نقل ${b.tenantName} من شقة ${oldApt} إلى شقة ${newApt} ✓`,'success');
+  showToast(`تم نقل ${escapeHtml(b.tenantName)} من شقة ${oldApt} إلى شقة ${newApt} ✓`,'success');
   closeModal('modal-move-tenant');
   renderDashboard();renderBookings();renderCalendar();renderApartmentsPage();
 }
@@ -4250,7 +4247,7 @@ function renderFullReportPage(){
               const nights=calcNights(b.checkIn,b.checkOut);
               return `<tr>
                 <td><b>${b.apartment}</b></td>
-                <td>${b.tenantName}</td>
+                <td>${escapeHtml(b.tenantName)}</td>
                 <td dir="ltr">${fmtDate(b.checkIn)}</td>
                 <td dir="ltr">${fmtDate(b.checkOut)}</td>
                 <td>${nights}</td>
@@ -4435,7 +4432,7 @@ function printFullReport(){
           const s=bookingStatus(b);
           return `<tr style="background:${i%2?'#f9f9f9':'#fff'};border-bottom:1px solid #eee">
             <td style="padding:5px 8px"><b>${b.apartment}</b></td>
-            <td style="padding:5px 8px">${b.tenantName}</td>
+            <td style="padding:5px 8px">${escapeHtml(b.tenantName)}</td>
             <td style="padding:5px 8px;direction:ltr">${fmtDate(b.checkIn)}</td>
             <td style="padding:5px 8px;direction:ltr">${fmtDate(b.checkOut)}</td>
             <td style="padding:5px 8px">${calcNights(b.checkIn,b.checkOut)}</td>
@@ -4505,7 +4502,7 @@ function openAddSubuser(){
           <div style="display:flex;align-items:center;gap:10px">
             <span style="font-size:1.1rem">🏢</span>
             <div>
-              <div style="font-size:.88rem;font-weight:700;color:var(--ink)">${b.name}</div>
+              <div style="font-size:.88rem;font-weight:700;color:var(--ink)">${escapeHtml(b.name)}</div>
               ${b.address?`<div style="font-size:.7rem;color:var(--muted)">${b.address}</div>`:''}
             </div>
           </div>
@@ -4666,7 +4663,7 @@ function renderBuildingsPage(){
             ${i+1}
           </div>
           <div style="flex:1">
-            <div style="font-weight:700;font-size:.95rem">${b.name}</div>
+            <div style="font-weight:700;font-size:.95rem">${escapeHtml(b.name)}</div>
             <div style="font-size:.75rem;color:var(--muted);margin-top:2px">${b.apartments?b.apartments.length:0} شقة${b.address?` · ${b.address}`:''}</div>
           </div>
           ${i===activeIdx?'<span style="font-size:.72rem;font-weight:700;color:var(--accent);background:var(--accent-light);padding:3px 10px;border-radius:10px">نشط</span>':'<span style="font-size:.72rem;color:var(--muted)">تبديل ←</span>'}
@@ -4710,7 +4707,7 @@ function updateBuildingSwitcher(){
       font-size:.78rem;font-weight:${i===ai?'700':'400'};cursor:pointer;
       color:${i===ai?'#93c5fd':'rgba(255,255,255,.5)'};text-align:right">
       <span>${i===ai?'🏢':'🏗️'}</span>
-      <span style="flex:1">${b.name}</span>
+      <span style="flex:1">${escapeHtml(b.name)}</span>
       ${i===ai?'<span style="font-size:.58rem;background:rgba(79,126,248,.35);padding:2px 7px;border-radius:4px">نشط</span>':'<span style="font-size:.65rem;opacity:.4">تبديل</span>'}
     </button>`).join('');
 }
@@ -4794,7 +4791,7 @@ function refreshAptSelect(){
 function refreshTenantSelect(){
   const sel=document.getElementById('b-tenant');
   const cur=sel.value;
-  sel.innerHTML='<option value="">— اختر مستأجر —</option>'+allTenants.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+  sel.innerHTML='<option value="">— اختر مستأجر —</option>'+allTenants.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
   if(cur) sel.value=cur;
 }
 
@@ -4821,6 +4818,15 @@ function showToast(msg,type=''){
 function showErr(el,msg){el.textContent=msg;el.classList.add('show');}
 function v(id){return document.getElementById(id)?.value||'';}
 function clear(ids){ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';})}
+function escapeHtml(s){
+  if(s===null||s===undefined) return '';
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
 function fmt(n){return(n||0).toLocaleString('en-OM',{minimumFractionDigits:3,maximumFractionDigits:3});}
 function fmtDate(d){return d?new Date(d+'T14:00:00').toLocaleDateString('ar-OM',{year:'numeric',month:'short',day:'numeric'}):'—';}
 function fmtDateFull(d,time){return d?`${new Date(d+'T14:00:00').toLocaleDateString('ar-OM',{year:'numeric',month:'long',day:'numeric'})} — ${time}`:'—';}
