@@ -1690,6 +1690,8 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, collection, doc, addDoc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp, arrayUnion }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFunctions, httpsCallable }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
 
 const firebaseConfig = {
   apiKey:            "AIzaSyDADo3La7oaGq5rUWaroc0Dl5siaRAtDxk",
@@ -1705,6 +1707,7 @@ const fbApp = initializeApp(firebaseConfig);
 window._fbOptions = firebaseConfig; // needed for secondary auth
 const auth  = getAuth(fbApp);
 const db    = getFirestore(fbApp);
+const fns = getFunctions(fbApp);
 
 let currentUser=null, userProfile=null;
 let allTenants=[], allBookings=[], allExpenses=[];
@@ -2243,26 +2246,25 @@ async function doUpgradeAccount(){
   if(code.length!==6){ showErr(err,'أدخل الرمز كاملاً (6 أرقام)'); return; }
   btn.innerHTML='<span class="spinner"></span>';
   try{
-    const ref=doc(db,'config','registration');
-    const snap=await getDoc(ref);
-    if(!snap.exists()){
-      showErr(err,'الرمز غير مفعّل — تواصل: +968 94313327');
-      btn.textContent='تفعيل الاشتراك'; return;
-    }
-    const stored=String(snap.data().code||'').trim();
-    if(code!==stored){
+    // Code verification now happens server-side via Cloud Function —
+    // the client never reads config/registration directly anymore.
+    const verifyActivationCode = httpsCallable(fns, 'verifyActivationCode');
+    const result = await verifyActivationCode({ code });
+    if(result.data && result.data.success){
+      userProfile.plan='unlimited';
+      closeModal('modal-upgrade');
+      unlockApp();
+      updatePlanBanner();
+      showToast('🎉 تم تفعيل اشتراكك!','success');
+    } else {
       showErr(err,'رمز خاطئ — Wrong code');
-      btn.textContent='تفعيل الاشتراك'; return;
+      btn.textContent='تفعيل الاشتراك';
     }
-    await setDoc(doc(db,'users',currentUser.uid),{plan:'unlimited'},{merge:true});
-    userProfile.plan='unlimited';
-    closeModal('modal-upgrade');
-    unlockApp();
-    updatePlanBanner();
-    showToast('🎉 تم تفعيل اشتراكك!','success');
   }catch(e){
     console.error('upgrade error:',e.code,e.message);
-    showErr(err,e.code==='permission-denied'?'خطأ صلاحيات':(e.message||e.code||'خطأ'));
+    // Cloud Function errors arrive as e.code like 'functions/permission-denied'
+    const friendly = (e.message && e.message.length < 80) ? e.message : 'حدث خطأ — حاول مرة أخرى';
+    showErr(err, friendly);
     btn.textContent='تفعيل الاشتراك';
   }
 }
