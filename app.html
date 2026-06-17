@@ -2331,19 +2331,25 @@ function renderSidebar(isAdmin){
     return;
   }
   const allItems=[
+    // Daily landing point
     {id:'page-dashboard',  ic:'grid',         label:t('nav_dashboard'),  perm:null,     ownerOnly:false},
+    // Operational core — booking workflow, same concept in two views, kept adjacent
     {id:'page-bookings',   ic:'file-text',    label:t('nav_bookings'),   perm:'bookings',ownerOnly:false},
     {id:'page-calendar',   ic:'calendar',     label:t('nav_calendar'),   perm:'bookings',ownerOnly:false},
-    {id:'page-tenants',    ic:'users',        label:t('nav_tenants'),    perm:'tenants', ownerOnly:false},
+    // Inventory before people — you pick an apartment, then assign a tenant to it
     {id:'page-apartments', ic:'building',     label:t('nav_apartments'), perm:null,      ownerOnly:false},
+    {id:'page-tenants',    ic:'users',        label:t('nav_tenants'),    perm:'tenants', ownerOnly:false},
+    // Money block — contract (legal output) + invoices (money in) + expenses (money out), grouped as siblings
     {id:'page-contracts',  ic:'contract',     label:t('nav_contracts'),  perm:'contracts',ownerOnly:false},
-    {id:'page-notifications',ic:'bell',       label:t('nav_notifications'),perm:null,   ownerOnly:false, badge:true},
-    // Financial — owner only or if explicitly granted
-    {id:'page-expenses',   ic:'trending-down',label:t('nav_expenses'),   perm:'expenses', ownerOnly:false},
     {id:'page-invoices',   ic:'receipt',      label:t('nav_invoices'),   perm:'invoices', ownerOnly:false},
+    {id:'page-expenses',   ic:'trending-down',label:t('nav_expenses'),   perm:'expenses', ownerOnly:false},
+    // Rollup of everything above
     {id:'page-fullreport', ic:'bar-chart',    label:t('nav_report'),     perm:'reports',  ownerOnly:false},
-    {id:'page-subusers',   ic:'user-plus',    label:t('nav_subusers'),   perm:null,       ownerOnly:true},
+    // Reactive/operational, lower frequency than the core workflow
+    {id:'page-notifications',ic:'bell',       label:t('nav_notifications'),perm:null,   ownerOnly:false, badge:true},
+    // Admin / config — touched rarely after setup
     {id:'page-buildings',  ic:'building',     label:t('nav_buildings'),  perm:null,       ownerOnly:true},
+    {id:'page-subusers',   ic:'user-plus',    label:t('nav_subusers'),   perm:null,       ownerOnly:true},
   ];
   const items=allItems.filter(i=>{
     if(i.ownerOnly && isSubuser) return false;
