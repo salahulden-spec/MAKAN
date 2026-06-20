@@ -4609,6 +4609,18 @@ async function saveSubUser(){
     const subs=[subEntry]; // max 1
     await updateDoc(doc(db,'users',currentUser.uid),{subUsers:subs});
     userProfile.subUsers=subs;
+    // Stamp the new sub-user's auth token with parentUid via Cloud Function,
+    // so Firestore rules can recognize them as acting on the landlord's data.
+    try{
+      const idToken=await auth.currentUser.getIdToken(true);
+      const claimRes=await fetch('https://us-central1-makan-d8dd7.cloudfunctions.net/setSubUserClaim',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
+        body:JSON.stringify({data:{subUserUid:subUid}})
+      });
+      const claimJson=await claimRes.json();
+      if(!claimRes.ok){ console.warn('setSubUserClaim failed:',claimJson); }
+    }catch(claimErr){ console.warn('setSubUserClaim error:',claimErr); }
     closeModal('modal-subuser');
     clear(['su-email','su-pass']);
     showToast('✓ تم إنشاء المستخدم الفرعي — يمكنه تسجيل الدخول الآن','success');
