@@ -2304,27 +2304,34 @@ async function loadProfile(){
   if(snap.exists()){
     userProfile=snap.data();
   } else {
-    // Could be a sub-user — search all users for a subUsers entry matching this UID
-    const allUsersSnap=await getDocs(collection(db,'users'));
+    // Could be a sub-user. Their auth token carries a parentUid custom
+    // claim (set by the setSubUserClaim Cloud Function at creation time)
+    // — read that directly from the token instead of scanning the whole
+    // users collection (which sub-users don't have permission to do).
     let found=false;
-    for(const d of allUsersSnap.docs){
-      const data=d.data();
-      const subEntry=(data.subUsers||[]).find(s=>s.uid===currentUser.uid);
-      if(subEntry){
-        // Load parent data but apply sub-user role and permissions
-        userProfile={
-          ...data,
-          name:subEntry.email,
-          email:subEntry.email,
-          role:'subuser',
-          permissions:subEntry.permissions||{},
-          parentUid:d.id,
-          plan:'unlimited',
-        };
-        found=true;
-        break;
+    try{
+      const idTokenResult = await currentUser.getIdTokenResult(true); // force refresh to pick up new claims
+      const parentUid = idTokenResult.claims.parentUid;
+      if(parentUid){
+        const parentSnap = await getDoc(doc(db,'users',parentUid));
+        if(parentSnap.exists()){
+          const data = parentSnap.data();
+          const subEntry=(data.subUsers||[]).find(s=>s.uid===currentUser.uid);
+          if(subEntry){
+            userProfile={
+              ...data,
+              name:subEntry.email,
+              email:subEntry.email,
+              role:'subuser',
+              permissions:subEntry.permissions||{},
+              parentUid:parentUid,
+              plan:'unlimited',
+            };
+            found=true;
+          }
+        }
       }
-    }
+    }catch(e){ console.warn('sub-user profile lookup failed:', e.code||e.message); }
     if(!found) userProfile={name:currentUser.email,role:'landlord',apartments:[]};
   }
 }
