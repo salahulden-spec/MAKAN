@@ -2248,16 +2248,31 @@ async function doUpgradeAccount(){
   try{
     // Code verification now happens server-side via Cloud Function —
     // the client never reads config/registration directly anymore.
-    // Force a fresh ID token before calling — removes any doubt about
-    // whether a valid/expired token is the issue.
-    if(auth.currentUser){
-      await auth.currentUser.getIdToken(true);
-      console.log('DEBUG client auth.currentUser.uid:', auth.currentUser.uid);
-    } else {
-      console.log('DEBUG client auth.currentUser is NULL at call time');
+    // Bypassing httpsCallable's internal auth-attach mechanism —
+    // calling the function as a plain HTTPS request and attaching
+    // the ID token ourselves, so we have full visibility into the
+    // actual request being sent instead of trusting an SDK internal.
+    if(!auth.currentUser){
+      showErr(err,'يجب تسجيل الدخول أولاً');
+      btn.textContent='تفعيل الاشتراك'; return;
     }
-    const verifyActivationCode = httpsCallable(fns, 'verifyActivationCode');
-    const result = await verifyActivationCode({ code });
+    const idToken = await auth.currentUser.getIdToken(true);
+    console.log('DEBUG token length:', idToken ? idToken.length : 'NONE');
+    const rawResponse = await fetch('https://us-central1-makan-d8dd7.cloudfunctions.net/verifyActivationCode', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + idToken
+      },
+      body: JSON.stringify({ data: { code } })
+    });
+    const rawJson = await rawResponse.json();
+    console.log('DEBUG raw response status:', rawResponse.status, rawJson);
+    if(!rawResponse.ok){
+      const msg = (rawJson.error && rawJson.error.message) || 'حدث خطأ';
+      throw { code: 'functions/' + ((rawJson.error && rawJson.error.status) || 'internal'), message: msg };
+    }
+    const result = { data: rawJson.result };
     if(result.data && result.data.success){
       userProfile.plan='unlimited';
       closeModal('modal-upgrade');
