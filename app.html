@@ -2431,9 +2431,15 @@ async function loadAdminData(){
   const snap=await getDocs(collection(db,'users'));
   const landlords=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.role==='landlord');
 
-  // Fetch ALL bookings across all landlords in parallel
+  // Fetch ALL bookings across all landlords in parallel.
+  // Each query is wrapped so one landlord's permission error doesn't
+  // take down the entire admin panel (Promise.all would otherwise
+  // reject as soon as ANY single query fails, hiding every landlord).
   const bookingSnaps=await Promise.all(
-    landlords.map(l=>getDocs(query(collection(db,'bookings'),where('uid','==',l.id))))
+    landlords.map(l=>
+      getDocs(query(collection(db,'bookings'),where('uid','==',l.id)))
+        .catch(e=>{ console.warn('booking count failed for', l.id, e.code); return {docs:[]}; })
+    )
   );
   const bookingCounts={};
   let platformTotal=0;
