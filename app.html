@@ -1707,7 +1707,7 @@ const fbApp = initializeApp(firebaseConfig);
 window._fbOptions = firebaseConfig; // needed for secondary auth
 const auth  = getAuth(fbApp);
 const db    = getFirestore(fbApp);
-const fns = getFunctions(fbApp);
+const fns = getFunctions(fbApp, 'us-central1');
 
 let currentUser=null, userProfile=null;
 let allTenants=[], allBookings=[], allExpenses=[];
@@ -2248,6 +2248,14 @@ async function doUpgradeAccount(){
   try{
     // Code verification now happens server-side via Cloud Function —
     // the client never reads config/registration directly anymore.
+    // Force a fresh ID token before calling — removes any doubt about
+    // whether a valid/expired token is the issue.
+    if(auth.currentUser){
+      await auth.currentUser.getIdToken(true);
+      console.log('DEBUG client auth.currentUser.uid:', auth.currentUser.uid);
+    } else {
+      console.log('DEBUG client auth.currentUser is NULL at call time');
+    }
     const verifyActivationCode = httpsCallable(fns, 'verifyActivationCode');
     const result = await verifyActivationCode({ code });
     if(result.data && result.data.success){
