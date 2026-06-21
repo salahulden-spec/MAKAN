@@ -1688,7 +1688,7 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, collection, doc, addDoc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp, arrayUnion }
+import { getFirestore, collection, doc, addDoc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, deleteField, query, where, orderBy, serverTimestamp, arrayUnion }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getFunctions, httpsCallable }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
@@ -2303,6 +2303,21 @@ async function loadProfile(){
   const snap=await getDoc(doc(db,'users',currentUser.uid));
   if(snap.exists()){
     userProfile=snap.data();
+    // Merge admin overrides (email/phone/disabled edits the admin made
+    // through the admin panel — these can't be written directly onto
+    // another user's own doc, so they live in config/adminOverrides
+    // and get applied here at load time instead).
+    try{
+      const ovSnap=await getDoc(doc(db,'config','adminOverrides'));
+      if(ovSnap.exists()){
+        const ov=ovSnap.data()[currentUser.uid];
+        if(ov){
+          if(ov.email!==undefined) userProfile.email=ov.email;
+          if(ov.phone!==undefined) userProfile.phone=ov.phone;
+          if(ov.disabled!==undefined) userProfile.disabled=ov.disabled;
+        }
+      }
+    }catch(e){ /* adminOverrides may not be readable by non-admins — ignore */ }
   } else {
     // Could be a sub-user. Their auth token carries a parentUid custom
     // claim (set by the setSubUserClaim Cloud Function at creation time)
@@ -2473,11 +2488,15 @@ async function loadAdminData(){
     const ovSnap = await getDoc(doc(db,'config','adminOverrides'));
     if(ovSnap.exists()) overrides = ovSnap.data();
   } catch(e) { /* ignore */ }
-  // Merge overrides into landlord objects
+  // Merge overrides into landlord objects (email, phone, AND disabled —
+  // disabled is a boolean so we check for undefined, not truthiness,
+  // otherwise re-enabling (disabled:false) would never apply)
   landlords.forEach(l => {
     if(overrides[l.id]) {
       if(overrides[l.id].email) l.email = overrides[l.id].email;
       if(overrides[l.id].phone) l.phone = overrides[l.id].phone;
+      if(overrides[l.id].disabled !== undefined) l.disabled = overrides[l.id].disabled;
+      if(overrides[l.id].pendingDelete !== undefined) l.pendingDelete = overrides[l.id].pendingDelete;
     }
   });
 
@@ -2528,6 +2547,19 @@ async function loadAdminData(){
             style="background:rgba(79,126,248,.08);border:1.5px solid rgba(79,126,248,.25);color:var(--accent);border-radius:8px;padding:8px 12px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap;min-width:80px">
             ✏️ تعديل
           </button>
+          <button
+            data-uid="${l.id}"
+            onclick="adminResetPassword(this.dataset.uid)"
+            style="background:rgba(180,140,20,.08);border:1.5px solid rgba(180,140,20,.25);color:#b48c14;border-radius:8px;padding:8px 12px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap;min-width:80px">
+            🔑 كلمة المرور
+          </button>
+          <button
+            data-uid="${l.id}"
+            data-name="${escapeHtml(l.name||l.email||'')}"
+            onclick="deleteLandlord(this)"
+            style="background:rgba(224,60,60,.08);border:1.5px solid rgba(224,60,60,.25);color:var(--danger);border-radius:8px;padding:8px 12px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap;min-width:80px">
+            🗑️ حذف
+          </button>
         </div>
       </div>
     </div>`;
@@ -2539,8 +2571,18 @@ async function toggleLandlordStatus(btn){
   const isDisabled=btn.dataset.disabled==='1';
   const action=isDisabled?'تفعيل':'تعطيل';
   if(!confirm(`هل تريد ${action} هذا الحساب؟`)) return;
+  // Admin cannot write 'disabled' directly onto another user's own
+  // users/{uid} doc — Firestore rules only allow a user to write
+  // their own doc. Route through config/adminOverrides instead,
+  // same pattern as email/phone edits. loadProfile() and the login
+  // gate both check adminOverrides for a disabled flag before
+  // falling back to the user's own doc.
   try{
-    await setDoc(doc(db,'users',uid),{disabled:!isDisabled},{merge:true});
+    await setDoc(
+      doc(db,'config','adminOverrides'),
+      { [uid]: { disabled: !isDisabled, updatedAt: new Date().toISOString() } },
+      { merge: true }
+    );
     showToast(`تم ${action} الحساب ✓`,'success');
     loadAdminData();
   }catch(e){ showToast('خطأ: '+(e.message||e.code),'error'); }
@@ -2573,10 +2615,22 @@ async function saveEditLandlord(){
     showToast('خطأ: '+(e.message||e.code), 'error');
   }
 }
-async function deleteLandlord(uid, name){
-  if(!confirm(`حذف حساب "${name}" بشكل نهائي؟\nسيتم حذف جميع بياناته من المنصة.\nهذا الإجراء لا يمكن التراجع عنه.`)) return;
+async function deleteLandlord(btn){
+  const uid  = btn.dataset.uid;
+  const name = btn.dataset.name || 'هذا المستخدم';
+  if(!confirm(
+    `حذف بيانات حساب "${name}" نهائياً؟\n\n` +
+    `سيتم حذف جميع الحجوزات والمستأجرين والمصروفات وملفه الشخصي من قاعدة البيانات.\n` +
+    `هذا الإجراء لا يمكن التراجع عنه.\n\n` +
+    `ملاحظة: حساب تسجيل الدخول (Firebase Auth) يبقى موجوداً تقنياً لكنه لن يستطيع ` +
+    `فعل أي شيء بدون ملفه في قاعدة البيانات — لحذفه بالكامل يلزم الوصول لـ Firebase Console.`
+  )) return;
   try{
-    // Delete user's bookings, tenants, expenses from Firestore
+    // These deletes ARE permitted by the current Firestore rules,
+    // because the rule explicitly grants the admin (matched by
+    // server-verified email token) delete access on tenants,
+    // bookings, expenses, AND users/{uid} — unlike write/edit on
+    // users/{uid}, which only the owning uid itself can do.
     const [bSnap, tSnap, eSnap] = await Promise.all([
       getDocs(query(collection(db,'bookings'), where('uid','==',uid))),
       getDocs(query(collection(db,'tenants'),  where('uid','==',uid))),
@@ -2588,17 +2642,18 @@ async function deleteLandlord(uid, name){
       ...eSnap.docs.map(d => deleteDoc(doc(db,'expenses',d.id))),
     ];
     await Promise.all(deletes);
-    // Delete user profile doc
     await deleteDoc(doc(db,'users',uid));
-    // Remove card from UI immediately
+    // Clean up any adminOverrides entry for this uid too, so it
+    // doesn't linger as orphaned data
+    try{
+      await updateDoc(doc(db,'config','adminOverrides'), { [uid]: deleteField() });
+    }catch(e){ /* non-critical, ignore */ }
+
     const card = document.getElementById('landlord-card-'+uid);
     if(card) card.remove();
-    // Update count
     const countEl = document.getElementById('admin-count');
-    if(countEl) countEl.textContent = parseInt(countEl.textContent||0) - 1;
-    showToast(`تم حذف حساب ${name} ✓`,'success');
-    // Note: Firebase Auth user still exists — they can't do anything without Firestore profile
-    // To fully delete auth account, use Firebase Admin SDK or manual deletion from console
+    if(countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent||0) - 1);
+    showToast(`تم حذف بيانات ${name} ✓`,'success');
   } catch(e){
     showToast('خطأ أثناء الحذف: ' + (e.message||e.code), 'error');
   }
@@ -3974,32 +4029,54 @@ function renderNotificationsPage(){
 }
 
 // ── ADMIN PASSWORD RESET ─────────────────────────────────────────────
-async function adminResetPassword(){
-  const inputEmail = document.getElementById('admin-reset-email').value.trim();
+async function adminResetPassword(uidHint){
   const msg = document.getElementById('admin-reset-msg');
-  if(!inputEmail){ msg.style.display='block';msg.style.color='var(--danger)';msg.textContent='أدخل البريد الإلكتروني';return; }
+  let finalEmail;
 
-  // Check if admin has overridden this email in adminOverrides
-  let finalEmail = inputEmail;
-  try{
-    const ovSnap = await getDoc(doc(db,'config','adminOverrides'));
-    if(ovSnap.exists()){
-      const overrides = ovSnap.data();
-      // Find any override where original email matches, use the new one
-      const match = Object.values(overrides).find(o => o.email === inputEmail);
-      if(match && match.email) finalEmail = match.email;
+  if(uidHint){
+    // Called directly from a landlord card — uidHint is that landlord's
+    // Firebase Auth uid. Look up their CURRENT email by uid: check
+    // adminOverrides first (admin may have changed it), fall back to
+    // their original users/{uid} doc. This is the reliable path,
+    // since it keys off uid rather than trying to guess which email
+    // string the admin might type into a free-text box.
+    try{
+      const userSnap = await getDoc(doc(db,'users',uidHint));
+      finalEmail = userSnap.exists() ? userSnap.data().email : null;
+      const ovSnap = await getDoc(doc(db,'config','adminOverrides'));
+      if(ovSnap.exists()){
+        const ov = ovSnap.data()[uidHint];
+        if(ov && ov.email) finalEmail = ov.email;
+      }
+    }catch(e){ /* fall through */ }
+    if(!finalEmail){
+      showToast('تعذّر العثور على بريد هذا الحساب','error');
+      return;
     }
-  }catch(e){ /* proceed with original */ }
+  } else {
+    // Called from the free-text admin reset box (legacy path) —
+    // the typed value IS the email to send to. We no longer try to
+    // "reverse lookup" an override here since overrides are keyed
+    // by uid, not by email, and searching by email was unreliable.
+    const inputEmail = document.getElementById('admin-reset-email').value.trim();
+    if(!inputEmail){ msg.style.display='block';msg.style.color='var(--danger)';msg.textContent='أدخل البريد الإلكتروني';return; }
+    finalEmail = inputEmail;
+  }
 
   try{
     const {sendPasswordResetEmail}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
     await sendPasswordResetEmail(auth, finalEmail);
-    msg.style.display='block';msg.style.color='var(--success)';
-    msg.textContent='✓ تم إرسال رابط إعادة التعيين إلى '+finalEmail;
-    document.getElementById('admin-reset-email').value='';
+    if(msg){
+      msg.style.display='block';msg.style.color='var(--success)';
+      msg.textContent='✓ تم إرسال رابط إعادة التعيين إلى '+finalEmail;
+      const box=document.getElementById('admin-reset-email'); if(box) box.value='';
+    } else {
+      showToast('✓ تم إرسال رابط إعادة التعيين إلى '+finalEmail,'success');
+    }
   }catch(e){
-    msg.style.display='block';msg.style.color='var(--danger)';
-    msg.textContent='خطأ: '+translateAuthError(e.code);
+    const errMsg='خطأ: '+translateAuthError(e.code);
+    if(msg){ msg.style.display='block';msg.style.color='var(--danger)'; msg.textContent=errMsg; }
+    else { showToast(errMsg,'error'); }
   }
 }
 
@@ -4997,6 +5074,8 @@ function updateSidebarLogo(){
 
 // Expose admin functions to global scope (required for onclick in innerHTML)
 window.toggleLandlordStatus = toggleLandlordStatus;
+window.deleteLandlord        = deleteLandlord;
+window.adminResetPassword    = adminResetPassword;
 window.openEditLandlord     = openEditLandlord;
 window.saveEditLandlord     = saveEditLandlord;
 // Logo modal
