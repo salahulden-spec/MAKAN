@@ -5347,6 +5347,13 @@ function updateSidebarLogo(){
 
 // Expose admin functions to global scope (required for onclick in innerHTML)
 window.toggleLandlordStatus = toggleLandlordStatus;
+// Multi-rate booking feature
+window.enableMultiRate         = enableMultiRate;
+window.disableMultiRate        = disableMultiRate;
+window.disableMultiRateSilent  = disableMultiRateSilent;
+window.addRateSegmentRow       = addRateSegmentRow;
+window.removeRateSegmentRow    = removeRateSegmentRow;
+window.recalcMultiRate         = recalcMultiRate;
 window.deleteLandlord        = deleteLandlord;
 window.adminResetPassword    = adminResetPassword;
 window.openEditLandlord     = openEditLandlord;
