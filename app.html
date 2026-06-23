@@ -1423,6 +1423,17 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
   </div>
 </div>
 
+<!-- DAY BOOKINGS LIST (calendar grid — click a date to see all bookings that day) -->
+<div class="modal-overlay" id="modal-day-bookings">
+  <div class="modal" style="max-width:480px">
+    <h2 id="day-bookings-title">حجوزات اليوم</h2>
+    <div id="day-bookings-list" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto"></div>
+    <div class="modal-footer" style="margin-top:14px">
+      <button class="btn btn-secondary" onclick="closeModal('modal-day-bookings')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <!-- BOOKING DETAIL -->
 <div class="modal-overlay" id="modal-booking-detail">
   <div class="modal" style="max-width:640px">
@@ -2955,8 +2966,10 @@ function renderCalendar(){
       return cellDate>=new Date(ci.getFullYear(),ci.getMonth(),ci.getDate())&&
              cellDate<=new Date(co.getFullYear(),co.getMonth(),co.getDate());
     }):[];
+    const cellDateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(c.day).padStart(2,'0')}`;
+    const hasEvents=c.cur&&events.length>0;
     return `<div class="cal-day ${isToday?'today':''} ${!c.cur?'other-month':''}">
-      <div class="cal-day-num">${c.day}</div>
+      <div class="cal-day-num" ${hasEvents?`style="cursor:pointer" onclick="showDayBookings('${cellDateStr}')"`:''}>${c.day}</div>
       ${events.slice(0,2).map(e=>{
         const es=bookingStatus(e);
         // Colors match legend: accent=active, success=checkedin, amber=upcoming, muted=ended
@@ -2970,9 +2983,46 @@ function renderCalendar(){
         const textColor=es==='ended'?'var(--muted)':'#fff';
         return `<div class="cal-event" style="cursor:pointer;background:${bg};color:${textColor||'#fff'}" onclick="viewBooking('${e.id}')">${e.apartment} — ${e.tenantName||''}</div>`;
       }).join('')}
-      ${events.length>2?`<div style="font-size:.6rem;color:var(--muted)">+${events.length-2}</div>`:''}
+      ${events.length>2?`<div style="font-size:.6rem;color:var(--muted);cursor:pointer;text-decoration:underline" onclick="showDayBookings('${cellDateStr}')">+${events.length-2}</div>`:''}
     </div>`;
   }).join('');
+}
+
+// ── DAY BOOKINGS MODAL (calendar grid) ──────────────────────────────────
+// Clicking a date number, or the "+N" overflow indicator, shows every
+// booking active on that day — not just the first two pills the grid
+// cell has room for.
+function showDayBookings(dateStr){
+  const cellDate=new Date(dateStr+'T00:00:00');
+  const dayBookings=allBookings.filter(b=>{
+    if(bookingStatus(b)==='ended') return false;
+    const ci=new Date(b.checkIn), co=new Date(b.checkOut);
+    return cellDate>=new Date(ci.getFullYear(),ci.getMonth(),ci.getDate())&&
+           cellDate<=new Date(co.getFullYear(),co.getMonth(),co.getDate());
+  });
+  const title=document.getElementById('day-bookings-title');
+  const list=document.getElementById('day-bookings-list');
+  if(!title||!list) return;
+  title.textContent=`حجوزات ${fmtDate(dateStr)} (${dayBookings.length})`;
+  if(!dayBookings.length){
+    list.innerHTML='<div class="empty-state" style="padding:20px"><p>لا توجد حجوزات في هذا اليوم</p></div>';
+  } else {
+    const bgMap={active:'var(--accent)',checkedin:'var(--success)',upcoming:'#f59e0b',ended:'rgba(30,37,53,.25)'};
+    list.innerHTML=dayBookings.map(b=>{
+      const s=bookingStatus(b);
+      const bg=bgMap[s]||'var(--accent)';
+      return `<div onclick="closeModal('modal-day-bookings');viewBooking('${b.id}')"
+          style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-right:3px solid ${bg};border-radius:10px;padding:10px 12px;cursor:pointer">
+        <div style="font-size:1rem;font-weight:900;color:${bg};min-width:36px">${b.apartment}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.84rem;font-weight:700;color:var(--ink)">${escapeHtml(b.tenantName||'')}</div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:1px" dir="ltr">${fmtDate(b.checkIn)} – ${fmtDate(b.checkOut)}</div>
+        </div>
+        <span style="background:${bg};color:#fff;padding:3px 8px;border-radius:6px;font-size:.68rem;font-weight:700;white-space:nowrap">${bookingStatusAr(s)}</span>
+      </div>`;
+    }).join('');
+  }
+  openModal('modal-day-bookings');
 }
 
 // ── RENT CALC ─────────────────────────────────────────────────────────
@@ -5354,6 +5404,7 @@ window.disableMultiRateSilent  = disableMultiRateSilent;
 window.addRateSegmentRow       = addRateSegmentRow;
 window.removeRateSegmentRow    = removeRateSegmentRow;
 window.recalcMultiRate         = recalcMultiRate;
+window.showDayBookings         = showDayBookings;
 window.deleteLandlord        = deleteLandlord;
 window.adminResetPassword    = adminResetPassword;
 window.openEditLandlord     = openEditLandlord;
