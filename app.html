@@ -1353,7 +1353,7 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
       <label id="lbl-tenant"></label>
       <select id="b-tenant"><option value="">— اختر مستأجر —</option></select>
     </div>
-    <div class="form-row">
+    <div class="form-row" id="flat-rate-row">
       <div class="form-group">
         <label id="lbl-daily"></label>
         <input type="number" id="b-daily-rate" placeholder="20.000" step="0.001" min="0" dir="ltr" oninput="calcRent()">
@@ -1361,6 +1361,28 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
       <div class="form-group">
         <label id="lbl-total"></label>
         <input type="text" id="b-total-rent" placeholder="يُحسب تلقائياً" dir="ltr" readonly style="background:var(--warm);font-weight:700">
+      </div>
+    </div>
+    <div class="form-group" id="multi-rate-toggle-row" style="margin-top:-4px;margin-bottom:14px">
+      <button type="button" id="btn-add-rate-period" onclick="enableMultiRate()"
+        style="background:none;border:1.5px dashed var(--border);color:var(--accent);border-radius:8px;padding:8px 14px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer;width:100%">
+        ＋ هل تريد فترات بأسعار مختلفة لنفس الحجز؟ (اختياري)
+      </button>
+    </div>
+    <div class="form-group" id="multi-rate-section" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <label style="margin:0">فترات الأسعار — Rate Periods</label>
+        <button type="button" onclick="disableMultiRate()" style="background:none;border:none;color:var(--muted);font-size:.76rem;cursor:pointer;text-decoration:underline">إلغاء وعودة لسعر واحد</button>
+      </div>
+      <div id="rate-segments-list"></div>
+      <button type="button" onclick="addRateSegmentRow()"
+        style="background:rgba(79,126,248,.08);border:1.5px solid rgba(79,126,248,.25);color:var(--accent);border-radius:8px;padding:8px 14px;font-family:var(--font);font-size:.8rem;font-weight:700;cursor:pointer;width:100%;margin-top:6px">
+        ＋ إضافة فترة أخرى
+      </button>
+      <div class="hint" id="multi-rate-error" style="color:var(--danger);display:none;margin-top:8px"></div>
+      <div style="background:var(--warm);border-radius:8px;padding:10px 12px;margin-top:10px;font-weight:700;font-size:.88rem;display:flex;justify-content:space-between">
+        <span>الإجمالي — Total</span>
+        <span id="multi-rate-total" dir="ltr">0.000 OMR</span>
       </div>
     </div>
     <div class="form-group">
@@ -2969,11 +2991,184 @@ function calcRent(){
   document.getElementById('b-total-rent').value=display;
 }
 
+// ── MULTI-RATE BOOKING UI ────────────────────────────────────────────
+// Optional feature: instead of one flat daily rate for the whole stay,
+// the landlord can split the SAME continuous booking into consecutive
+// rate periods. Hidden by default — toggled on via the "+" button.
+let _multiRateActive=false;
+
+function enableMultiRate(){
+  const ci=v('b-checkin'), co=v('b-checkout');
+  if(!ci||!co){
+    showToast('أدخل تاريخ الدخول والخروج أولاً','error');
+    return;
+  }
+  _multiRateActive=true;
+  document.getElementById('flat-rate-row').style.display='none';
+  document.getElementById('multi-rate-toggle-row').style.display='none';
+  document.getElementById('multi-rate-section').style.display='block';
+  document.getElementById('rate-segments-list').innerHTML='';
+  // Seed with one segment spanning the full current check-in/check-out range —
+  // the landlord then edits the "to" date to split it.
+  addRateSegmentRow(ci, co, v('b-daily-rate')||'');
+}
+
+function disableMultiRate(){
+  if(!confirm('سيتم حذف فترات الأسعار والعودة لسعر يومي واحد. متابعة؟')) return;
+  disableMultiRateSilent();
+  calcRent();
+}
+
+// Used after a successful save (no confirm dialog needed — the booking
+// is already saved, we're just resetting the form for next use) and
+// internally by disableMultiRate() above after the user confirms.
+function disableMultiRateSilent(){
+  _multiRateActive=false;
+  const flatRow=document.getElementById('flat-rate-row');
+  const toggleRow=document.getElementById('multi-rate-toggle-row');
+  const section=document.getElementById('multi-rate-section');
+  const list=document.getElementById('rate-segments-list');
+  if(flatRow) flatRow.style.display='flex';
+  if(toggleRow) toggleRow.style.display='block';
+  if(section) section.style.display='none';
+  if(list) list.innerHTML='';
+}
+
+function addRateSegmentRow(presetFrom, presetTo, presetRate){
+  const list=document.getElementById('rate-segments-list');
+  const rows=list.querySelectorAll('.rate-segment-row');
+  const idx=rows.length;
+  // New segment's start date defaults to the PREVIOUS segment's end date —
+  // this enforces "no gaps, no overlaps" by construction, not just by
+  // validation after the fact. The landlord can still edit it, but the
+  // sensible default is always contiguous.
+  let defaultFrom=presetFrom;
+  if(idx>0 && !presetFrom){
+    const prevTo=rows[idx-1].querySelector('.seg-to').value;
+    defaultFrom=prevTo;
+  }
+  const overallCheckout=v('b-checkout');
+  const row=document.createElement('div');
+  row.className='rate-segment-row';
+  row.style.cssText='display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;background:var(--paper);padding:10px;border-radius:8px;flex-wrap:wrap';
+  row.innerHTML=`
+    <div style="flex:1;min-width:120px">
+      <label style="font-size:.74rem;color:var(--muted);margin-bottom:3px;display:block">من</label>
+      <input type="date" class="seg-from" dir="ltr" value="${defaultFrom||''}" onchange="recalcMultiRate()"
+        style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font)">
+    </div>
+    <div style="flex:1;min-width:120px">
+      <label style="font-size:.74rem;color:var(--muted);margin-bottom:3px;display:block">إلى</label>
+      <input type="date" class="seg-to" dir="ltr" value="${presetTo||overallCheckout||''}" onchange="recalcMultiRate()"
+        style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font)">
+    </div>
+    <div style="flex:1;min-width:100px">
+      <label style="font-size:.74rem;color:var(--muted);margin-bottom:3px;display:block">السعر اليومي</label>
+      <input type="number" class="seg-rate" step="0.001" min="0" dir="ltr" value="${presetRate||''}" placeholder="20.000" oninput="recalcMultiRate()"
+        style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font)">
+    </div>
+    <button type="button" onclick="removeRateSegmentRow(this)"
+      style="background:rgba(224,60,60,.08);border:1.5px solid rgba(224,60,60,.2);color:var(--danger);border-radius:6px;padding:8px 12px;cursor:pointer;flex-shrink:0">🗑️</button>
+  `;
+  list.appendChild(row);
+  recalcMultiRate();
+}
+
+function removeRateSegmentRow(btn){
+  const row=btn.closest('.rate-segment-row');
+  row.remove();
+  recalcMultiRate();
+}
+
+function getRateSegmentsFromForm(){
+  const rows=[...document.querySelectorAll('#rate-segments-list .rate-segment-row')];
+  return rows.map(r=>({
+    from: r.querySelector('.seg-from').value,
+    to:   r.querySelector('.seg-to').value,
+    rate: parseFloat(r.querySelector('.seg-rate').value)||0
+  }));
+}
+
+function recalcMultiRate(){
+  const segments=getRateSegmentsFromForm();
+  const errBox=document.getElementById('multi-rate-error');
+  const v_=validateRateSegments(segments);
+  if(!v_.valid){
+    errBox.style.display='block';
+    errBox.textContent='⚠️ '+v_.error;
+    document.getElementById('multi-rate-total').textContent='—';
+    return;
+  }
+  errBox.style.display='none';
+  const result=computeBookingTotals({rateSegments:segments});
+  document.getElementById('multi-rate-total').textContent=fmt(result.total)+' OMR ('+result.nights+' ليلة)';
+  // Keep the overall booking's check-in/check-out in sync with the
+  // first segment's start and the last segment's end, so the rest of
+  // the app (availability check, calendar, etc.) sees the correct range.
+  if(segments.length){
+    document.getElementById('b-checkin').value=segments[0].from;
+    document.getElementById('b-checkout').value=segments[segments.length-1].to;
+  }
+}
+
 function calcNights(checkIn,checkOut){
   // Check-in at 14:00, check-out at 12:00
   const ci=new Date(checkIn+'T14:00:00');
   const co=new Date(checkOut+'T12:00:00');
   return Math.max(0,Math.ceil((co-ci)/(1000*60*60*24)));
+}
+
+// ── MULTI-RATE BOOKING HELPER ───────────────────────────────────────
+// A booking is normally one continuous stay at one flat daily rate.
+// Optionally, a landlord can split the SAME stay into consecutive
+// rate periods (e.g. first 10 nights at 15 OMR, next 10 at 10 OMR).
+// This is stored as booking.rateSegments = [{from,to,rate}, ...].
+// When present, it is the single source of truth for nights/total —
+// every part of the app (form preview, save, contract, invoice,
+// report) calls this ONE function instead of computing independently.
+function computeBookingTotals(b){
+  // b can be either the live form state {checkIn,checkOut,dailyRate,rateSegments}
+  // or a saved booking document — same shape either way.
+  if(b.rateSegments && b.rateSegments.length){
+    let nights=0, total=0;
+    const breakdown=b.rateSegments.map(seg=>{
+      const segNights=calcNights(seg.from, seg.to);
+      const segTotal=parseFloat((segNights*seg.rate).toFixed(3));
+      nights+=segNights; total+=segTotal;
+      return {from:seg.from, to:seg.to, rate:seg.rate, nights:segNights, total:segTotal};
+    });
+    return {
+      nights,
+      total: parseFloat(total.toFixed(3)),
+      segments: breakdown,
+      isMultiRate: true
+    };
+  }
+  const nights=calcNights(b.checkIn, b.checkOut);
+  const total=parseFloat((nights*(b.dailyRate||0)).toFixed(3));
+  return { nights, total, segments:null, isMultiRate:false };
+}
+
+// Validate a rateSegments array: each segment's dates must be valid,
+// in order, and CONTIGUOUS (each segment's "from" must equal the
+// previous segment's "to" — no gaps, no overlaps) — this is what
+// makes it "one continuous stay split into rate periods" rather than
+// separate disconnected bookings.
+function validateRateSegments(segments){
+  if(!segments || !segments.length) return {valid:true};
+  for(let i=0;i<segments.length;i++){
+    const s=segments[i];
+    if(!s.from || !s.to || isNaN(parseFloat(s.rate))){
+      return {valid:false, error:`الفترة ${i+1}: يرجى تعبئة التاريخ والسعر`};
+    }
+    if(new Date(s.to)<=new Date(s.from)){
+      return {valid:false, error:`الفترة ${i+1}: تاريخ الانتهاء يجب أن يكون بعد البداية`};
+    }
+    if(i>0 && segments[i-1].to!==s.from){
+      return {valid:false, error:`الفترة ${i+1}: يجب أن تبدأ من نفس تاريخ انتهاء الفترة السابقة (${fmtDate(segments[i-1].to)}) — بدون فجوات`};
+    }
+  }
+  return {valid:true};
 }
 
 function checkAptAvailability(){
@@ -3097,14 +3292,28 @@ async function saveTenant(){
 // ── SAVE BOOKING ──────────────────────────────────────────────────────
 async function saveBooking(){
   const apt=v('b-apt'), tenantId=v('b-tenant');
+  // ── Multi-rate path ──────────────────────────────────────────────
+  // If multi-rate mode is active, the form's check-in/check-out fields
+  // are kept in sync with the first/last segment by recalcMultiRate(),
+  // so they're still reliable here for everything downstream (conflict
+  // checks, history, etc). dailyRate becomes irrelevant in this mode —
+  // computeBookingTotals() reads from rateSegments instead.
+  let rateSegments=null;
+  if(_multiRateActive){
+    rateSegments=getRateSegmentsFromForm();
+    const segCheck=validateRateSegments(rateSegments);
+    if(!segCheck.valid){ showToast('⚠️ '+segCheck.error,'error'); return; }
+    if(!rateSegments.length){ showToast('أضف فترة سعر واحدة على الأقل','error'); return; }
+  }
   const checkIn=v('b-checkin'), checkOut=v('b-checkout');
-  const dailyRate=parseFloat(v('b-daily-rate'));
+  const dailyRate=_multiRateActive?0:parseFloat(v('b-daily-rate'));
   const advance=parseFloat(v('b-advance'))||0;
   const advanceMethod=v('b-advance-method');
   if(advance>0 && !advanceMethod){showToast('اختر طريقة الدفعة المقدمة — نقداً أو تحويل','error');return;}
   const notes=v('b-notes'), editId=v('b-edit-id');
   if(!editId && blockNewBookingIfFree()) return;
-  if(!apt||!tenantId||!checkIn||!checkOut||isNaN(dailyRate)){showToast('يرجى تعبئة جميع الحقول','error');return;}
+  if(!apt||!tenantId||!checkIn||!checkOut){showToast('يرجى تعبئة جميع الحقول','error');return;}
+  if(!_multiRateActive && isNaN(dailyRate)){showToast('يرجى تعبئة جميع الحقول','error');return;}
   // Block past dates — check-in must be today or future
   const todayStr=new Date().toISOString().slice(0,10);
   if(!editId && checkIn < todayStr){
@@ -3121,8 +3330,11 @@ async function saveBooking(){
     }
   }
   if(new Date(checkOut)<=new Date(checkIn)){showToast('تاريخ الخروج يجب أن يكون بعد الدخول','error');return;}
-  const nights=calcNights(checkIn,checkOut);
-  const totalRent=parseFloat((nights*dailyRate).toFixed(3));
+  // Single source of truth for nights + total — whether flat-rate or
+  // multi-rate, this is the ONLY place that computes them for saving.
+  const _totals=computeBookingTotals(_multiRateActive?{rateSegments}:{checkIn,checkOut,dailyRate});
+  const nights=_totals.nights;
+  const totalRent=_totals.total;
   // check duplicate
   // Hard duplicate/conflict check — block BOTH same apt in same dates AND exact duplicate
   const exactDup=allBookings.find(b=>
@@ -3160,6 +3372,7 @@ async function saveBooking(){
     await updateDoc(doc(db,'bookings',editId),{
       apartment:apt,tenantId,tenantName:tenant?.name||'',tenantIdNumber:tenant?.idNumber||'',
       checkIn,checkOut,dailyRate,totalRent,advance,remaining:parseFloat((totalRent-advance).toFixed(3)),
+      rateSegments: rateSegments || deleteField(),
       notes,history:arrayUnion(historyEntry),updatedAt:serverTimestamp()
     });
     showToast('تم تعديل الحجز ✓','success');
@@ -3167,7 +3380,7 @@ async function saveBooking(){
     const advancePaidNow=advance>0;
     const _saveUid=(userProfile&&userProfile.role==='subuser')?(userProfile.parentUid||currentUser.uid):currentUser.uid;
     const _bldId=String(userProfile.activeBuildingIdx||0);
-    await addDoc(collection(db,'bookings'),{
+    const _newBookingData={
       uid:_saveUid,buildingId:_bldId,building:userProfile.building||'',apartment:apt,tenantId,tenantName:tenant?.name||'',
       tenantIdNumber:tenant?.idNumber||'',checkIn,checkOut,dailyRate,totalRent,
       advance,remaining:parseFloat((totalRent-advance).toFixed(3)),
@@ -3175,10 +3388,13 @@ async function saveBooking(){
       advancePaid:advancePaidNow, advancePaidMethod:advancePaidNow?advanceMethod:'',
       landlordName:userProfile.name,landlordBuilding:userProfile.building,
       history:[historyEntry],createdAt:serverTimestamp()
-    });
+    };
+    if(rateSegments) _newBookingData.rateSegments=rateSegments;
+    await addDoc(collection(db,'bookings'), _newBookingData);
     showToast('تم حفظ الحجز ✓','success');
   }
   closeModal('modal-booking');
+  disableMultiRateSilent();
   clear(['b-apt','b-checkin','b-checkout','b-daily-rate','b-advance','b-notes','b-edit-id']);
   const amr=document.getElementById('b-advance-method'); if(amr) amr.value='';
   const amrr=document.getElementById('advance-method-row'); if(amrr) amrr.style.display='none';
@@ -3367,6 +3583,12 @@ function viewBooking(id){
       <div class="stat-card" style="padding:14px"><div class="stat-label">عدد الليالي</div><div class="stat-value">${nights}</div></div>
       <div class="stat-card" style="padding:14px"><div class="stat-label">الإجمالي</div><div class="stat-value income">${fmt(b.totalRent||b.rent||0)} OMR</div></div>
     </div>
+    ${b.rateSegments && b.rateSegments.length ? `
+    <div style="background:rgba(79,126,248,.06);border:1px solid rgba(79,126,248,.2);border-radius:8px;padding:10px 12px;font-size:.82rem;margin-bottom:8px">
+      <b>📊 حجز بأسعار متعددة الفترات (${b.rateSegments.length} فترات):</b>
+      ${b.rateSegments.map(seg=>`<div style="margin-top:4px;padding-right:8px">• ${fmtDate(seg.from)} → ${fmtDate(seg.to)}: <span dir="ltr">${fmt(seg.rate)} OMR/ليلة</span></div>`).join('')}
+    </div>
+    ` : ''}
     ${(!_isSubNow&&b.advance>0)?`<div style="background:rgba(193,127,62,.08);border-radius:8px;padding:12px;font-size:.85rem;margin-bottom:8px;display:flex;justify-content:space-between">
       <span><b>دفعة مقدمة:</b> ${fmt(b.advance)} OMR</span>
       <span><b>المتبقي:</b> <span style="color:var(--danger)">${fmt(b.remaining||0)} OMR</span></span>
@@ -3398,6 +3620,10 @@ function editBookingFromDetail(){
   closeModal('modal-booking-detail');
   // populate form
   refreshAptSelect(); refreshTenantSelect();
+  // Always start from a clean flat-rate state before populating —
+  // prevents a leftover multi-rate UI from a previously-opened
+  // booking bleeding into this one.
+  disableMultiRateSilent();
   setTimeout(()=>{
     document.getElementById('booking-modal-title').textContent=t('m_edit_booking');
     document.getElementById('b-edit-id').value=b.id;
@@ -3405,10 +3631,21 @@ function editBookingFromDetail(){
     document.getElementById('b-checkout').value=b.checkOut;
     document.getElementById('b-apt').value=b.apartment;
     document.getElementById('b-tenant').value=b.tenantId;
-    document.getElementById('b-daily-rate').value=b.dailyRate||'';
     document.getElementById('b-advance').value=b.advance||'';
     document.getElementById('b-notes').value=b.notes||'';
-    calcRent();
+    if(b.rateSegments && b.rateSegments.length){
+      // This booking uses multi-rate periods — switch the form into
+      // that mode and repopulate each segment row exactly as saved.
+      _multiRateActive=true;
+      document.getElementById('flat-rate-row').style.display='none';
+      document.getElementById('multi-rate-toggle-row').style.display='none';
+      document.getElementById('multi-rate-section').style.display='block';
+      document.getElementById('rate-segments-list').innerHTML='';
+      b.rateSegments.forEach(seg=>addRateSegmentRow(seg.from, seg.to, seg.rate));
+    } else {
+      document.getElementById('b-daily-rate').value=b.dailyRate||'';
+      calcRent();
+    }
     openModal('modal-booking');
   },100);
 }
@@ -3473,8 +3710,36 @@ function printContract(){
       <div class="doc-row"><span class="doc-label">${t('ct_checkin')}</span><span class="doc-value" dir="ltr">${fmtDateFull(b.checkIn,'14:00')}</span></div>
       <div class="doc-row"><span class="doc-label">${t('ct_checkout')}</span><span class="doc-value" dir="ltr">${fmtDateFull(b.checkOut,'12:00')}</span></div>
       <div class="doc-row"><span class="doc-label">${t('ct_nights')}</span><span class="doc-value">${nights}</span></div>
+      ${b.rateSegments && b.rateSegments.length ? `
+      <div class="doc-row"><span class="doc-label">السعر:</span><span class="doc-value">أسعار متعددة الفترات — انظر الجدول أدناه</span></div>
+      ` : `
       <div class="doc-row"><span class="doc-label">${t('ct_daily')}</span><span class="doc-value" dir="ltr">${fmt(b.dailyRate||0)} OMR</span></div>
+      `}
       <div class="doc-row"><span class="doc-label">${t('ct_total')}</span><span class="doc-value" dir="ltr"><b>${fmt(b.totalRent||b.rent||0)} OMR</b></span></div>
+      ${b.rateSegments && b.rateSegments.length ? `
+      <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:.74rem">
+        <thead><tr style="background:#f1f5f9">
+          <th style="padding:4px 6px;text-align:right;border:1px solid #e2e8f0">من</th>
+          <th style="padding:4px 6px;text-align:right;border:1px solid #e2e8f0">إلى</th>
+          <th style="padding:4px 6px;text-align:right;border:1px solid #e2e8f0">الليالي</th>
+          <th style="padding:4px 6px;text-align:right;border:1px solid #e2e8f0">السعر اليومي</th>
+          <th style="padding:4px 6px;text-align:right;border:1px solid #e2e8f0">المجموع</th>
+        </tr></thead>
+        <tbody>
+          ${b.rateSegments.map(seg=>{
+            const segNights=calcNights(seg.from,seg.to);
+            const segTotal=fmt(segNights*seg.rate);
+            return `<tr>
+              <td style="padding:4px 6px;border:1px solid #e2e8f0" dir="ltr">${fmtDate(seg.from)}</td>
+              <td style="padding:4px 6px;border:1px solid #e2e8f0" dir="ltr">${fmtDate(seg.to)}</td>
+              <td style="padding:4px 6px;border:1px solid #e2e8f0">${segNights}</td>
+              <td style="padding:4px 6px;border:1px solid #e2e8f0" dir="ltr">${fmt(seg.rate)} OMR</td>
+              <td style="padding:4px 6px;border:1px solid #e2e8f0" dir="ltr">${segTotal} OMR</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      ` : ''}
       ${b.advance>0?`<div class="doc-row"><span class="doc-label">${t('ct_advance')}</span><span class="doc-value" dir="ltr" style="color:green">- ${fmt(b.advance)} OMR</span></div>
       <div class="doc-row"><span class="doc-label">${t('ct_remaining')}</span><span class="doc-value" dir="ltr"><b style="color:${b.paid?'#22a06b':'#e03c3c'}">${b.paid?'0.000':fmt(b.remaining||0)} OMR${b.paid?' ✓':''}</b></span></div>`:''}
     </div>
@@ -3550,9 +3815,17 @@ function printInvoice(id){
         <th>${currentLang==='ar'?'المبلغ (OMR)':'Amount (OMR)'}</th>
       </tr></thead>
       <tbody>
+        ${b.rateSegments && b.rateSegments.length ? b.rateSegments.map(seg=>{
+          const segNights=calcNights(seg.from,seg.to);
+          const segTotal=segNights*seg.rate;
+          return `<tr><td>${currentLang==='ar'?'إيجار شقة':'Unit Rent'} ${b.apartment} <span style="color:#888;font-size:.7rem">(${fmtDate(seg.from)} – ${fmtDate(seg.to)})</span></td>
+              <td>${segNights} ${currentLang==='ar'?'ليلة':'nights'} × ${fmt(seg.rate)} OMR</td>
+              <td dir="ltr">${fmt(segTotal)}</td></tr>`;
+        }).join('') : `
         <tr><td>${currentLang==='ar'?'إيجار شقة':'Unit Rent'} ${b.apartment}</td>
             <td>${nights} ${currentLang==='ar'?'ليلة':'nights'} × ${fmt(b.dailyRate||0)} OMR</td>
             <td dir="ltr">${fmt(total)}</td></tr>
+        `}
         ${paymentLines}
         ${b.notes?`<tr><td colspan="2">${currentLang==='ar'?'ملاحظات':'Notes'}: ${escapeHtml(b.notes)}</td><td>—</td></tr>`:''}
       </tbody>
