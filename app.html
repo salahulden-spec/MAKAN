@@ -2441,11 +2441,15 @@ async function loadProfile(){
     try{
       const idTokenResult = await currentUser.getIdTokenResult(true); // force refresh to pick up new claims
       const parentUid = idTokenResult.claims.parentUid;
+      console.warn('[subuser-debug] parentUid claim on token:', parentUid||'(none — claim missing!)');
       if(parentUid){
         const parentSnap = await getDoc(doc(db,'users',parentUid));
+        console.warn('[subuser-debug] parent doc exists:', parentSnap.exists());
         if(parentSnap.exists()){
           const data = parentSnap.data();
           const subEntry=(data.subUsers||[]).find(s=>s.uid===currentUser.uid);
+          console.warn('[subuser-debug] subUsers on parent doc:', (data.subUsers||[]).map(s=>s.uid));
+          console.warn('[subuser-debug] matching subEntry found:', !!subEntry, '— my uid:', currentUser.uid);
           if(subEntry){
             userProfile={
               ...data,
@@ -2460,8 +2464,11 @@ async function loadProfile(){
           }
         }
       }
-    }catch(e){ console.warn('sub-user profile lookup failed:', e.code||e.message); }
-    if(!found) userProfile={name:currentUser.email,role:'landlord',apartments:[]};
+    }catch(e){ console.error('[subuser-debug] sub-user profile lookup failed:', e.code||e.message); }
+    if(!found){
+      console.error('[subuser-debug] FELL BACK TO BLANK LANDLORD PROFILE — sub-user link is broken. See [subuser-debug] lines above for where it broke.');
+      userProfile={name:currentUser.email,role:'landlord',apartments:[]};
+    }
   }
 }
 
@@ -2579,18 +2586,18 @@ async function loadLandlordData(){
     _liveListenersActive = true;
     // Live listeners: any change to these collections — from this tab,
     // another tab, another device, or a sub-user — re-renders automatically.
-    _liveUnsubFns.push(onSnapshot(query(collection(db,'tenants'),where('uid','==',uid)), snap=>{
-      _rawTenants = snap.docs.map(d=>({id:d.id,...d.data()}));
-      _applyBuildingFilterAndRender();
-    }));
-    _liveUnsubFns.push(onSnapshot(query(collection(db,'bookings'),where('uid','==',uid)), snap=>{
-      _rawBookings = snap.docs.map(d=>({id:d.id,...d.data()}));
-      _applyBuildingFilterAndRender();
-    }));
-    _liveUnsubFns.push(onSnapshot(query(collection(db,'expenses'),where('uid','==',uid)), snap=>{
-      _rawExpenses = snap.docs.map(d=>({id:d.id,...d.data()}));
-      _applyBuildingFilterAndRender();
-    }));
+    _liveUnsubFns.push(onSnapshot(query(collection(db,'tenants'),where('uid','==',uid)),
+      snap=>{ _rawTenants = snap.docs.map(d=>({id:d.id,...d.data()})); _applyBuildingFilterAndRender(); },
+      err=>{ console.error('[live-data] tenants listener failed:', err.code||err.message); showToast('تعذر تحميل المستأجرين: '+(err.code||err.message),'error'); }
+    ));
+    _liveUnsubFns.push(onSnapshot(query(collection(db,'bookings'),where('uid','==',uid)),
+      snap=>{ _rawBookings = snap.docs.map(d=>({id:d.id,...d.data()})); _applyBuildingFilterAndRender(); },
+      err=>{ console.error('[live-data] bookings listener failed:', err.code||err.message); showToast('تعذر تحميل الحجوزات: '+(err.code||err.message),'error'); }
+    ));
+    _liveUnsubFns.push(onSnapshot(query(collection(db,'expenses'),where('uid','==',uid)),
+      snap=>{ _rawExpenses = snap.docs.map(d=>({id:d.id,...d.data()})); _applyBuildingFilterAndRender(); },
+      err=>{ console.error('[live-data] expenses listener failed:', err.code||err.message); showToast('تعذر تحميل المصروفات: '+(err.code||err.message),'error'); }
+    ));
   } else {
     // Listeners already live (e.g. after switching buildings) — just
     // re-apply the filter to whatever is already cached, instantly.
@@ -3550,6 +3557,7 @@ async function saveBooking(){
     await updateDoc(doc(db,'bookings',editId),{
       apartment:apt,tenantId,tenantName:tenant?.name||'',tenantIdNumber:tenant?.idNumber||'',
       checkIn,checkOut,dailyRate,totalRent,advance,remaining:parseFloat((totalRent-advance).toFixed(3)),
+      advancePaid:advance>0, advancePaidMethod:advance>0?advanceMethod:'',
       rateSegments: rateSegments || deleteField(),
       notes,history:arrayUnion(historyEntry),updatedAt:serverTimestamp()
     });
@@ -3811,6 +3819,13 @@ function editBookingFromDetail(){
     document.getElementById('b-tenant').value=b.tenantId;
     document.getElementById('b-advance').value=b.advance||'';
     document.getElementById('b-notes').value=b.notes||'';
+    // Restore the advance-payment-method state — without this, the row stays
+    // hidden and the hidden field stays empty, which also blocks re-saving
+    // the edit entirely (saveBooking requires a method whenever advance>0).
+    toggleAdvanceMethod();
+    if(b.advance>0 && b.advancePaidMethod){
+      setAdvanceMethod(b.advancePaidMethod);
+    }
     if(b.rateSegments && b.rateSegments.length){
       // This booking uses multi-rate periods — switch the form into
       // that mode and repopulate each segment row exactly as saved.
