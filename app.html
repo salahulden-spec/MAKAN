@@ -3080,8 +3080,12 @@ function renderCalendar(){
     const events=c.cur?allBookings.filter(b=>{
       if(bookingStatus(b)==='ended') return false;
       const ci=new Date(b.checkIn),co=new Date(b.checkOut);
-      return cellDate>=new Date(ci.getFullYear(),ci.getMonth(),ci.getDate())&&
-             cellDate<=new Date(co.getFullYear(),co.getMonth(),co.getDate());
+      const ciDate=new Date(ci.getFullYear(),ci.getMonth(),ci.getDate());
+      const coDate=new Date(co.getFullYear(),co.getMonth(),co.getDate());
+      // Checkout day itself is NOT occupied — tenant leaves before noon,
+      // apartment is vacant and ready for a same-day check-in. Same rule
+      // already used on the حالة الشقق (vacancy) page.
+      return cellDate>=ciDate && cellDate<coDate;
     }):[];
     const cellDateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(c.day).padStart(2,'0')}`;
     const hasEvents=c.cur&&events.length>0;
@@ -3119,8 +3123,10 @@ function showDayBookings(dateStr){
   const dayBookings=allBookings.filter(b=>{
     if(bookingStatus(b)==='ended') return false;
     const ci=new Date(b.checkIn), co=new Date(b.checkOut);
-    return cellDate>=new Date(ci.getFullYear(),ci.getMonth(),ci.getDate())&&
-           cellDate<=new Date(co.getFullYear(),co.getMonth(),co.getDate());
+    const ciDate=new Date(ci.getFullYear(),ci.getMonth(),ci.getDate());
+    const coDate=new Date(co.getFullYear(),co.getMonth(),co.getDate());
+    // Checkout day itself is NOT occupied — same rule as the calendar grid and the vacancy page
+    return cellDate>=ciDate && cellDate<coDate;
   });
   const title=document.getElementById('day-bookings-title');
   const list=document.getElementById('day-bookings-list');
@@ -3240,7 +3246,7 @@ function addRateSegmentRow(presetFrom, presetTo, presetRate){
         style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font)">
     </div>
     <button type="button" onclick="removeRateSegmentRow(this)"
-      style="background:rgba(224,60,60,.08);border:1.5px solid rgba(224,60,60,.2);color:var(--danger);border-radius:6px;padding:8px 12px;cursor:pointer;flex-shrink:0"></button>
+      style="background:rgba(224,60,60,.08);border:1.5px solid rgba(224,60,60,.2);color:var(--danger);border-radius:6px;padding:8px 12px;cursor:pointer;flex-shrink:0">حذف</button>
   `;
   list.appendChild(row);
   recalcMultiRate();
@@ -3381,7 +3387,7 @@ function loadTenantPhotoField(input, side){
         <img src="${data}" style="width:100%;height:72px;object-fit:cover;border-radius:8px;border:1.5px solid var(--accent);display:block">
         <div style="position:absolute;top:4px;left:4px;display:flex;gap:4px">
           <button type="button" onclick="window.open(document.getElementById('t-photo-${side}-data').value,'_blank')"
-            style="background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:5px;padding:3px 7px;font-size:.65rem;cursor:pointer"></button>
+            style="background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:5px;padding:3px 7px;font-size:.65rem;cursor:pointer">عرض</button>
           <button type="button" onclick="clearTenantPhoto('${side}')"
             style="background:rgba(224,60,60,.8);color:#fff;border:none;border-radius:5px;padding:3px 7px;font-size:.65rem;cursor:pointer">✕</button>
         </div>
@@ -3742,7 +3748,7 @@ function viewBooking(id){
           </button>
           <button onclick="confirmDeleteBooking()"
             style="background:rgba(224,60,60,.06);border:1.5px solid rgba(224,60,60,.2);color:var(--danger);padding:9px 13px;border-radius:10px;font-family:var(--font);font-size:.88rem;cursor:pointer">
-           
+            ${t('btn_delete_label')}
           </button>`;
     }
   }
