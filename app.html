@@ -2953,6 +2953,7 @@ function renderCalendar(){
   const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
   const daysInPrev=new Date(calYear,calMonth,0).getDate();
   const today=new Date();
+  const aptList=userProfile.apartments||[];
   let cells=[];
   for(let i=firstDay-1;i>=0;i--) cells.push({day:daysInPrev-i,cur:false});
   for(let d=1;d<=daysInMonth;d++) cells.push({day:d,cur:true});
@@ -2984,6 +2985,11 @@ function renderCalendar(){
         return `<div class="cal-event" style="cursor:pointer;background:${bg};color:${textColor||'#fff'}" onclick="viewBooking('${e.id}')">${e.apartment} — ${e.tenantName||''}</div>`;
       }).join('')}
       ${events.length>2?`<div style="font-size:.6rem;color:var(--muted);cursor:pointer;text-decoration:underline" onclick="showDayBookings('${cellDateStr}')">+${events.length-2}</div>`:''}
+      ${c.cur&&aptList.length?(()=>{
+        const occupied=new Set(events.map(e=>e.apartment));
+        const avail=Math.max(0,aptList.length-occupied.size);
+        return `<div style="font-size:.6rem;font-weight:700;color:var(--success);margin-top:3px;white-space:nowrap" title="الشقق الشاغرة هذا اليوم">شاغرة ${avail}/${aptList.length}</div>`;
+      })():''}
     </div>`;
   }).join('');
 }
