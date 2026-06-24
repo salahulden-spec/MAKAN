@@ -464,11 +464,50 @@ body {
   padding: 14px 20px;
   border-top: 1px solid rgba(255,255,255,.07);
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 10px;
   flex-shrink: 0;
   position: relative;
   z-index: 1;
+}
+.sidebar-user-row { display: flex; align-items: center; gap: 10px; }
+.sidebar-logo-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-family: var(--font);
+  text-align: right;
+  transition: background .2s, border-color .2s;
+}
+.sidebar-logo-btn:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.22); }
+.sidebar-logo-thumb {
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  background: rgba(255,255,255,.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  font-size: .85rem;
+}
+.sidebar-logo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sidebar-logo-label {
+  font-size: .74rem;
+  font-weight: 600;
+  color: rgba(255,255,255,.6);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .user-avatar {
   width: 36px; height: 36px;
@@ -1075,16 +1114,19 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
       </button>
     </div>
     <div class="sidebar-user">
-      <div class="user-avatar" id="user-avatar-init">م</div>
-      <div class="user-info">
-        <div class="user-name" id="sidebar-username">—</div>
-        <div class="user-role" id="sidebar-role">—</div>
+      <div class="sidebar-user-row">
+        <div class="user-avatar" id="user-avatar-init">م</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-username">—</div>
+          <div class="user-role" id="sidebar-role">—</div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()" title="تسجيل الخروج">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
       </div>
-      <button onclick="openLogoUpload()" style="background:none;border:none;cursor:pointer;padding:4px 6px;color:rgba(255,255,255,.5);font-size:.72rem;font-family:var(--font);display:flex;align-items:center;gap:4px;margin-bottom:6px;width:100%;justify-content:flex-end" title="تحميل شعار">
-        🖼️ <span data-t="sidebar_logo">شعار المبنى</span>
-      </button>
-      <button class="logout-btn" onclick="doLogout()">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <button class="sidebar-logo-btn" onclick="openLogoUpload()" title="تحميل شعار المبنى">
+        <span class="sidebar-logo-thumb" id="sidebar-logo-thumb">🖼️</span>
+        <span class="sidebar-logo-label" id="sidebar-logo-label">شعار المبنى</span>
       </button>
     </div>
   <!-- Building switcher — appears when user has 2+ buildings -->
@@ -2071,6 +2113,7 @@ function applyLang(){
   // Sidebar nav labels (re-render)
   const isAdmin=currentUser&&currentUser.email===ADMIN_EMAIL;
   renderSidebar(isAdmin);
+  updateSidebarLogoBtn();
   // Page headers
   const phMap={
     'page-dashboard':['ph_dashboard','ph_dashboard_sub'],
@@ -2405,6 +2448,8 @@ function initApp(){
   document.getElementById('sidebar-username').textContent=userProfile.name||currentUser.email;
   document.getElementById('sidebar-role').textContent=isAdmin?'مدير المنصة':(userProfile.building||'مالك');
   document.getElementById('user-avatar-init').textContent=(userProfile.name||'م')[0];
+  updateSidebarLogoBtn();
+  updateSidebarLogo();
   if(isAdmin){ showPage('page-admin'); loadAdminData(); }
   else { showPage('page-dashboard'); loadLandlordData(); }
 }
@@ -3751,7 +3796,7 @@ function printContract(){
   if(!b) return;
   const nights=calcNights(b.checkIn,b.checkOut);
   const _contractLogo = userProfile.logoBase64
-    ? `<img src="${userProfile.logoBase64}" style="max-height:52px;max-width:160px;object-fit:contain;display:block" alt="logo">`
+    ? `<img src="${userProfile.logoBase64}" style="max-height:68px;max-width:200px;object-fit:contain;display:block" alt="logo">`
     : '';
   const html=`<div class="print-doc">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
@@ -3860,7 +3905,7 @@ function printInvoice(id){
   const html=`<div class="print-doc">
     <div class="invoice-header">
       <div>
-        <div class="invoice-logo">${userProfile.logoBase64?`<img src="${userProfile.logoBase64}" style="max-height:52px;max-width:180px;object-fit:contain" alt="logo">`:buildingName}</div>
+        <div class="invoice-logo">${userProfile.logoBase64?`<img src="${userProfile.logoBase64}" style="max-height:68px;max-width:220px;object-fit:contain" alt="logo">`:buildingName}</div>
         <div style="font-size:.72rem;color:#888;margin-top:2px">${landlordName}</div>
       </div>
       <div class="invoice-meta">
@@ -5380,6 +5425,7 @@ async function saveLogo(){
     closeModal('modal-logo-upload');
     // Refresh sidebar logo display
     updateSidebarLogo();
+    updateSidebarLogoBtn();
   }catch(e){ showToast('خطأ: '+(e.message||e.code),'error'); }
 }
 window.saveLogo = saveLogo;
@@ -5396,11 +5442,27 @@ async function removeLogo(){
     userProfile.logoBase64 = null;
     showToast('تم حذف الشعار','success');
     updateSidebarLogo();
+    updateSidebarLogoBtn();
   }catch(e){ showToast('خطأ','error'); }
 }
 window.removeLogo = removeLogo;
 
 // ── LOGO SIDEBAR DISPLAY ─────────────────────────────────────────────
+function updateSidebarLogoBtn(){
+  const thumb = document.getElementById('sidebar-logo-thumb');
+  const label = document.getElementById('sidebar-logo-label');
+  if(!thumb || !label) return;
+  const hasLogo = !!(userProfile && userProfile.logoBase64);
+  thumb.innerHTML = hasLogo
+    ? `<img src="${userProfile.logoBase64}" alt="شعار">`
+    : '🖼️';
+  const isAr = currentLang==='ar';
+  label.textContent = hasLogo
+    ? (isAr?'تغيير الشعار':'Change logo')
+    : (isAr?'شعار المبنى':'Building logo');
+}
+window.updateSidebarLogoBtn = updateSidebarLogoBtn;
+
 function updateSidebarLogo(){
   let el = document.getElementById('sidebar-user-logo');
   if(!el){
