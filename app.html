@@ -1180,6 +1180,14 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
       <div class="card" id="apartments-list"></div>
     </div>
 
+    <!-- VACANCY / APARTMENT STATUS -->
+    <div class="page" id="page-vacancy">
+      <div class="page-header">
+        <div class="page-header-text"><h1 data-t="ph_vacancy">حالة الشقق</h1><p data-t="ph_vacancy_sub">الشقق الشاغرة والمشغولة وبحث التوفر</p></div>
+      </div>
+      <div class="card" id="vacancy-content"></div>
+    </div>
+
     <!-- INVOICES -->
     <div class="page" id="page-invoices">
       <div class="page-header">
@@ -1755,7 +1763,7 @@ const T = {
   ar: {
     // Sidebar nav
     nav_dashboard: 'لوحة التحكم', nav_tenants: 'المستأجرون', nav_bookings: 'الحجوزات',
-    nav_apartments: 'الشقق', nav_calendar: 'التقويم', nav_expenses: 'المصروفات',
+    nav_apartments: 'الشقق', nav_vacancy: 'حالة الشقق', nav_calendar: 'التقويم', nav_expenses: 'المصروفات',
     nav_invoices: 'الفواتير', nav_contracts: 'العقود', nav_notifications: 'التنبيهات',
     nav_report: 'التقرير الكامل', nav_admin: 'إدارة الملاك', nav_subusers: 'المستخدمون', nav_buildings: 'المباني',
     // Auth + extra UI
@@ -1773,6 +1781,7 @@ const T = {
     ph_tenants: 'المستأجرون', ph_tenants_sub: 'قائمة المستأجرين المسجّلين',
     ph_bookings: 'الحجوزات', ph_bookings_sub: 'جميع حجوزات الشقق',
     ph_apartments: 'الشقق', ph_apartments_sub: 'إدارة شقق المبنى وأنواع الإيجار',
+    ph_vacancy: 'حالة الشقق', ph_vacancy_sub: 'الشقق الشاغرة والمشغولة وبحث التوفر',
     ph_calendar: 'التقويم', ph_calendar_sub: 'جدول الحجوزات الشهري',
     ph_expenses: 'المصروفات', ph_expenses_sub: 'متابعة نفقات المبنى',
     ph_invoices: 'الفواتير', ph_invoices_sub: 'جميع فواتير الحجوزات',
@@ -1905,7 +1914,7 @@ const T = {
   },
   en: {
     nav_dashboard: 'Dashboard', nav_tenants: 'Tenants', nav_bookings: 'Bookings',
-    nav_apartments: 'Apartments', nav_calendar: 'Calendar', nav_expenses: 'Expenses',
+    nav_apartments: 'Apartments', nav_vacancy: 'Apartment Status', nav_calendar: 'Calendar', nav_expenses: 'Expenses',
     nav_invoices: 'Invoices', nav_contracts: 'Contracts', nav_notifications: 'Alerts',
     nav_report: 'Full Report', nav_admin: 'Admin Panel', nav_subusers: 'Sub-Users', nav_buildings: 'Buildings',
     // Auth + extra UI
@@ -1922,6 +1931,7 @@ const T = {
     ph_tenants: 'Tenants', ph_tenants_sub: 'Registered tenants list',
     ph_bookings: 'Bookings', ph_bookings_sub: 'All apartment bookings',
     ph_apartments: 'Apartments', ph_apartments_sub: 'Manage units and rental types',
+    ph_vacancy: 'Apartment Status', ph_vacancy_sub: 'Vacant and occupied units, with availability search',
     ph_calendar: 'Calendar', ph_calendar_sub: 'Monthly booking schedule',
     ph_expenses: 'Expenses', ph_expenses_sub: 'Track building costs',
     ph_invoices: 'Invoices', ph_invoices_sub: 'All booking invoices',
@@ -2067,6 +2077,7 @@ function applyLang(){
     'page-tenants':['ph_tenants','ph_tenants_sub'],
     'page-bookings':['ph_bookings','ph_bookings_sub'],
     'page-apartments':['ph_apartments','ph_apartments_sub'],
+    'page-vacancy':['ph_vacancy','ph_vacancy_sub'],
     'page-calendar':['ph_calendar','ph_calendar_sub'],
     'page-expenses':['ph_expenses','ph_expenses_sub'],
     'page-invoices':['ph_invoices','ph_invoices_sub'],
@@ -2416,6 +2427,7 @@ function renderSidebar(isAdmin){
     {id:'page-calendar',   ic:'calendar',     label:t('nav_calendar'),   perm:'bookings',ownerOnly:false},
     // Inventory before people — you pick an apartment, then assign a tenant to it
     {id:'page-apartments', ic:'building',     label:t('nav_apartments'), perm:null,      ownerOnly:false},
+    {id:'page-vacancy',    ic:'building',     label:t('nav_vacancy'),    perm:null,       ownerOnly:false},
     {id:'page-tenants',    ic:'users',        label:t('nav_tenants'),    perm:'tenants', ownerOnly:false},
     // Money block — contract (legal output) + invoices (money in) + expenses (money out), grouped as siblings
     {id:'page-contracts',  ic:'contract',     label:t('nav_contracts'),  perm:'contracts',ownerOnly:false},
@@ -4715,11 +4727,14 @@ function renderFullReportPage(){
           <tr><td dir="ltr">${e.date}</td><td>${e.description}</td><td dir="ltr"><b>${fmt(e.amount)}</b></td></tr>`).join('')}
         </tbody>
       </table></div>
-    </div>`:''}
-    <div class="card">
-      <div class="card-header"><span class="card-title">🏢 حالة الشقق — الشاغر والمشغول</span></div>
-      ${renderVacancyChart()}
-    </div>`;
+    </div>`:''}`;
+}
+
+function renderVacancyPage(){
+  const el=document.getElementById('vacancy-content');
+  if(!el) return;
+  el.innerHTML=renderVacancyChart();
+  runVacancySearch(); // show today's vacant/busy split immediately, no date pick needed
 }
 
 function renderVacancyChart(){
@@ -5222,6 +5237,7 @@ function showPage(pageId){
   if(pageId==='page-subusers') renderSubusers();
   if(pageId==='page-buildings') renderBuildingsPage();
   if(pageId==='page-fullreport') renderFullReportPage();
+  if(pageId==='page-vacancy') renderVacancyPage();
   if(pageId==='page-contracts'){
     // Clear search on navigation, not on search button click
     ['contract-search','contract-from','contract-to'].forEach(id=>{
