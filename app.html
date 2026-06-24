@@ -2485,14 +2485,17 @@ function initApp(){
   showScreen('app');
   // Apply saved language
   const saved=localStorage.getItem('makan_lang'); if(saved) currentLang=saved;
-  const lbl=document.getElementById('lang-toggle-label'); if(lbl) lbl.textContent=t('lang_switch');
   const isAdmin=currentUser.email===ADMIN_EMAIL;
-  renderSidebar(isAdmin);
   document.getElementById('sidebar-username').textContent=userProfile.name||currentUser.email;
-  document.getElementById('sidebar-role').textContent=isAdmin?'مدير المنصة':(userProfile.building||'مالك');
   document.getElementById('user-avatar-init').textContent=(userProfile.name||'م')[0];
   updateSidebarLogoBtn();
   updateSidebarLogo();
+  // Populates everything text-related: sidebar nav, page headers, booking-modal
+  // field labels/placeholders, lang-toggle label, sidebar role, calendar legend.
+  // Previously this only ever ran before login (where it exits early) or on a
+  // manual language toggle — meaning all of the above stayed blank after a
+  // normal login unless the person happened to toggle the language at least once.
+  applyLang();
   if(isAdmin){ showPage('page-admin'); loadAdminData(); }
   else { showPage('page-dashboard'); loadLandlordData(); }
 }
