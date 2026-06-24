@@ -1437,13 +1437,13 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     <div class="form-group" id="multi-rate-toggle-row" style="margin-top:-4px;margin-bottom:14px">
       <button type="button" id="btn-add-rate-period" onclick="enableMultiRate()"
         style="background:none;border:1.5px dashed var(--border);color:var(--accent);border-radius:8px;padding:8px 14px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer;width:100%">
-        ＋ هل تريد فترات بأسعار مختلفة لنفس الحجز؟ (اختياري)
+        ＋ فترات متعددة لنفس الحجز — سعر مختلف أو نقل لشقة أخرى (اختياري)
       </button>
     </div>
     <div class="form-group" id="multi-rate-section" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <label style="margin:0">فترات الأسعار — Rate Periods</label>
-        <button type="button" onclick="disableMultiRate()" style="background:none;border:none;color:var(--muted);font-size:.76rem;cursor:pointer;text-decoration:underline">إلغاء وعودة لسعر واحد</button>
+        <label style="margin:0">فترات الحجز — Booking Periods</label>
+        <button type="button" onclick="disableMultiRate()" style="background:none;border:none;color:var(--muted);font-size:.76rem;cursor:pointer;text-decoration:underline">إلغاء وعودة لفترة واحدة</button>
       </div>
       <div id="rate-segments-list"></div>
       <button type="button" onclick="addRateSegmentRow()"
@@ -2952,7 +2952,7 @@ function bookingsTable(list){
       const sAr=bookingStatusAr(s);
       const nights=calcNights(b.checkIn,b.checkOut);
       return `<tr>
-        <td><b>${b.apartment}</b></td>
+        <td><b>${aptSummaryLabel(b)}</b></td>
         <td>${b.tenantName||'—'}</td>
         <td dir="ltr">${fmtDate(b.checkIn)}</td>
         <td dir="ltr">${fmtDate(b.checkOut)}</td>
@@ -3047,7 +3047,7 @@ function renderCalendarList(year, month, bookings){
         const colors={active:'var(--accent)',checkedin:'var(--success)',upcoming:'#f59e0b',ended:'var(--muted)'};
         const col=colors[s]||'var(--muted)';
         return `<div onclick="viewBooking('${b.id}')" style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-right:3px solid ${col};border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--warm)'" onmouseout="this.style.background='var(--card)'">
-          <div style="font-size:1rem;font-weight:900;color:${col};min-width:32px">${b.apartment}</div>
+          <div style="font-size:1rem;font-weight:900;color:${col};min-width:32px">${aptSummaryLabel(b)}</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:.84rem;font-weight:700;color:var(--ink)">${escapeHtml(b.tenantName)}</div>
             <div style="font-size:.72rem;color:var(--muted);margin-top:1px">${fmtDate(b.checkIn)} — ${fmtDate(b.checkOut)}</div>
@@ -3109,11 +3109,12 @@ function renderCalendar(){
         };
         const bg=bgMap[es]||'var(--accent)';
         const textColor=es==='ended'?'var(--muted)':'#fff';
-        return `<div class="cal-event" style="cursor:pointer;background:${bg};color:${textColor||'#fff'}" onclick="viewBooking('${e.id}')">${e.apartment} — ${e.tenantName||''}</div>`;
+        const aptToday=aptForBookingOnDate(e, cellDateStr);
+        return `<div class="cal-event" style="cursor:pointer;background:${bg};color:${textColor||'#fff'}" onclick="viewBooking('${e.id}')">${aptToday} — ${e.tenantName||''}</div>`;
       }).join('')}
       ${events.length>2?`<div style="font-size:.6rem;color:var(--muted);cursor:pointer;text-decoration:underline" onclick="showDayBookings('${cellDateStr}')">+${events.length-2}</div>`:''}
       ${c.cur&&aptList.length?(()=>{
-        const occupied=new Set(events.map(e=>e.apartment));
+        const occupied=new Set(events.map(e=>aptForBookingOnDate(e, cellDateStr)));
         const avail=Math.max(0,aptList.length-occupied.size);
         return `<div style="font-size:.6rem;font-weight:700;color:var(--success);margin-top:3px;white-space:nowrap" title="الشقق الشاغرة هذا اليوم">شاغرة ${avail}/${aptList.length}</div>`;
       })():''}
@@ -3148,7 +3149,7 @@ function showDayBookings(dateStr){
       const bg=bgMap[s]||'var(--accent)';
       return `<div onclick="closeModal('modal-day-bookings');viewBooking('${b.id}')"
           style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-right:3px solid ${bg};border-radius:10px;padding:10px 12px;cursor:pointer">
-        <div style="font-size:1rem;font-weight:900;color:${bg};min-width:36px">${b.apartment}</div>
+        <div style="font-size:1rem;font-weight:900;color:${bg};min-width:36px">${aptForBookingOnDate(b, dateStr)}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:.84rem;font-weight:700;color:var(--ink)">${escapeHtml(b.tenantName||'')}</div>
           <div style="font-size:.72rem;color:var(--muted);margin-top:1px" dir="ltr">${fmtDate(b.checkIn)} – ${fmtDate(b.checkOut)}</div>
@@ -3194,8 +3195,8 @@ function enableMultiRate(){
   document.getElementById('multi-rate-section').style.display='block';
   document.getElementById('rate-segments-list').innerHTML='';
   // Seed with one segment spanning the full current check-in/check-out range —
-  // the landlord then edits the "to" date to split it.
-  addRateSegmentRow(ci, co, v('b-daily-rate')||'');
+  // the landlord then edits the "to" date to split it (by rate, by apartment, or both).
+  addRateSegmentRow(ci, co, v('b-daily-rate')||'', v('b-apt')||'');
 }
 
 function disableMultiRate(){
@@ -3219,7 +3220,7 @@ function disableMultiRateSilent(){
   if(list) list.innerHTML='';
 }
 
-function addRateSegmentRow(presetFrom, presetTo, presetRate){
+function addRateSegmentRow(presetFrom, presetTo, presetRate, presetApt){
   const list=document.getElementById('rate-segments-list');
   const rows=list.querySelectorAll('.rate-segment-row');
   const idx=rows.length;
@@ -3232,7 +3233,17 @@ function addRateSegmentRow(presetFrom, presetTo, presetRate){
     const prevTo=rows[idx-1].querySelector('.seg-to').value;
     defaultFrom=prevTo;
   }
+  // Apartment defaults to the previous segment's apartment (most periods
+  // keep the same apartment — apartment switching is the exception, and
+  // the landlord changes the dropdown when that's actually what's happening).
+  // The very first segment defaults to whatever's already chosen in the
+  // main apartment field above.
+  let defaultApt=presetApt;
+  if(!defaultApt){
+    defaultApt = idx>0 ? rows[idx-1].querySelector('.seg-apt').value : v('b-apt');
+  }
   const overallCheckout=v('b-checkout');
+  const apts=userProfile.apartments||[];
   const row=document.createElement('div');
   row.className='rate-segment-row';
   row.style.cssText='display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;background:var(--paper);padding:10px;border-radius:8px;flex-wrap:wrap';
@@ -3246,6 +3257,14 @@ function addRateSegmentRow(presetFrom, presetTo, presetRate){
       <label style="font-size:.74rem;color:var(--muted);margin-bottom:3px;display:block">إلى</label>
       <input type="date" class="seg-to" dir="ltr" value="${presetTo||overallCheckout||''}" onchange="recalcMultiRate()"
         style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font)">
+    </div>
+    <div style="flex:1;min-width:110px">
+      <label style="font-size:.74rem;color:var(--muted);margin-bottom:3px;display:block">الشقة</label>
+      <select class="seg-apt" onchange="recalcMultiRate()"
+        style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font)">
+        <option value="">—</option>
+        ${apts.map(a=>`<option value="${a}"${a===defaultApt?' selected':''}>${a}</option>`).join('')}
+      </select>
     </div>
     <div style="flex:1;min-width:100px">
       <label style="font-size:.74rem;color:var(--muted);margin-bottom:3px;display:block">السعر اليومي</label>
@@ -3270,7 +3289,8 @@ function getRateSegmentsFromForm(){
   return rows.map(r=>({
     from: r.querySelector('.seg-from').value,
     to:   r.querySelector('.seg-to').value,
-    rate: parseFloat(r.querySelector('.seg-rate').value)||0
+    rate: parseFloat(r.querySelector('.seg-rate').value)||0,
+    apartment: r.querySelector('.seg-apt').value
   }));
 }
 
@@ -3284,15 +3304,25 @@ function recalcMultiRate(){
     document.getElementById('multi-rate-total').textContent='—';
     return;
   }
+  const editId=v('b-edit-id');
+  const conflictCheck=checkSegmentApartmentConflicts(segments, editId);
+  if(!conflictCheck.valid){
+    errBox.style.display='block';
+    errBox.textContent='⚠️ '+conflictCheck.error;
+    document.getElementById('multi-rate-total').textContent='—';
+    return;
+  }
   errBox.style.display='none';
   const result=computeBookingTotals({rateSegments:segments});
   document.getElementById('multi-rate-total').textContent=fmt(result.total)+' OMR ('+result.nights+' ليلة)';
-  // Keep the overall booking's check-in/check-out in sync with the
-  // first segment's start and the last segment's end, so the rest of
-  // the app (availability check, calendar, etc.) sees the correct range.
+  // Keep the overall booking's check-in/check-out/apartment in sync with
+  // the first segment's start and the last segment's end, so the rest of
+  // the app (availability check, calendar, etc.) sees the correct range
+  // and the correct primary apartment.
   if(segments.length){
     document.getElementById('b-checkin').value=segments[0].from;
     document.getElementById('b-checkout').value=segments[segments.length-1].to;
+    if(segments[0].apartment) document.getElementById('b-apt').value=segments[0].apartment;
   }
 }
 
@@ -3339,12 +3369,76 @@ function computeBookingTotals(b){
 // previous segment's "to" — no gaps, no overlaps) — this is what
 // makes it "one continuous stay split into rate periods" rather than
 // separate disconnected bookings.
+// ── MULTI-APARTMENT BOOKING HELPERS ─────────────────────────────────
+// A booking can now span more than one apartment over its stay (e.g.
+// apt 204 from 25–27 Jul, then apt 304 from 27–30 Jul), stored as
+// rateSegments with a per-segment `apartment` field. Every place in the
+// app that needs to know "which apartment, on which date, for which
+// booking" goes through these three functions instead of reading
+// b.apartment directly — that's what makes this safe to extend without
+// breaking the ~40 existing places that work with bookings.
+
+// All date ranges (sorted, in order) during which `b` occupies `apt`.
+// For a normal single-apartment booking, this is just its whole stay
+// (if apt matches), or empty array (if it never touches this apartment).
+function getApartmentDateRanges(b, apt){
+  if(b.rateSegments && b.rateSegments.length && b.rateSegments.some(s=>s.apartment)){
+    return b.rateSegments
+      .filter(s=>(s.apartment||b.apartment)===apt)
+      .map(s=>({from:s.from, to:s.to}));
+  }
+  return b.apartment===apt ? [{from:b.checkIn, to:b.checkOut}] : [];
+}
+
+// Every distinct apartment this booking touches, in stay order.
+function getAllApartmentsForBooking(b){
+  if(b.rateSegments && b.rateSegments.length && b.rateSegments.some(s=>s.apartment)){
+    const seen=new Set(), out=[];
+    b.rateSegments.forEach(s=>{ const a=s.apartment||b.apartment; if(!seen.has(a)){ seen.add(a); out.push(a); } });
+    return out;
+  }
+  return [b.apartment];
+}
+
+// Is `apt` occupied by booking `b` on this specific date (YYYY-MM-DD)?
+// Uses the same check-in-2pm/check-out-noon convention as everywhere else.
+function bookingOccupiesAptOnDate(b, apt, dateStr){
+  const d=new Date(dateStr+'T14:00:00');
+  return getApartmentDateRanges(b, apt).some(r=>{
+    const ci=new Date(r.from+'T14:00:00'), co=new Date(r.to+'T12:00:00');
+    return d>=ci && d<co;
+  });
+}
+
+// Which apartment is THIS booking actually in on this specific date?
+// (For display — calendar pills, day-bookings list, etc.)
+function aptForBookingOnDate(b, dateStr){
+  if(b.rateSegments && b.rateSegments.length && b.rateSegments.some(s=>s.apartment)){
+    const d=new Date(dateStr+'T14:00:00');
+    const seg=b.rateSegments.find(s=>{
+      const ci=new Date(s.from+'T14:00:00'), co=new Date(s.to+'T12:00:00');
+      return d>=ci && d<co;
+    });
+    if(seg) return seg.apartment||b.apartment;
+  }
+  return b.apartment;
+}
+
+// Short display label for list/table rows: "204" for a normal booking,
+// "204 ⟶ 304" for a multi-apartment one.
+function aptSummaryLabel(b){
+  return getAllApartmentsForBooking(b).join(' ⟶ ');
+}
+
 function validateRateSegments(segments){
   if(!segments || !segments.length) return {valid:true};
   for(let i=0;i<segments.length;i++){
     const s=segments[i];
     if(!s.from || !s.to || isNaN(parseFloat(s.rate))){
       return {valid:false, error:`الفترة ${i+1}: يرجى تعبئة التاريخ والسعر`};
+    }
+    if(!s.apartment){
+      return {valid:false, error:`الفترة ${i+1}: يرجى اختيار الشقة`};
     }
     if(new Date(s.to)<=new Date(s.from)){
       return {valid:false, error:`الفترة ${i+1}: تاريخ الانتهاء يجب أن يكون بعد البداية`};
@@ -3356,17 +3450,42 @@ function validateRateSegments(segments){
   return {valid:true};
 }
 
+// Checks each segment's OWN apartment against ITS OWN date range for
+// conflicts with OTHER bookings — necessary because a multi-apartment
+// booking's segments can each touch a different apartment, so the single
+// whole-range check used for flat-rate bookings isn't enough here.
+// Excludes the booking being edited (editId) from the conflict scan.
+function checkSegmentApartmentConflicts(segments, editId){
+  for(let i=0;i<segments.length;i++){
+    const seg=segments[i];
+    const sci=new Date(seg.from+'T14:00:00'), sco=new Date(seg.to+'T12:00:00');
+    const conflict=allBookings.find(b=>{
+      if(b.id===editId) return false;
+      if(bookingStatus(b)==='ended') return false;
+      return getApartmentDateRanges(b, seg.apartment).some(r=>{
+        const rci=new Date(r.from+'T14:00:00'), rco=new Date(r.to+'T12:00:00');
+        return sci<rco && sco>rci;
+      });
+    });
+    if(conflict){
+      return {valid:false, error:`الفترة ${i+1} (شقة ${seg.apartment}): محجوزة بالفعل من ${fmtDate(conflict.checkIn)} إلى ${fmtDate(conflict.checkOut)}`};
+    }
+  }
+  return {valid:true};
+}
+
 function checkAptAvailability(){
   const apt=v('b-apt'), ci=v('b-checkin'), co=v('b-checkout');
   const hint=document.getElementById('apt-availability-hint');
   const editId=v('b-edit-id');
-  if(!apt||!ci||!co){hint.textContent='';return;}
+  if(!apt||!ci||!co||_multiRateActive){hint.textContent='';return;} // multi-period mode shows its own per-segment feedback instead
+  const nci=new Date(ci+'T14:00:00'), nco=new Date(co+'T12:00:00');
   const conflict=allBookings.find(b=>{
     if(b.id===editId) return false;
-    if(b.apartment!==apt) return false;
-    const bci=new Date(b.checkIn+'T14:00:00'), bco=new Date(b.checkOut+'T12:00:00');
-    const nci=new Date(ci+'T14:00:00'), nco=new Date(co+'T12:00:00');
-    return nci<bco && nco>bci;
+    return getApartmentDateRanges(b, apt).some(r=>{
+      const bci=new Date(r.from+'T14:00:00'), bco=new Date(r.to+'T12:00:00');
+      return nci<bco && nco>bci;
+    });
   });
   if(conflict){
     hint.style.color='var(--danger)';
@@ -3489,6 +3608,9 @@ async function saveBooking(){
     const segCheck=validateRateSegments(rateSegments);
     if(!segCheck.valid){ showToast('⚠️ '+segCheck.error,'error'); return; }
     if(!rateSegments.length){ showToast('أضف فترة سعر واحدة على الأقل','error'); return; }
+    const editIdForCheck=v('b-edit-id');
+    const segConflict=checkSegmentApartmentConflicts(rateSegments, editIdForCheck);
+    if(!segConflict.valid){ showToast('⚠️ '+segConflict.error,'error'); return; }
   }
   const checkIn=v('b-checkin'), checkOut=v('b-checkout');
   const dailyRate=_multiRateActive?0:parseFloat(v('b-daily-rate'));
@@ -3521,21 +3643,28 @@ async function saveBooking(){
   const nights=_totals.nights;
   const totalRent=_totals.total;
   // check duplicate
-  // Hard duplicate/conflict check — block BOTH same apt in same dates AND exact duplicate
-  const exactDup=allBookings.find(b=>
-    b.id!==editId && b.apartment===apt && b.tenantId===tenantId &&
-    b.checkIn===checkIn && b.checkOut===checkOut
-  );
-  if(exactDup){showToast('⚠️ هذا الحجز موجود بالفعل — Duplicate booking blocked','error');return;}
-  const conflict=allBookings.find(b=>{
-    if(b.id===editId) return false;
-    if(b.apartment!==apt) return false;
-    const bs=bookingStatus(b); if(bs==='ended') return false;
-    const bci=new Date(b.checkIn+'T14:00:00'), bco=new Date(b.checkOut+'T12:00:00');
-    const nci=new Date(checkIn+'T14:00:00'), nco=new Date(checkOut+'T12:00:00');
-    return nci<bco && nco>bci;
-  });
-  if(conflict){showToast('⚠️ هذه الشقة محجوزة في هذه الفترة — Apartment already booked','error');return;}
+  // Hard duplicate/conflict check — block BOTH same apt in same dates AND exact duplicate.
+  // Skipped for multi-rate/multi-apartment bookings: checkSegmentApartmentConflicts()
+  // above already did a more precise per-segment, per-apartment check — this
+  // whole-range single-apartment check would be wrong here (it would treat the
+  // entire stay as occupying just one apartment, which multi-apartment bookings don't).
+  if(!_multiRateActive){
+    const exactDup=allBookings.find(b=>
+      b.id!==editId && b.apartment===apt && b.tenantId===tenantId &&
+      b.checkIn===checkIn && b.checkOut===checkOut
+    );
+    if(exactDup){showToast('⚠️ هذا الحجز موجود بالفعل — Duplicate booking blocked','error');return;}
+    const conflict=allBookings.find(b=>{
+      if(b.id===editId) return false;
+      const bs=bookingStatus(b); if(bs==='ended') return false;
+      const nci=new Date(checkIn+'T14:00:00'), nco=new Date(checkOut+'T12:00:00');
+      return getApartmentDateRanges(b, apt).some(r=>{
+        const bci=new Date(r.from+'T14:00:00'), bco=new Date(r.to+'T12:00:00');
+        return nci<bco && nco>bci;
+      });
+    });
+    if(conflict){showToast('⚠️ هذه الشقة محجوزة في هذه الفترة — Apartment already booked','error');return;}
+  }
   const tenant=allTenants.find(t=>t.id===tenantId);
   const historyEntry={
     action:editId?'تعديل':'إنشاء',
@@ -3762,7 +3891,7 @@ function viewBooking(id){
   }
   document.getElementById('booking-detail-content').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-      <div class="stat-card" style="padding:14px"><div class="stat-label">الشقة</div><div style="font-size:1.4rem;font-weight:900">${b.apartment}</div></div>
+      <div class="stat-card" style="padding:14px"><div class="stat-label">الشقة</div><div style="font-size:1.4rem;font-weight:900">${aptSummaryLabel(b)}</div></div>
       <div class="stat-card" style="padding:14px"><div class="stat-label">المستأجر</div><div style="font-size:1rem;font-weight:700;margin-top:4px">${escapeHtml(b.tenantName)}</div></div>
       <div class="stat-card" style="padding:14px"><div class="stat-label">الدخول (2:00 م)</div><div style="font-size:.9rem;font-weight:600;margin-top:4px">${fmtDate(b.checkIn)}</div></div>
       <div class="stat-card" style="padding:14px"><div class="stat-label">الخروج (12:00 م)</div><div style="font-size:.9rem;font-weight:600;margin-top:4px">${fmtDate(b.checkOut)}</div></div>
@@ -3771,8 +3900,8 @@ function viewBooking(id){
     </div>
     ${b.rateSegments && b.rateSegments.length ? `
     <div style="background:rgba(79,126,248,.06);border:1px solid rgba(79,126,248,.2);border-radius:8px;padding:10px 12px;font-size:.82rem;margin-bottom:8px">
-      <b>حجز بأسعار متعددة الفترات (${b.rateSegments.length} فترات):</b>
-      ${b.rateSegments.map(seg=>`<div style="margin-top:4px;padding-right:8px">• ${fmtDate(seg.from)} → ${fmtDate(seg.to)}: <span dir="ltr">${fmt(seg.rate)} OMR/ليلة</span></div>`).join('')}
+      <b>${getAllApartmentsForBooking(b).length>1?'حجز متعدد الشقق':'حجز بأسعار متعددة الفترات'} (${b.rateSegments.length} فترات):</b>
+      ${b.rateSegments.map(seg=>`<div style="margin-top:4px;padding-right:8px">• ${fmtDate(seg.from)} → ${fmtDate(seg.to)}: شقة <b>${seg.apartment||b.apartment}</b> — <span dir="ltr">${fmt(seg.rate)} OMR/ليلة</span></div>`).join('')}
     </div>
     ` : ''}
     ${(!_isSubNow&&b.advance>0)?`<div style="background:rgba(193,127,62,.08);border-radius:8px;padding:12px;font-size:.85rem;margin-bottom:8px;display:flex;justify-content:space-between">
@@ -3834,7 +3963,7 @@ function editBookingFromDetail(){
       document.getElementById('multi-rate-toggle-row').style.display='none';
       document.getElementById('multi-rate-section').style.display='block';
       document.getElementById('rate-segments-list').innerHTML='';
-      b.rateSegments.forEach(seg=>addRateSegmentRow(seg.from, seg.to, seg.rate));
+      b.rateSegments.forEach(seg=>addRateSegmentRow(seg.from, seg.to, seg.rate, seg.apartment||b.apartment));
     } else {
       document.getElementById('b-daily-rate').value=b.dailyRate||'';
       calcRent();
@@ -3891,7 +4020,7 @@ function printContract(){
       <h3>${t('ct_landlord')}</h3>
       <div class="doc-row"><span class="doc-label">${t('ct_name')}</span><span class="doc-value">${escapeHtml(b.landlordName||userProfile.name)}</span></div>
       <div class="doc-row"><span class="doc-label">${t('ct_building')}</span><span class="doc-value">${b.landlordBuilding||userProfile.building}</span></div>
-      <div class="doc-row"><span class="doc-label">${t('ct_apt_num')}</span><span class="doc-value">${b.apartment}</span></div>
+      <div class="doc-row"><span class="doc-label">${t('ct_apt_num')}</span><span class="doc-value">${aptSummaryLabel(b)}</span></div>
     </div>
     <div class="doc-section">
       <h3>${t('ct_tenant_party')}</h3>
@@ -3914,6 +4043,7 @@ function printContract(){
         <thead><tr style="background:#f1f5f9">
           <th style="padding:4px 6px;text-align:right;border:1px solid #e2e8f0">من</th>
           <th style="padding:4px 6px;text-align:right;border:1px solid #e2e8f0">إلى</th>
+          <th style="padding:4px 6px;text-align:right;border:1px solid #e2e8f0">الشقة</th>
           <th style="padding:4px 6px;text-align:right;border:1px solid #e2e8f0">الليالي</th>
           <th style="padding:4px 6px;text-align:right;border:1px solid #e2e8f0">السعر اليومي</th>
           <th style="padding:4px 6px;text-align:right;border:1px solid #e2e8f0">المجموع</th>
@@ -3925,6 +4055,7 @@ function printContract(){
             return `<tr>
               <td style="padding:4px 6px;border:1px solid #e2e8f0" dir="ltr">${fmtDate(seg.from)}</td>
               <td style="padding:4px 6px;border:1px solid #e2e8f0" dir="ltr">${fmtDate(seg.to)}</td>
+              <td style="padding:4px 6px;border:1px solid #e2e8f0">${seg.apartment||b.apartment}</td>
               <td style="padding:4px 6px;border:1px solid #e2e8f0">${segNights}</td>
               <td style="padding:4px 6px;border:1px solid #e2e8f0" dir="ltr">${fmt(seg.rate)} OMR</td>
               <td style="padding:4px 6px;border:1px solid #e2e8f0" dir="ltr">${segTotal} OMR</td>
@@ -3992,14 +4123,14 @@ function printInvoice(id){
         <strong>${currentLang==='ar'?'فاتورة إيجار':'Rental Invoice'}</strong>
         ${currentLang==='ar'?'رقم':'No.'}: ${invoiceNum}<br>
         ${currentLang==='ar'?'التاريخ':'Date'}: ${new Date().toLocaleDateString(currentLang==='ar'?'ar-OM':'en-GB')}<br>
-        ${currentLang==='ar'?'الشقة':'Unit'}: ${b.apartment}
+        ${currentLang==='ar'?'الشقة':'Unit'}: ${aptSummaryLabel(b)}
       </div>
     </div>
     <div class="doc-section">
       <h3>${currentLang==='ar'?'بيانات المستأجر':'Tenant Information'}</h3>
       <div class="doc-row"><span class="doc-label">${currentLang==='ar'?'الاسم:':'Name:'}</span><span class="doc-value">${escapeHtml(b.tenantName)}</span></div>
       <div class="doc-row"><span class="doc-label">${currentLang==='ar'?'رقم الهوية:':'ID:'}</span><span class="doc-value" dir="ltr">${escapeHtml(b.tenantIdNumber)}</span></div>
-      <div class="doc-row"><span class="doc-label">${currentLang==='ar'?'الشقة:':'Unit:'}</span><span class="doc-value">${b.apartment}</span></div>
+      <div class="doc-row"><span class="doc-label">${currentLang==='ar'?'الشقة:':'Unit:'}</span><span class="doc-value">${aptSummaryLabel(b)}</span></div>
     </div>
     <table class="invoice-table">
       <thead><tr>
@@ -4011,7 +4142,7 @@ function printInvoice(id){
         ${b.rateSegments && b.rateSegments.length ? b.rateSegments.map(seg=>{
           const segNights=calcNights(seg.from,seg.to);
           const segTotal=segNights*seg.rate;
-          return `<tr><td>${currentLang==='ar'?'إيجار شقة':'Unit Rent'} ${b.apartment} <span style="color:#888;font-size:.7rem">(${fmtDate(seg.from)} – ${fmtDate(seg.to)})</span></td>
+          return `<tr><td>${currentLang==='ar'?'إيجار شقة':'Unit Rent'} ${seg.apartment||b.apartment} <span style="color:#888;font-size:.7rem">(${fmtDate(seg.from)} – ${fmtDate(seg.to)})</span></td>
               <td>${segNights} ${currentLang==='ar'?'ليلة':'nights'} × ${fmt(seg.rate)} OMR</td>
               <td dir="ltr">${fmt(segTotal)}</td></tr>`;
         }).join('') : `
@@ -4062,7 +4193,7 @@ function printReport(){
     <div class="doc-subtitle">Booking Report · مكان</div>
     <div class="doc-section">
       <h3>ملخص الحجز</h3>
-      <div class="doc-row"><span class="doc-label">رقم الشقة:</span><span class="doc-value">${b.apartment}</span></div>
+      <div class="doc-row"><span class="doc-label">رقم الشقة:</span><span class="doc-value">${aptSummaryLabel(b)}</span></div>
       <div class="doc-row"><span class="doc-label">المستأجر:</span><span class="doc-value">${escapeHtml(b.tenantName)}</span></div>
       <div class="doc-row"><span class="doc-label">رقم الهوية:</span><span class="doc-value" dir="ltr">${escapeHtml(b.tenantIdNumber)}</span></div>
       <div class="doc-row"><span class="doc-label">الدخول:</span><span class="doc-value">${fmtDateFull(b.checkIn,'2:00 م')}</span></div>
@@ -4172,10 +4303,11 @@ function renderApartmentsPage(){
   if(!apts.length){el.innerHTML='<div class="empty-state"><div class="icon"></div><p>لا توجد شقق مسجّلة</p></div>';return;}
   const aptData=userProfile.apartmentData||{};
   // Determine which apartments are currently occupied (checked-in, not checked-out)
+  const _todayStr=new Date().toISOString().slice(0,10);
   const occupiedApts=new Set(
     allBookings
       .filter(b=>b.checkedIn&&!b.checkedOut)
-      .map(b=>b.apartment)
+      .map(b=>aptForBookingOnDate(b,_todayStr))
   );
   const vacantCount=apts.filter(a=>!occupiedApts.has(a)).length;
   const occupiedCount=occupiedApts.size;
@@ -4205,7 +4337,7 @@ function renderApartmentsPage(){
         const type=data.type||'daily';
         const typeAr={daily:'يومي / Daily',monthly:'شهري / Monthly',annual:'سنوي / Annual'}[type];
         const occupied=occupiedApts.has(a);
-        const activeBooking=allBookings.find(b=>b.apartment===a&&b.checkedIn&&!b.checkedOut);
+        const activeBooking=allBookings.find(b=>b.checkedIn&&!b.checkedOut&&aptForBookingOnDate(b,_todayStr)===a);
         return `<div class="stat-card" style="padding:14px;border:2px solid ${occupied?'var(--success)':'var(--border)'}">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
             <div style="display:flex;align-items:center;gap:6px">
@@ -4260,11 +4392,20 @@ async function renameApartment(oldNum, newNum){
   if(aptData[oldNum]){aptData[newNum]=aptData[oldNum];delete aptData[oldNum];}
   await updateDoc(doc(db,'users',currentUser.uid),{apartments:updated,apartmentData:aptData});
   userProfile.apartments=updated; userProfile.apartmentData=aptData;
-  // Update all bookings referencing old number
-  const toUpdate=allBookings.filter(b=>b.apartment===oldNum);
+  // Update all bookings referencing old number — both the primary apartment
+  // field AND any rate-segment that references it (multi-apartment bookings).
+  const toUpdate=allBookings.filter(b=>
+    b.apartment===oldNum || (b.rateSegments&&b.rateSegments.some(s=>s.apartment===oldNum))
+  );
   for(const b of toUpdate){
-    await updateDoc(doc(db,'bookings',b.id),{apartment:newNum});
-    b.apartment=newNum;
+    const upd={};
+    if(b.apartment===oldNum) upd.apartment=newNum;
+    if(b.rateSegments&&b.rateSegments.some(s=>s.apartment===oldNum)){
+      upd.rateSegments=b.rateSegments.map(s=>s.apartment===oldNum?{...s,apartment:newNum}:s);
+    }
+    await updateDoc(doc(db,'bookings',b.id),upd);
+    if(upd.apartment) b.apartment=upd.apartment;
+    if(upd.rateSegments) b.rateSegments=upd.rateSegments;
   }
   showToast(`تم تغيير رقم الشقة ${oldNum} إلى ${newNum} ✓`,'success');
   renderApartmentsPage(); refreshAptSelect(); renderBookings(); renderCalendar();
@@ -4287,7 +4428,7 @@ function renderInvoicesPage(){
   const sorted=[...completed].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn));
   el.innerHTML=`<table><thead><tr><th>${t('th_apt')}</th><th>${t('th_tenant')}</th><th>${t('th_checkin')}</th><th>${t('th_checkout')}</th><th>${t('th_advance')}</th><th>${t('th_remaining')}</th><th>${t('th_total')}</th><th>${t('th_payment')}</th><th></th></tr></thead><tbody>
     ${sorted.map(b=>`<tr>
-      <td><b>${b.apartment}</b></td>
+      <td><b>${aptSummaryLabel(b)}</b></td>
       <td>${escapeHtml(b.tenantName)}</td>
       <td dir="ltr">${fmtDate(b.checkIn)}</td>
       <td dir="ltr">${fmtDate(b.checkOut)}</td>
@@ -4327,11 +4468,11 @@ function renderContractsPage(){
     if(q){
       const name=(b.tenantName||'').toLowerCase();
       const idNum=(b.tenantIdNumber||'').toLowerCase();
-      const apt=(b.apartment||'').toLowerCase();
+      const aptMatches=getAllApartmentsForBooking(b).map(a=>(a||'').toLowerCase());
       // Match: full name includes query, or ID/apt starts with query
       const matches = name.includes(q) ||
                       idNum.startsWith(q) || idNum===q ||
-                      apt.startsWith(q)   || apt===q;
+                      aptMatches.some(apt=>apt.startsWith(q) || apt===q);
       if(!matches) return false;
     }
     if(cf&&b.checkIn<cf) return false;
@@ -4350,7 +4491,7 @@ function renderContractsPage(){
       const s=bookingStatus(b);
       const sAr=bookingStatusAr(s);
       return `<tr>
-        <td><b>${b.apartment}</b></td>
+        <td><b>${aptSummaryLabel(b)}</b></td>
         <td>${escapeHtml(b.tenantName)}</td>
         <td dir="ltr">${fmtDate(b.checkIn)}</td>
         <td dir="ltr">${fmtDate(b.checkOut)}</td>
@@ -4473,20 +4614,24 @@ function renderNotificationsPage(){
   const section=(title,icon,items,color)=>items.length?`
     <div class="card" style="margin-bottom:16px">
       <div class="card-header"><span class="card-title">${icon} ${title} (${items.length})</span></div>
-      ${items.map(n=>`
+      ${items.map(n=>{
+        const aptList=getAllApartmentsForBooking(n.booking);
+        const relevantApt=n.type==='arriving'?aptList[0]:aptList[aptList.length-1];
+        return `
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--warm);gap:12px;flex-wrap:wrap">
           <div style="display:flex;align-items:center;gap:12px">
-            <div style="width:44px;height:44px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1rem;flex-shrink:0">${n.booking.apartment}</div>
+            <div style="width:44px;height:44px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1rem;flex-shrink:0">${relevantApt}</div>
             <div>
               <div style="font-weight:700">${n.booking.tenantName}</div>
-              <div style="font-size:.8rem;color:var(--muted)">${fmtDate(n.type==='arriving'?n.booking.checkIn:n.booking.checkOut)} · شقة ${n.booking.apartment}</div>
+              <div style="font-size:.8rem;color:var(--muted)">${fmtDate(n.type==='arriving'?n.booking.checkIn:n.booking.checkOut)} · شقة ${relevantApt}</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
             <span class="badge" style="background:${color}22;color:${color}">${n.msg}</span>
             <button class="btn btn-ghost btn-sm" onclick="viewBooking('${n.booking.id}')">عرض</button>
           </div>
-        </div>`).join('')}
+        </div>`;
+      }).join('')}
     </div>`:''
   ;
   el.innerHTML=
@@ -4673,7 +4818,7 @@ function shareContractWhatsApp(){
     D,
     `${isEn?'Tenant':'المستأجر'}: *${escapeHtml(b.tenantName)}*`,
     `${isEn?'ID':'الهوية'}: ${b.tenantIdNumber||'—'}`,
-    `${isEn?'Unit':'الشقة'}: *${b.apartment}*`,
+    `${isEn?'Unit':'الشقة'}: *${aptSummaryLabel(b)}*`,
     D,
     `${isEn?'Check-in':'الدخول'}: *${fmtDate(b.checkIn)}* ${isEn?'2:00 PM':'2:00 م'}`,
     `${isEn?'Check-out':'الخروج'}: *${fmtDate(b.checkOut)}* ${isEn?'12:00 PM':'12:00 م'}`,
@@ -4726,17 +4871,25 @@ function togglePaid(id){
 function openMoveTenant(){
   const b=allBookings.find(x=>x.id===activeBookingId);
   if(!b){showToast('افتح تفاصيل الحجز أولاً','error');return;}
+  if(getAllApartmentsForBooking(b).length>1){
+    showToast('هذا الحجز يشمل أكثر من شقة بالفعل — عدّل الفترات من شاشة تعديل الحجز','error');
+    return;
+  }
   document.getElementById('move-booking-info').innerHTML=
     `<b>${escapeHtml(b.tenantName)}</b> — شقة ${b.apartment}<br>من ${fmtDate(b.checkIn)} إلى ${fmtDate(b.checkOut)}`;
-  // Populate available apts (no conflict in same period)
+  // Populate available apts (no conflict in same period) — checks the
+  // candidate apartment's FULL occupancy (including other bookings'
+  // own multi-apartment segments), not just their primary apartment field.
   const apts=userProfile.apartments||[];
+  const bci=new Date(b.checkIn+'T14:00:00'),bco=new Date(b.checkOut+'T12:00:00');
   const available=apts.filter(a=>{
     if(a===b.apartment) return false;
     const conflict=allBookings.find(x=>{
-      if(x.id===activeBookingId||x.apartment!==a) return false;
-      const xci=new Date(x.checkIn+'T14:00:00'),xco=new Date(x.checkOut+'T12:00:00');
-      const bci=new Date(b.checkIn+'T14:00:00'),bco=new Date(b.checkOut+'T12:00:00');
-      return bci<xco&&bco>xci;
+      if(x.id===activeBookingId) return false;
+      return getApartmentDateRanges(x,a).some(r=>{
+        const xci=new Date(r.from+'T14:00:00'),xco=new Date(r.to+'T12:00:00');
+        return bci<xco&&bco>xci;
+      });
     });
     return !conflict;
   });
@@ -4827,7 +4980,7 @@ function renderFullReportPage(){
               const sAr=bookingStatusAr(s);
               const nights=calcNights(b.checkIn,b.checkOut);
               return `<tr>
-                <td><b>${b.apartment}</b></td>
+                <td><b>${aptSummaryLabel(b)}</b></td>
                 <td>${escapeHtml(b.tenantName)}</td>
                 <td dir="ltr">${fmtDate(b.checkIn)}</td>
                 <td dir="ltr">${fmtDate(b.checkOut)}</td>
@@ -4894,18 +5047,19 @@ function runVacancySearch(){
   // Helper: is apartment free for entire date range?
   function isAptFree(apt, fromDate, toDate){
     return !allBookings.some(b=>{
-      if(b.apartment!==apt) return false;
       if(bookingStatus(b)==='ended') return false;
-      const bci=new Date(b.checkIn+'T14:00:00');
-      const bco=new Date(b.checkOut+'T12:00:00');
-      if(fromDate&&toDate){
-        const qci=new Date(fromDate+'T14:00:00');
-        const qco=new Date(toDate+'T12:00:00');
-        return qci<bco && qco>bci;
-      }
-      if(fromDate){ return new Date(fromDate+'T14:00:00')<bco; }
-      if(toDate){ return new Date(toDate+'T12:00:00')>bci; }
-      return false;
+      return getApartmentDateRanges(b, apt).some(r=>{
+        const bci=new Date(r.from+'T14:00:00');
+        const bco=new Date(r.to+'T12:00:00');
+        if(fromDate&&toDate){
+          const qci=new Date(fromDate+'T14:00:00');
+          const qco=new Date(toDate+'T12:00:00');
+          return qci<bco && qco>bci;
+        }
+        if(fromDate){ return new Date(fromDate+'T14:00:00')<bco; }
+        if(toDate){ return new Date(toDate+'T12:00:00')>bci; }
+        return false;
+      });
     });
   }
 
@@ -4916,13 +5070,9 @@ function runVacancySearch(){
     const end=new Date(to+'T00:00:00');
     while(cur<=end){
       const dateStr=cur.toISOString().slice(0,10);
-      const vacantOnDay=apts.filter(a=>!allBookings.some(b=>{
-        if(b.apartment!==a||bookingStatus(b)==='ended') return false;
-        const bci=new Date(b.checkIn+'T14:00:00');
-        const bco=new Date(b.checkOut+'T12:00:00');
-        const d=new Date(dateStr+'T14:00:00');
-        return d>=bci&&d<bco;
-      }));
+      const vacantOnDay=apts.filter(a=>!allBookings.some(b=>
+        bookingStatus(b)!=='ended' && bookingOccupiesAptOnDate(b, a, dateStr)
+      ));
       days.push({date:dateStr,vacant:vacantOnDay,busy:apts.filter(a=>!vacantOnDay.includes(a))});
       cur.setDate(cur.getDate()+1);
     }
@@ -4975,7 +5125,7 @@ function runVacancySearch(){
   const cards=[
     ...showFree.map(a=>{
       const type=aptData[a]?.type||'daily';
-      const upcoming=allBookings.find(b=>b.apartment===a&&bookingStatus(b)==='upcoming');
+      const upcoming=allBookings.find(b=>getAllApartmentsForBooking(b).includes(a)&&bookingStatus(b)==='upcoming');
       return `<div style="border:2.5px solid var(--success);border-radius:12px;padding:14px;text-align:center;background:rgba(34,160,107,.07)">
         <div style="font-size:1.4rem;font-weight:900;color:var(--ink)">${a}</div>
         <div style="font-size:.72rem;color:var(--muted);margin:3px 0">${typeAr(type)}</div>
@@ -4984,7 +5134,7 @@ function runVacancySearch(){
       </div>`;
     }),
     ...(needed===0?allBusyApts.map(a=>{
-      const active=allBookings.find(b=>b.apartment===a&&b.checkedIn&&!b.checkedOut);
+      const active=allBookings.find(b=>b.checkedIn&&!b.checkedOut&&aptForBookingOnDate(b,new Date().toISOString().slice(0,10))===a);
       return `<div style="border:2px solid rgba(224,60,60,.3);border-radius:12px;padding:14px;text-align:center;background:rgba(224,60,60,.04);opacity:.7">
         <div style="font-size:1.4rem;font-weight:900;color:var(--muted)">${a}</div>
         <div style="font-size:.76rem;font-weight:700;color:var(--danger)">مشغولة ✗</div>
@@ -5015,7 +5165,7 @@ function printFullReport(){
         <tbody>${sorted.map((b,i)=>{
           const s=bookingStatus(b);
           return `<tr style="background:${i%2?'#f9f9f9':'#fff'};border-bottom:1px solid #eee">
-            <td style="padding:5px 8px"><b>${b.apartment}</b></td>
+            <td style="padding:5px 8px"><b>${aptSummaryLabel(b)}</b></td>
             <td style="padding:5px 8px">${escapeHtml(b.tenantName)}</td>
             <td style="padding:5px 8px;direction:ltr">${fmtDate(b.checkIn)}</td>
             <td style="padding:5px 8px;direction:ltr">${fmtDate(b.checkOut)}</td>
@@ -5225,7 +5375,7 @@ function viewTenant(id){
       const colors={active:'var(--accent)',checkedin:'var(--success)',upcoming:'#f59e0b',ended:'var(--muted)'};
       return `<div onclick="closeModal('modal-tenant-detail');viewBooking('${b.id}')" 
         style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--paper);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;cursor:pointer">
-        <div style="font-weight:900;font-size:1rem;color:${colors[s]};min-width:36px">${b.apartment}</div>
+        <div style="font-weight:900;font-size:1rem;color:${colors[s]};min-width:36px">${aptSummaryLabel(b)}</div>
         <div style="flex:1">
           <div style="font-size:.84rem;font-weight:600">${fmtDate(b.checkIn)} — ${fmtDate(b.checkOut)}</div>
           <div style="font-size:.74rem;color:var(--muted)">${calcNights(b.checkIn,b.checkOut)} ليلة · ${fmt(b.totalRent||0)} OMR</div>
