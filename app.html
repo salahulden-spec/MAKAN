@@ -458,6 +458,7 @@ body {
   flex-direction: column;
   z-index: 200;
   transition: transform .3s cubic-bezier(.4,0,.2,1);
+  will-change: transform;
   overflow: hidden;
 }
 .sidebar::after {
@@ -987,9 +988,7 @@ tbody tr:hover td { background: var(--accent-light); transition: background .15s
   position: fixed;
   top: 0; right: 0; left: 0;
   height: 62px;
-  background: rgba(255,255,255,.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: #fff;
   border-bottom: 1px solid var(--border);
   box-shadow: 0 2px 12px rgba(26,34,54,.06);
   z-index: 150;
@@ -1014,6 +1013,7 @@ tbody tr:hover td { background: var(--accent-light); transition: background .15s
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px) {
+  #cal-view-grid { display: none; }
   :root { --sidebar-w: 0px; }
   .sidebar { transform: translateX(100%); width: 282px; box-shadow: none; }
   .sidebar.open, [dir='ltr'] .sidebar.open { transform: translateX(0); box-shadow: var(--shadow-xl); }
@@ -1441,7 +1441,7 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     </div>
     <div class="form-group"><label>رقم الهاتف / Phone (اختياري)</label><input type="tel" id="t-phone" placeholder="+968 9X XXX XXX" dir="ltr"></div>
     <div class="form-group">
-      <label style="font-weight:700;font-size:.83rem;display:block;margin-bottom:10px">صورة الهوية / ID Photos</label>
+      <div style="font-weight:700;font-size:.83rem;color:var(--muted);margin-bottom:10px">صورة الهوية / ID Photos</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div>
           <div style="font-size:.78rem;color:var(--muted);margin-bottom:6px;font-weight:600">الوجه الأمامي / Front</div>
@@ -1533,7 +1533,7 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     </div>
     <div id="advance-method-row" style="display:none">
       <div class="form-group">
-        <label>طريقة الدفعة المقدمة — Advance Payment Method</label>
+        <div style="font-weight:700;font-size:.83rem;color:var(--muted);margin-bottom:10px">طريقة الدفعة المقدمة — Advance Payment Method</div>
         <div style="display:flex;gap:10px">
           <button type="button" id="adv-cash-btn" class="btn btn-secondary" style="flex:1" onclick="setAdvanceMethod('cash')">نقداً — Cash</button>
           <button type="button" id="adv-transfer-btn" class="btn btn-secondary" style="flex:1" onclick="setAdvanceMethod('transfer')">تحويل — Transfer</button>
@@ -1799,7 +1799,7 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
       </div>
     </div>
     <div class="form-group" id="su-buildings-group" style="display:none">
-      <label style="font-weight:700;font-size:.85rem;display:block;margin-bottom:10px">الوصول إلى المباني / Building Access</label>
+      <div style="font-weight:700;font-size:.85rem;color:var(--muted);margin-bottom:10px">الوصول إلى المباني / Building Access</div>
       <div id="su-buildings-checkboxes" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
     <div class="modal-footer">
@@ -3064,7 +3064,7 @@ function renderExpenses(){
   </tbody></table>`;
 }
 
-window.calView = window.innerWidth < 640 ? 'list' : 'grid';
+window.calView = window.innerWidth <= 768 ? 'list' : 'grid';
 
 function setCalView(v){
   window.calView = v;
@@ -3133,14 +3133,16 @@ function renderCalendarList(year, month, bookings){
 }
 
 function renderCalendar(){
+  if(calYear===undefined){ const now=new Date(); calYear=now.getFullYear(); calMonth=now.getMonth(); }
   // Set legend labels (fixes static HTML t() issue)
   ['active','in','upcoming','ended'].forEach(k=>{
     const el=document.getElementById('cal-lbl-'+k);
     if(el) el.textContent=t('cal_legend_'+k);
   });
-  // Auto-switch to list on mobile
-  if(window.innerWidth < 640 && window.calView === 'grid') setCalView('list');
-  if(window.innerWidth >= 640 && window.calView === 'list') {} // keep user choice on desktop
+  // Auto-switch to list on mobile — grid view fundamentally doesn't fit a
+  // phone screen, so don't bother building it; same breakpoint as the CSS
+  // that hides the grid-view toggle button, so there's no gap between them.
+  if(window.innerWidth <= 768 && window.calView === 'grid'){ setCalView('list'); return; }
   const days=['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
   const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   document.getElementById('cal-headers').innerHTML=days.map(d=>`<div class="cal-header">${d}</div>`).join('');
@@ -3504,9 +3506,18 @@ function aptForBookingOnDate(b, dateStr){
 }
 
 // Short display label for list/table rows: "204" for a normal booking,
-// "204 ⟶ 304" for a multi-apartment one.
+// "204 ⟶ 304" for a multi-apartment one. Wrapped in dir="ltr" because a
+// string with no actual Arabic letters (just digits/arrows) gets its
+// reading order silently reversed by the browser's bidi algorithm when
+// embedded in RTL flow — without this it shows "304 ⟶ 204" instead.
 function aptSummaryLabel(b){
-  return getAllApartmentsForBooking(b).join(' ⟶ ');
+  return `<span dir="ltr">${getAllApartmentsForBooking(b).join(' ⟶ ')}</span>`;
+}
+// Same fix, but for plain-text contexts (WhatsApp messages) where HTML tags
+// would show up as literal text. U+200E (left-to-right mark) is invisible
+// but forces correct reading order, same as dir="ltr" does for HTML.
+function aptSummaryPlain(b){
+  return `\u200E${getAllApartmentsForBooking(b).join(' ⟶ ')}\u200E`;
 }
 
 function validateRateSegments(segments){
@@ -4897,7 +4908,7 @@ function shareContractWhatsApp(){
     D,
     `${isEn?'Tenant':'المستأجر'}: *${escapeHtml(b.tenantName)}*`,
     `${isEn?'ID':'الهوية'}: ${b.tenantIdNumber||'—'}`,
-    `${isEn?'Unit':'الشقة'}: *${aptSummaryLabel(b)}*`,
+    `${isEn?'Unit':'الشقة'}: *${aptSummaryPlain(b)}*`,
     D,
     `${isEn?'Check-in':'الدخول'}: *${fmtDate(b.checkIn)}* ${isEn?'2:00 PM':'2:00 م'}`,
     `${isEn?'Check-out':'الخروج'}: *${fmtDate(b.checkOut)}* ${isEn?'12:00 PM':'12:00 م'}`,
@@ -5593,6 +5604,7 @@ function showPage(pageId){
   if(pageId==='page-buildings') renderBuildingsPage();
   if(pageId==='page-fullreport') renderFullReportPage();
   if(pageId==='page-vacancy') renderVacancyPage();
+  if(pageId==='page-calendar') renderCalendar();
   if(pageId==='page-contracts'){
     // Clear search on navigation, not on search button click
     ['contract-search','contract-from','contract-to'].forEach(id=>{
