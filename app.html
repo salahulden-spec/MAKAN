@@ -2682,23 +2682,40 @@ async function loadAdminData(){
   const snap=await getDocs(collection(db,'users'));
   const landlords=snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.role==='landlord');
 
-  // Fetch ALL bookings across all landlords in parallel.
-  // Each query is wrapped so one landlord's permission error doesn't
-  // take down the entire admin panel (Promise.all would otherwise
-  // reject as soon as ANY single query fails, hiding every landlord).
-  const bookingSnaps=await Promise.all(
-    landlords.map(l=>
-      getDocs(query(collection(db,'bookings'),where('uid','==',l.id)))
-        .catch(e=>{ console.warn('booking count failed for', l.id, e.code); return {docs:[]}; })
-    )
-  );
+  // Booking counts: try ONE collection-wide read first (fast, scales with
+  // landlord count instead of doing N separate queries). Falls back to the
+  // old per-landlord-query loop if that single read is denied for any
+  // reason (e.g. Firestore rules don't grant broad admin read on
+  // /bookings) — this guarantees the panel still works either way, it's
+  // purely a performance optimization, never a behavior change.
   const bookingCounts={};
   let platformTotal=0;
-  landlords.forEach((l,i)=>{
-    const count=bookingSnaps[i].docs.length;
-    bookingCounts[l.id]=count;
-    platformTotal+=count;
-  });
+  let bulkReadOk=true;
+  try{
+    const allBookingsSnap=await getDocs(collection(db,'bookings'));
+    allBookingsSnap.docs.forEach(d=>{
+      const uid=d.data().uid;
+      if(!uid) return;
+      bookingCounts[uid]=(bookingCounts[uid]||0)+1;
+      platformTotal++;
+    });
+  }catch(e){
+    console.warn('[admin] bulk bookings read failed, falling back to per-landlord queries:', e.code||e.message);
+    bulkReadOk=false;
+  }
+  if(!bulkReadOk){
+    const bookingSnaps=await Promise.all(
+      landlords.map(l=>
+        getDocs(query(collection(db,'bookings'),where('uid','==',l.id)))
+          .catch(e=>{ console.warn('booking count failed for', l.id, e.code); return {docs:[]}; })
+      )
+    );
+    landlords.forEach((l,i)=>{
+      const count=bookingSnaps[i].docs.length;
+      bookingCounts[l.id]=count;
+      platformTotal+=count;
+    });
+  }
 
   // Update stat cards
   document.getElementById('admin-count').textContent=landlords.length;
@@ -2732,7 +2749,25 @@ async function loadAdminData(){
   // Sort by most bookings first
   const sorted=[...landlords].sort((a,b)=>(bookingCounts[b.id]||0)-(bookingCounts[a.id]||0));
 
-  list.innerHTML=sorted.map(l=>{
+  // Render in pages of 40 — this is purely about DOM/render cost, not
+  // Firestore reads (the full list above is already fetched once). Without
+  // this, hundreds of landlord cards would all render on first paint and
+  // the panel would visibly slow down as the platform grows.
+  const PAGE_SIZE=40;
+  window._adminLandlordsCache={sorted, bookingCounts, platformTotal};
+  renderAdminLandlordPage(0);
+}
+
+function renderAdminLandlordPage(upToIndex){
+  const cache=window._adminLandlordsCache;
+  if(!cache) return;
+  const {sorted, bookingCounts, platformTotal}=cache;
+  const PAGE_SIZE=40;
+  const end=Math.min(upToIndex+PAGE_SIZE, sorted.length);
+  const slice=sorted.slice(0, end);
+  const list=document.getElementById('admin-landlords-list');
+
+  list.innerHTML=slice.map(l=>{
     const bCount=bookingCounts[l.id]||0;
     const pct=platformTotal>0?Math.round((bCount/platformTotal)*100):0;
     return `
@@ -2741,8 +2776,8 @@ async function loadAdminData(){
         <div class="user-avatar" style="width:44px;height:44px;font-size:1rem;flex-shrink:0">${(l.name||'م')[0]}</div>
         <div style="flex:1;min-width:0">
           <div style="font-weight:700;font-size:1rem">${escapeHtml(l.name)}</div>
-          <div style="color:var(--muted);font-size:.8rem;margin-top:2px">${l.building} · ${l.units||0} شقة · ${l.phone||'—'}</div>
-          <div style="color:var(--muted);font-size:.75rem">${l.email}</div>
+          <div style="color:var(--muted);font-size:.8rem;margin-top:2px">${escapeHtml(l.building||'')} · ${l.units||0} شقة · ${escapeHtml(l.phone||'—')}</div>
+          <div style="color:var(--muted);font-size:.75rem">${escapeHtml(l.email||'')}</div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
             <span class="badge ${l.plan==='unlimited'?'badge-active':'badge-ended'}">${l.plan==='unlimited'?'✓ مشترك — 10 OMR/شهر':'تجربة مجانية (5)'}</span>
             <span style="font-size:.78rem;font-weight:700;color:var(--accent)">${bCount} حجز</span>
@@ -2754,8 +2789,8 @@ async function loadAdminData(){
           ${(l.subUsers&&l.subUsers.length)?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--warm)">
             <div style="font-size:.74rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">مستخدم فرعي / Sub-User</div>
             ${l.subUsers.map(su=>`<div style="display:flex;align-items:center;gap:8px;font-size:.8rem;padding:5px 0">
-              <div style="width:26px;height:26px;border-radius:50%;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem;flex-shrink:0">${su.email[0].toUpperCase()}</div>
-              <span style="color:var(--ink)">${su.email}</span>
+              <div style="width:26px;height:26px;border-radius:50%;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem;flex-shrink:0">${escapeHtml((su.email||'?')[0].toUpperCase())}</div>
+              <span style="color:var(--ink)">${escapeHtml(su.email||'')}</span>
               <span style="color:var(--muted);font-size:.73rem">· ${Object.entries(su.permissions||{}).filter(([,v])=>v).map(([k])=>k).join(', ')||'no perms'}</span>
             </div>`).join('')}
           </div>`:''}
@@ -2792,8 +2827,11 @@ async function loadAdminData(){
         </div>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + (end<sorted.length
+    ? `<button onclick="renderAdminLandlordPage(${end})" style="width:100%;padding:12px;background:var(--paper);border:1.5px dashed var(--border);border-radius:10px;color:var(--accent);font-family:var(--font);font-weight:700;font-size:.86rem;cursor:pointer;margin-top:4px">عرض المزيد — ${sorted.length-end} متبقي</button>`
+    : '');
 }
+window.renderAdminLandlordPage = renderAdminLandlordPage;
 
 async function toggleLandlordStatus(btn){
   const uid=btn.dataset.uid;
