@@ -5339,6 +5339,11 @@ function updatePermRow(key, checked){
 }
 
 function openAddSubuser(){
+  if((userProfile.plan||'free')!=='unlimited'){
+    showToast('إضافة موظف متاحة للمشتركين فقط — Subscribe to add staff accounts','error');
+    showUpgradePrompt();
+    return;
+  }
   const existing=(userProfile.subUsers||[]);
   if(existing.length>=1){
     showToast('يمكنك إضافة مستخدم فرعي واحد فقط — Only one sub-user allowed','error');
@@ -5383,6 +5388,12 @@ function openAddSubuser(){
 }
 
 async function saveSubUser(){
+  if((userProfile.plan||'free')!=='unlimited'){
+    showToast('إضافة موظف متاحة للمشتركين فقط — Subscribe to add staff accounts','error');
+    closeModal('modal-subuser');
+    showUpgradePrompt();
+    return;
+  }
   const email=v('su-email').trim(), pass=v('su-pass');
   if(!email||!pass){showToast('أدخل البريد وكلمة المرور','error');return;}
   if(pass.length<6){showToast('كلمة المرور 6 أحرف على الأقل','error');return;}
