@@ -2294,6 +2294,7 @@ const exp = {
   loadTenantPhotoField, clearTenantPhoto, viewTenant, setCalView, renderCalendarList,
   openEditTenant, deleteTenant, loadTenantPhoto,
   saveSubUser, renderSubusers, removeSubUser, updatePermRow, openAddSubuser,
+  repairSubUserLink,
   openMoveTenant, confirmMoveTenant, runVacancySearch, confirmPayment, tryClosePlanModal,
   showAddAptForm, addNewApartments, renameApartment,
   toggleAdvanceMethod:function(){
@@ -3947,6 +3948,11 @@ function renderSubusers(){
           <div style="font-weight:700;font-size:1rem">${s.email}</div>
           <div style="font-size:.78rem;color:var(--muted);margin-top:2px">مستخدم فرعي · Sub-User</div>
         </div>
+        <button onclick="repairSubUserLink('${s.uid}')"
+          title="أعد ربط هذا المستخدم بحسابك إذا كان يرى تطبيقاً فارغاً بعد تسجيل الدخول"
+          style="background:var(--accent-light);border:1.5px solid rgba(79,126,248,.35);color:var(--accent-dark);border-radius:8px;padding:8px 14px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer;margin-left:8px">
+          إصلاح الربط
+        </button>
         <button onclick="removeSubUser('${s.uid}')"
           style="background:rgba(224,60,60,.08);border:1.5px solid rgba(224,60,60,.25);color:var(--danger);border-radius:8px;padding:8px 14px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer">
           حذف
@@ -3962,6 +3968,44 @@ function renderSubusers(){
         }).join('')}
       </div>
     </div>`).join('');
+}
+
+// ── SUB-USER CLAIM ───────────────────────────────────────────────────
+// Stamps a sub-user's auth token with parentUid so loadProfile() can find
+// their parent landlord. Without it they log in successfully but fall
+// through to a blank landlord profile — an empty app with none of the
+// landlord's data. Returns true only if the claim was actually set.
+async function stampSubUserClaim(subUid){
+  try{
+    const idToken=await auth.currentUser.getIdToken(true);
+    const res=await fetch('https://us-central1-makan-d8dd7.cloudfunctions.net/setSubUserClaim',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
+      body:JSON.stringify({data:{subUserUid:subUid}})
+    });
+    if(!res.ok){
+      const body=await res.text();
+      console.warn('setSubUserClaim failed:',res.status,body);
+      return false;
+    }
+    return true;
+  }catch(e){
+    console.warn('setSubUserClaim error:',e);
+    return false;
+  }
+}
+
+// Re-runs the claim for a sub-user that was created while the Cloud
+// Function was unreachable, so a broken account can be repaired without
+// deleting and recreating it.
+async function repairSubUserLink(uid){
+  showToast('جارِ إصلاح الربط…','success');
+  const ok=await stampSubUserClaim(uid);
+  if(ok){
+    showToast('✓ تم إصلاح الربط — اطلب منه تسجيل الخروج ثم الدخول مرة أخرى','success');
+  } else {
+    showToast('فشل الإصلاح — تحقق من اتصالك ثم حاول مجدداً','error');
+  }
 }
 
 async function removeSubUser(uid){
@@ -4492,6 +4536,27 @@ function showAddAptForm(){
   if(f) f.style.display=f.style.display==='none'?'block':'none';
 }
 
+// ── APARTMENT WRITES: keep buildings[] in sync ───────────────────────
+// The top-level apartments/apartmentData/units fields are only a working
+// copy of the CURRENTLY OPEN building. switchBuilding() refills them from
+// buildings[idx], so writing only to the top level meant any apartment
+// added, renamed or retyped was silently reverted the next time the
+// landlord switched buildings and came back. It also meant the mobile
+// apps — which hydrate from buildings[idx] on login — never saw the change.
+//
+// Single-building accounts have no buildings[] array and are unaffected;
+// for them this behaves exactly as before.
+async function saveApartmentFields(fields){
+  const updates={...fields};
+  const buildings=userProfile.buildings||[];
+  if(buildings.length){
+    const idx=userProfile.activeBuildingIdx||0;
+    updates.buildings=buildings.map((b,i)=> i===idx ? {...b, ...fields} : b);
+    userProfile.buildings=updates.buildings;
+  }
+  await updateDoc(doc(db,'users',currentUser.uid),updates);
+}
+
 async function addNewApartments(){
   const val=v('new-apt-numbers');
   if(!val){showToast('أدخل أرقام الشقق','error');return;}
@@ -4501,8 +4566,9 @@ async function addNewApartments(){
   const dups=newApts.filter(a=>existing.includes(a));
   if(dups.length){showToast(`الشقق ${dups.join('، ')} موجودة مسبقاً`,'error');return;}
   const merged=[...existing,...newApts];
-  await updateDoc(doc(db,'users',currentUser.uid),{apartments:merged,units:merged.length});
+  await saveApartmentFields({apartments:merged,units:merged.length});
   userProfile.apartments=merged;
+  userProfile.units=merged.length;
   clear(['new-apt-numbers']);
   document.getElementById('add-apt-form').style.display='none';
   showToast(`تم إضافة ${newApts.length} شقة ✓`,'success');
@@ -4516,9 +4582,9 @@ async function renameApartment(oldNum, newNum){
   const apts=userProfile.apartments||[];
   if(apts.includes(newNum)){showToast(`رقم ${newNum} موجود مسبقاً`,'error');document.getElementById('apt-num-'+oldNum).value=oldNum;return;}
   const updated=apts.map(a=>a===oldNum?newNum:a);
-  const aptData=userProfile.aptmentData||userProfile.apartmentData||{};
+  const aptData=userProfile.apartmentData||{};
   if(aptData[oldNum]){aptData[newNum]=aptData[oldNum];delete aptData[oldNum];}
-  await updateDoc(doc(db,'users',currentUser.uid),{apartments:updated,apartmentData:aptData});
+  await saveApartmentFields({apartments:updated,apartmentData:aptData});
   userProfile.apartments=updated; userProfile.apartmentData=aptData;
   // Update all bookings referencing old number — both the primary apartment
   // field AND any rate-segment that references it (multi-apartment bookings).
@@ -4543,7 +4609,7 @@ async function updateAptType(aptNum, type){
   const aptData=userProfile.apartmentData||{};
   aptData[aptNum]={...aptData[aptNum],type};
   userProfile.apartmentData=aptData;
-  await updateDoc(doc(db,'users',currentUser.uid),{apartmentData:aptData});
+  await saveApartmentFields({apartmentData:aptData});
   showToast(`شقة ${aptNum} — تم التحديث إلى ${({daily:'يومي',monthly:'شهري',annual:'سنوي'})[type]} ✓`,'success');
   renderApartmentsPage();
 }
@@ -5452,19 +5518,17 @@ async function saveSubUser(){
     userProfile.subUsers=subs;
     // Stamp the new sub-user's auth token with parentUid via Cloud Function,
     // so Firestore rules can recognize them as acting on the landlord's data.
-    try{
-      const idToken=await auth.currentUser.getIdToken(true);
-      const claimRes=await fetch('https://us-central1-makan-d8dd7.cloudfunctions.net/setSubUserClaim',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
-        body:JSON.stringify({data:{subUserUid:subUid}})
-      });
-      const claimJson=await claimRes.json();
-      if(!claimRes.ok){ console.warn('setSubUserClaim failed:',claimJson); }
-    }catch(claimErr){ console.warn('setSubUserClaim error:',claimErr); }
+    const claimOk=await stampSubUserClaim(subUid);
     closeModal('modal-subuser');
     clear(['su-email','su-pass']);
-    showToast('✓ تم إنشاء المستخدم الفرعي — يمكنه تسجيل الدخول الآن','success');
+    // Only claim success if the link was actually established. Reporting
+    // success on a failed claim is what left sub-users able to log in but
+    // seeing a completely empty app, with the landlord believing it worked.
+    if(claimOk){
+      showToast('✓ تم إنشاء المستخدم الفرعي — يمكنه تسجيل الدخول الآن','success');
+    } else {
+      showToast('تم إنشاء الحساب لكن لم يكتمل الربط — اضغط "إصلاح الربط" قبل أن يسجّل الدخول','error');
+    }
     renderSubusers();
   }catch(e){
     showToast('خطأ: '+(e.message||e.code||'unknown'),'error');
