@@ -548,6 +548,21 @@ body {
   justify-content: center;
 }
 
+/* Section label above each group of nav items. The nav was already ordered
+   by workflow, but read as one flat list of twelve links — these make the
+   existing grouping visible. */
+.nav-group {
+  padding: 16px 20px 6px;
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+  color: rgba(255,255,255,.3);
+  text-transform: uppercase;
+  user-select: none;
+}
+.nav-group + .nav-item { margin-top: 0; }
+.nav-group:first-child { padding-top: 6px; }
+
 .sidebar-nav {
   overflow-y: auto;
   flex: 1;
@@ -1901,6 +1916,9 @@ const T = {
     nav_apartments: 'الشقق', nav_vacancy: 'حالة الشقق', nav_calendar: 'التقويم', nav_expenses: 'المصروفات',
     nav_invoices: 'الفواتير', nav_contracts: 'العقود', nav_notifications: 'التنبيهات',
     nav_report: 'التقرير الكامل', nav_admin: 'إدارة الملاك', nav_subusers: 'المستخدمون', nav_buildings: 'المباني',
+    // Sidebar section labels
+    grp_operations: 'العمليات اليومية', grp_units: 'الوحدات والمستأجرون',
+    grp_finance: 'المالية والمستندات', grp_settings: 'الإعدادات',
     // Auth + extra UI
     auth_login_title: 'تسجيل الدخول', auth_register_title: 'تسجيل مالك جديد',
     auth_email: 'البريد الإلكتروني', auth_password: 'كلمة المرور',
@@ -2052,6 +2070,9 @@ const T = {
     nav_apartments: 'Apartments', nav_vacancy: 'Apartment Status', nav_calendar: 'Calendar', nav_expenses: 'Expenses',
     nav_invoices: 'Invoices', nav_contracts: 'Contracts', nav_notifications: 'Alerts',
     nav_report: 'Full Report', nav_admin: 'Admin Panel', nav_subusers: 'Sub-Users', nav_buildings: 'Buildings',
+    // Sidebar section labels
+    grp_operations: 'Daily Operations', grp_units: 'Units & Tenants',
+    grp_finance: 'Finance & Documents', grp_settings: 'Settings',
     // Auth + extra UI
     auth_login_title: 'Sign In', auth_register_title: 'Register as Landlord',
     auth_email: 'Email', auth_password: 'Password',
@@ -2572,27 +2593,30 @@ function renderSidebar(isAdmin){
     ).join('');
     return;
   }
+  // `group` drives the section label rendered above each block. The order
+  // below is unchanged from before so existing muscle memory still works —
+  // the one exception is Notifications, moved up beside the dashboard
+  // because it carries the unread badge and is checked daily.
   const allItems=[
     // Daily landing point
-    {id:'page-dashboard',  ic:'grid',         label:t('nav_dashboard'),  perm:null,     ownerOnly:false},
+    {id:'page-dashboard',  ic:'grid',         label:t('nav_dashboard'),  perm:null,     ownerOnly:false, group:''},
+    {id:'page-notifications',ic:'bell',       label:t('nav_notifications'),perm:null,   ownerOnly:false, badge:true, group:''},
     // Operational core — booking workflow, same concept in two views, kept adjacent
-    {id:'page-bookings',   ic:'file-text',    label:t('nav_bookings'),   perm:'bookings',ownerOnly:false},
-    {id:'page-calendar',   ic:'calendar',     label:t('nav_calendar'),   perm:'bookings',ownerOnly:false},
+    {id:'page-bookings',   ic:'file-text',    label:t('nav_bookings'),   perm:'bookings',ownerOnly:false, group:t('grp_operations')},
+    {id:'page-calendar',   ic:'calendar',     label:t('nav_calendar'),   perm:'bookings',ownerOnly:false, group:t('grp_operations')},
     // Inventory before people — you pick an apartment, then assign a tenant to it
-    {id:'page-apartments', ic:'building',     label:t('nav_apartments'), perm:null,      ownerOnly:false},
-    {id:'page-vacancy',    ic:'building',     label:t('nav_vacancy'),    perm:null,       ownerOnly:false},
-    {id:'page-tenants',    ic:'users',        label:t('nav_tenants'),    perm:'tenants', ownerOnly:false},
+    {id:'page-apartments', ic:'building',     label:t('nav_apartments'), perm:null,      ownerOnly:false, group:t('grp_units')},
+    {id:'page-vacancy',    ic:'building',     label:t('nav_vacancy'),    perm:null,       ownerOnly:false, group:t('grp_units')},
+    {id:'page-tenants',    ic:'users',        label:t('nav_tenants'),    perm:'tenants', ownerOnly:false, group:t('grp_units')},
     // Money block — contract (legal output) + invoices (money in) + expenses (money out), grouped as siblings
-    {id:'page-contracts',  ic:'contract',     label:t('nav_contracts'),  perm:'contracts',ownerOnly:false},
-    {id:'page-invoices',   ic:'receipt',      label:t('nav_invoices'),   perm:'invoices', ownerOnly:false},
-    {id:'page-expenses',   ic:'trending-down',label:t('nav_expenses'),   perm:'expenses', ownerOnly:false},
+    {id:'page-contracts',  ic:'contract',     label:t('nav_contracts'),  perm:'contracts',ownerOnly:false, group:t('grp_finance')},
+    {id:'page-invoices',   ic:'receipt',      label:t('nav_invoices'),   perm:'invoices', ownerOnly:false, group:t('grp_finance')},
+    {id:'page-expenses',   ic:'trending-down',label:t('nav_expenses'),   perm:'expenses', ownerOnly:false, group:t('grp_finance')},
     // Rollup of everything above
-    {id:'page-fullreport', ic:'bar-chart',    label:t('nav_report'),     perm:'reports',  ownerOnly:false},
-    // Reactive/operational, lower frequency than the core workflow
-    {id:'page-notifications',ic:'bell',       label:t('nav_notifications'),perm:null,   ownerOnly:false, badge:true},
+    {id:'page-fullreport', ic:'bar-chart',    label:t('nav_report'),     perm:'reports',  ownerOnly:false, group:t('grp_finance')},
     // Admin / config — touched rarely after setup
-    {id:'page-buildings',  ic:'building',     label:t('nav_buildings'),  perm:null,       ownerOnly:true},
-    {id:'page-subusers',   ic:'user-plus',    label:t('nav_subusers'),   perm:null,       ownerOnly:true},
+    {id:'page-buildings',  ic:'building',     label:t('nav_buildings'),  perm:null,       ownerOnly:true, group:t('grp_settings')},
+    {id:'page-subusers',   ic:'user-plus',    label:t('nav_subusers'),   perm:null,       ownerOnly:true, group:t('grp_settings')},
   ];
   const items=allItems.filter(i=>{
     if(i.ownerOnly && isSubuser) return false;
@@ -2603,9 +2627,16 @@ function renderSidebar(isAdmin){
     }
     return true;
   });
-  document.getElementById('sidebar-nav').innerHTML=items.map(i=>
-    `<div class="nav-item" data-page="${i.id}" onclick="showPage('${i.id}')">${icon(i.ic)}<span>${i.label}</span>${i.badge?`<span class="nav-badge" id="notif-badge" style="display:none">0</span>`:''}</div>`
-  ).join('');
+  // Emit a section label whenever the group changes. Because this runs over
+  // the ALREADY-FILTERED list, a group whose every item was hidden from a
+  // sub-user never prints a header — no empty sections.
+  let lastGroup=null;
+  document.getElementById('sidebar-nav').innerHTML=items.map(i=>{
+    let head='';
+    if(i.group && i.group!==lastGroup) head=`<div class="nav-group">${i.group}</div>`;
+    lastGroup=i.group;
+    return head+`<div class="nav-item" data-page="${i.id}" onclick="showPage('${i.id}')">${icon(i.ic)}<span>${i.label}</span>${i.badge?`<span class="nav-badge" id="notif-badge" style="display:none">0</span>`:''}</div>`;
+  }).join('');
   updateNotifBadge();
 }
 
