@@ -548,6 +548,21 @@ body {
   justify-content: center;
 }
 
+/* Section label above each group of nav items. The nav was already ordered
+   by workflow, but read as one flat list of twelve links — these make the
+   existing grouping visible. */
+.nav-group {
+  padding: 16px 20px 6px;
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+  color: rgba(255,255,255,.3);
+  text-transform: uppercase;
+  user-select: none;
+}
+.nav-group + .nav-item { margin-top: 0; }
+.nav-group:first-child { padding-top: 6px; }
+
 .sidebar-nav {
   overflow-y: auto;
   flex: 1;
@@ -1901,6 +1916,9 @@ const T = {
     nav_apartments: 'الشقق', nav_vacancy: 'حالة الشقق', nav_calendar: 'التقويم', nav_expenses: 'المصروفات',
     nav_invoices: 'الفواتير', nav_contracts: 'العقود', nav_notifications: 'التنبيهات',
     nav_report: 'التقرير الكامل', nav_admin: 'إدارة الملاك', nav_subusers: 'المستخدمون', nav_buildings: 'المباني',
+    // Sidebar section labels
+    grp_operations: 'العمليات اليومية', grp_units: 'الوحدات والمستأجرون',
+    grp_finance: 'المالية والمستندات', grp_settings: 'الإعدادات',
     // Auth + extra UI
     auth_login_title: 'تسجيل الدخول', auth_register_title: 'تسجيل مالك جديد',
     auth_email: 'البريد الإلكتروني', auth_password: 'كلمة المرور',
@@ -2052,6 +2070,9 @@ const T = {
     nav_apartments: 'Apartments', nav_vacancy: 'Apartment Status', nav_calendar: 'Calendar', nav_expenses: 'Expenses',
     nav_invoices: 'Invoices', nav_contracts: 'Contracts', nav_notifications: 'Alerts',
     nav_report: 'Full Report', nav_admin: 'Admin Panel', nav_subusers: 'Sub-Users', nav_buildings: 'Buildings',
+    // Sidebar section labels
+    grp_operations: 'Daily Operations', grp_units: 'Units & Tenants',
+    grp_finance: 'Finance & Documents', grp_settings: 'Settings',
     // Auth + extra UI
     auth_login_title: 'Sign In', auth_register_title: 'Register as Landlord',
     auth_email: 'Email', auth_password: 'Password',
@@ -2294,6 +2315,7 @@ const exp = {
   loadTenantPhotoField, clearTenantPhoto, viewTenant, setCalView, renderCalendarList,
   openEditTenant, deleteTenant, loadTenantPhoto,
   saveSubUser, renderSubusers, removeSubUser, updatePermRow, openAddSubuser,
+  repairSubUserLink,
   openMoveTenant, confirmMoveTenant, runVacancySearch, confirmPayment, tryClosePlanModal,
   showAddAptForm, addNewApartments, renameApartment,
   toggleAdvanceMethod:function(){
@@ -2571,27 +2593,30 @@ function renderSidebar(isAdmin){
     ).join('');
     return;
   }
+  // `group` drives the section label rendered above each block. The order
+  // below is unchanged from before so existing muscle memory still works —
+  // the one exception is Notifications, moved up beside the dashboard
+  // because it carries the unread badge and is checked daily.
   const allItems=[
     // Daily landing point
-    {id:'page-dashboard',  ic:'grid',         label:t('nav_dashboard'),  perm:null,     ownerOnly:false},
+    {id:'page-dashboard',  ic:'grid',         label:t('nav_dashboard'),  perm:null,     ownerOnly:false, group:''},
+    {id:'page-notifications',ic:'bell',       label:t('nav_notifications'),perm:null,   ownerOnly:false, badge:true, group:''},
     // Operational core — booking workflow, same concept in two views, kept adjacent
-    {id:'page-bookings',   ic:'file-text',    label:t('nav_bookings'),   perm:'bookings',ownerOnly:false},
-    {id:'page-calendar',   ic:'calendar',     label:t('nav_calendar'),   perm:'bookings',ownerOnly:false},
+    {id:'page-bookings',   ic:'file-text',    label:t('nav_bookings'),   perm:'bookings',ownerOnly:false, group:t('grp_operations')},
+    {id:'page-calendar',   ic:'calendar',     label:t('nav_calendar'),   perm:'bookings',ownerOnly:false, group:t('grp_operations')},
     // Inventory before people — you pick an apartment, then assign a tenant to it
-    {id:'page-apartments', ic:'building',     label:t('nav_apartments'), perm:null,      ownerOnly:false},
-    {id:'page-vacancy',    ic:'building',     label:t('nav_vacancy'),    perm:null,       ownerOnly:false},
-    {id:'page-tenants',    ic:'users',        label:t('nav_tenants'),    perm:'tenants', ownerOnly:false},
+    {id:'page-apartments', ic:'building',     label:t('nav_apartments'), perm:null,      ownerOnly:false, group:t('grp_units')},
+    {id:'page-vacancy',    ic:'building',     label:t('nav_vacancy'),    perm:null,       ownerOnly:false, group:t('grp_units')},
+    {id:'page-tenants',    ic:'users',        label:t('nav_tenants'),    perm:'tenants', ownerOnly:false, group:t('grp_units')},
     // Money block — contract (legal output) + invoices (money in) + expenses (money out), grouped as siblings
-    {id:'page-contracts',  ic:'contract',     label:t('nav_contracts'),  perm:'contracts',ownerOnly:false},
-    {id:'page-invoices',   ic:'receipt',      label:t('nav_invoices'),   perm:'invoices', ownerOnly:false},
-    {id:'page-expenses',   ic:'trending-down',label:t('nav_expenses'),   perm:'expenses', ownerOnly:false},
+    {id:'page-contracts',  ic:'contract',     label:t('nav_contracts'),  perm:'contracts',ownerOnly:false, group:t('grp_finance')},
+    {id:'page-invoices',   ic:'receipt',      label:t('nav_invoices'),   perm:'invoices', ownerOnly:false, group:t('grp_finance')},
+    {id:'page-expenses',   ic:'trending-down',label:t('nav_expenses'),   perm:'expenses', ownerOnly:false, group:t('grp_finance')},
     // Rollup of everything above
-    {id:'page-fullreport', ic:'bar-chart',    label:t('nav_report'),     perm:'reports',  ownerOnly:false},
-    // Reactive/operational, lower frequency than the core workflow
-    {id:'page-notifications',ic:'bell',       label:t('nav_notifications'),perm:null,   ownerOnly:false, badge:true},
+    {id:'page-fullreport', ic:'bar-chart',    label:t('nav_report'),     perm:'reports',  ownerOnly:false, group:t('grp_finance')},
     // Admin / config — touched rarely after setup
-    {id:'page-buildings',  ic:'building',     label:t('nav_buildings'),  perm:null,       ownerOnly:true},
-    {id:'page-subusers',   ic:'user-plus',    label:t('nav_subusers'),   perm:null,       ownerOnly:true},
+    {id:'page-buildings',  ic:'building',     label:t('nav_buildings'),  perm:null,       ownerOnly:true, group:t('grp_settings')},
+    {id:'page-subusers',   ic:'user-plus',    label:t('nav_subusers'),   perm:null,       ownerOnly:true, group:t('grp_settings')},
   ];
   const items=allItems.filter(i=>{
     if(i.ownerOnly && isSubuser) return false;
@@ -2602,9 +2627,16 @@ function renderSidebar(isAdmin){
     }
     return true;
   });
-  document.getElementById('sidebar-nav').innerHTML=items.map(i=>
-    `<div class="nav-item" data-page="${i.id}" onclick="showPage('${i.id}')">${icon(i.ic)}<span>${i.label}</span>${i.badge?`<span class="nav-badge" id="notif-badge" style="display:none">0</span>`:''}</div>`
-  ).join('');
+  // Emit a section label whenever the group changes. Because this runs over
+  // the ALREADY-FILTERED list, a group whose every item was hidden from a
+  // sub-user never prints a header — no empty sections.
+  let lastGroup=null;
+  document.getElementById('sidebar-nav').innerHTML=items.map(i=>{
+    let head='';
+    if(i.group && i.group!==lastGroup) head=`<div class="nav-group">${i.group}</div>`;
+    lastGroup=i.group;
+    return head+`<div class="nav-item" data-page="${i.id}" onclick="showPage('${i.id}')">${icon(i.ic)}<span>${i.label}</span>${i.badge?`<span class="nav-badge" id="notif-badge" style="display:none">0</span>`:''}</div>`;
+  }).join('');
   updateNotifBadge();
 }
 
@@ -3947,6 +3979,11 @@ function renderSubusers(){
           <div style="font-weight:700;font-size:1rem">${s.email}</div>
           <div style="font-size:.78rem;color:var(--muted);margin-top:2px">مستخدم فرعي · Sub-User</div>
         </div>
+        <button onclick="repairSubUserLink('${s.uid}')"
+          title="أعد ربط هذا المستخدم بحسابك إذا كان يرى تطبيقاً فارغاً بعد تسجيل الدخول"
+          style="background:var(--accent-light);border:1.5px solid rgba(79,126,248,.35);color:var(--accent-dark);border-radius:8px;padding:8px 14px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer;margin-left:8px">
+          إصلاح الربط
+        </button>
         <button onclick="removeSubUser('${s.uid}')"
           style="background:rgba(224,60,60,.08);border:1.5px solid rgba(224,60,60,.25);color:var(--danger);border-radius:8px;padding:8px 14px;font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer">
           حذف
@@ -3962,6 +3999,44 @@ function renderSubusers(){
         }).join('')}
       </div>
     </div>`).join('');
+}
+
+// ── SUB-USER CLAIM ───────────────────────────────────────────────────
+// Stamps a sub-user's auth token with parentUid so loadProfile() can find
+// their parent landlord. Without it they log in successfully but fall
+// through to a blank landlord profile — an empty app with none of the
+// landlord's data. Returns true only if the claim was actually set.
+async function stampSubUserClaim(subUid){
+  try{
+    const idToken=await auth.currentUser.getIdToken(true);
+    const res=await fetch('https://us-central1-makan-d8dd7.cloudfunctions.net/setSubUserClaim',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
+      body:JSON.stringify({data:{subUserUid:subUid}})
+    });
+    if(!res.ok){
+      const body=await res.text();
+      console.warn('setSubUserClaim failed:',res.status,body);
+      return false;
+    }
+    return true;
+  }catch(e){
+    console.warn('setSubUserClaim error:',e);
+    return false;
+  }
+}
+
+// Re-runs the claim for a sub-user that was created while the Cloud
+// Function was unreachable, so a broken account can be repaired without
+// deleting and recreating it.
+async function repairSubUserLink(uid){
+  showToast('جارِ إصلاح الربط…','success');
+  const ok=await stampSubUserClaim(uid);
+  if(ok){
+    showToast('✓ تم إصلاح الربط — اطلب منه تسجيل الخروج ثم الدخول مرة أخرى','success');
+  } else {
+    showToast('فشل الإصلاح — تحقق من اتصالك ثم حاول مجدداً','error');
+  }
 }
 
 async function removeSubUser(uid){
@@ -4492,6 +4567,27 @@ function showAddAptForm(){
   if(f) f.style.display=f.style.display==='none'?'block':'none';
 }
 
+// ── APARTMENT WRITES: keep buildings[] in sync ───────────────────────
+// The top-level apartments/apartmentData/units fields are only a working
+// copy of the CURRENTLY OPEN building. switchBuilding() refills them from
+// buildings[idx], so writing only to the top level meant any apartment
+// added, renamed or retyped was silently reverted the next time the
+// landlord switched buildings and came back. It also meant the mobile
+// apps — which hydrate from buildings[idx] on login — never saw the change.
+//
+// Single-building accounts have no buildings[] array and are unaffected;
+// for them this behaves exactly as before.
+async function saveApartmentFields(fields){
+  const updates={...fields};
+  const buildings=userProfile.buildings||[];
+  if(buildings.length){
+    const idx=userProfile.activeBuildingIdx||0;
+    updates.buildings=buildings.map((b,i)=> i===idx ? {...b, ...fields} : b);
+    userProfile.buildings=updates.buildings;
+  }
+  await updateDoc(doc(db,'users',currentUser.uid),updates);
+}
+
 async function addNewApartments(){
   const val=v('new-apt-numbers');
   if(!val){showToast('أدخل أرقام الشقق','error');return;}
@@ -4501,8 +4597,9 @@ async function addNewApartments(){
   const dups=newApts.filter(a=>existing.includes(a));
   if(dups.length){showToast(`الشقق ${dups.join('، ')} موجودة مسبقاً`,'error');return;}
   const merged=[...existing,...newApts];
-  await updateDoc(doc(db,'users',currentUser.uid),{apartments:merged,units:merged.length});
+  await saveApartmentFields({apartments:merged,units:merged.length});
   userProfile.apartments=merged;
+  userProfile.units=merged.length;
   clear(['new-apt-numbers']);
   document.getElementById('add-apt-form').style.display='none';
   showToast(`تم إضافة ${newApts.length} شقة ✓`,'success');
@@ -4516,9 +4613,9 @@ async function renameApartment(oldNum, newNum){
   const apts=userProfile.apartments||[];
   if(apts.includes(newNum)){showToast(`رقم ${newNum} موجود مسبقاً`,'error');document.getElementById('apt-num-'+oldNum).value=oldNum;return;}
   const updated=apts.map(a=>a===oldNum?newNum:a);
-  const aptData=userProfile.aptmentData||userProfile.apartmentData||{};
+  const aptData=userProfile.apartmentData||{};
   if(aptData[oldNum]){aptData[newNum]=aptData[oldNum];delete aptData[oldNum];}
-  await updateDoc(doc(db,'users',currentUser.uid),{apartments:updated,apartmentData:aptData});
+  await saveApartmentFields({apartments:updated,apartmentData:aptData});
   userProfile.apartments=updated; userProfile.apartmentData=aptData;
   // Update all bookings referencing old number — both the primary apartment
   // field AND any rate-segment that references it (multi-apartment bookings).
@@ -4543,7 +4640,7 @@ async function updateAptType(aptNum, type){
   const aptData=userProfile.apartmentData||{};
   aptData[aptNum]={...aptData[aptNum],type};
   userProfile.apartmentData=aptData;
-  await updateDoc(doc(db,'users',currentUser.uid),{apartmentData:aptData});
+  await saveApartmentFields({apartmentData:aptData});
   showToast(`شقة ${aptNum} — تم التحديث إلى ${({daily:'يومي',monthly:'شهري',annual:'سنوي'})[type]} ✓`,'success');
   renderApartmentsPage();
 }
@@ -5452,19 +5549,17 @@ async function saveSubUser(){
     userProfile.subUsers=subs;
     // Stamp the new sub-user's auth token with parentUid via Cloud Function,
     // so Firestore rules can recognize them as acting on the landlord's data.
-    try{
-      const idToken=await auth.currentUser.getIdToken(true);
-      const claimRes=await fetch('https://us-central1-makan-d8dd7.cloudfunctions.net/setSubUserClaim',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},
-        body:JSON.stringify({data:{subUserUid:subUid}})
-      });
-      const claimJson=await claimRes.json();
-      if(!claimRes.ok){ console.warn('setSubUserClaim failed:',claimJson); }
-    }catch(claimErr){ console.warn('setSubUserClaim error:',claimErr); }
+    const claimOk=await stampSubUserClaim(subUid);
     closeModal('modal-subuser');
     clear(['su-email','su-pass']);
-    showToast('✓ تم إنشاء المستخدم الفرعي — يمكنه تسجيل الدخول الآن','success');
+    // Only claim success if the link was actually established. Reporting
+    // success on a failed claim is what left sub-users able to log in but
+    // seeing a completely empty app, with the landlord believing it worked.
+    if(claimOk){
+      showToast('✓ تم إنشاء المستخدم الفرعي — يمكنه تسجيل الدخول الآن','success');
+    } else {
+      showToast('تم إنشاء الحساب لكن لم يكتمل الربط — اضغط "إصلاح الربط" قبل أن يسجّل الدخول','error');
+    }
     renderSubusers();
   }catch(e){
     showToast('خطأ: '+(e.message||e.code||'unknown'),'error');
