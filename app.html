@@ -1502,12 +1502,21 @@ hr.divider { border: none; border-top: 1px solid var(--warm); margin: 16px 0; }
     </div>
     <div class="form-group">
       <label id="lbl-apt"></label>
-      <select id="b-apt" onchange="checkAptAvailability()"><option value="">— اختر شقة —</option></select>
+      <select id="b-apt" onchange="onBookingAptChanged()"><option value="">— اختر شقة —</option></select>
       <div class="hint" id="apt-availability-hint"></div>
     </div>
     <div class="form-group">
       <label id="lbl-tenant"></label>
       <select id="b-tenant"><option value="">— اختر مستأجر —</option></select>
+    </div>
+    <div class="form-group" id="rate-type-row">
+      <label>نوع الإيجار · Rent Type</label>
+      <select id="b-rate-type" onchange="applyRateTypeUI();calcRent()">
+        <option value="daily">يومي / Daily</option>
+        <option value="monthly">شهري / Monthly</option>
+        <option value="annual">سنوي / Annual</option>
+      </select>
+      <div class="hint" id="rate-type-hint"></div>
     </div>
     <div class="form-row" id="flat-rate-row">
       <div class="form-group">
@@ -1966,6 +1975,8 @@ const T = {
     f_building: 'اسم المبنى', f_floors: 'عدد الطوابق', f_perfloor: 'شقق في كل طابق',
     f_checkin_lbl: 'تاريخ الدخول (2:00 م)', f_checkout_lbl: 'تاريخ الخروج (12:00 م)',
     f_apt_lbl: 'رقم الشقة', f_tenant_lbl: 'المستأجر', f_daily: 'السعر اليومي (OMR)',
+    f_monthly: 'الإيجار الشهري (OMR)', f_annual: 'الإيجار السنوي (OMR)',
+    ct_duration: 'مدة العقد:', ct_monthly: 'الإيجار الشهري:', ct_annual: 'الإيجار السنوي:',
     f_total_lbl: 'الإجمالي (OMR)', f_advance_lbl: 'دفعة مقدمة (OMR) — اختياري',
     f_notes: 'ملاحظات (تظهر في العقد)',
     f_date: 'التاريخ', f_desc: 'التفاصيل', f_amount: 'المبلغ (OMR)',
@@ -2114,6 +2125,8 @@ const T = {
     f_building: 'Building Name', f_floors: 'Number of Floors', f_perfloor: 'Units per Floor',
     f_checkin_lbl: 'Check-in Date (2:00 PM)', f_checkout_lbl: 'Check-out Date (12:00 PM)',
     f_apt_lbl: 'Apartment', f_tenant_lbl: 'Tenant', f_daily: 'Daily Rate (OMR)',
+    f_monthly: 'Monthly Rent (OMR)', f_annual: 'Annual Rent (OMR)',
+    ct_duration: 'Contract Term:', ct_monthly: 'Monthly Rent:', ct_annual: 'Annual Rent:',
     f_total_lbl: 'Total (OMR)', f_advance_lbl: 'Advance Payment (OMR) — optional',
     f_notes: 'Notes (shown on contract)',
     f_date: 'Date', f_desc: 'Description', f_amount: 'Amount (OMR)',
@@ -2267,11 +2280,12 @@ function applyLang(){
   const fLabelMap={
     'lbl-checkin':'f_checkin_lbl','lbl-checkout':'f_checkout_lbl',
     'lbl-apt':'f_apt_lbl','lbl-tenant':'f_tenant_lbl',
-    'lbl-daily':'f_daily','lbl-total':'f_total_lbl','lbl-advance':'f_advance_lbl',
+    'lbl-total':'f_total_lbl','lbl-advance':'f_advance_lbl',
   };
   Object.entries(fLabelMap).forEach(([id,key])=>{
     const el=document.getElementById(id); if(el) el.textContent=t(key);
   });
+  applyRateTypeUI(); // the rate label depends on the chosen rent type
   // Update modal buttons
   const modalBtns={
     'booking-modal-title': document.getElementById('b-edit-id')?.value ? t('btn_edit') : t('btn_new_booking'),
@@ -2302,7 +2316,7 @@ const exp = {
   saveTenant, saveBooking, saveExpense,
   viewBooking, editBookingFromDetail, markCheckedIn,
   printContract, printReport,
-  calcRent, checkAptAvailability,
+  calcRent, checkAptAvailability, onBookingAptChanged, applyRateTypeUI,
   codeNext, generateNewCode, previewApartments,
   updateAptType, printInvoiceDirect, printContractDirect, markCheckedOut,
   confirmDeleteBooking, deleteBooking, updateNotifBadge,
@@ -3315,11 +3329,41 @@ function calcRent(){
   if(!ci||!co||!rate){document.getElementById('b-total-rent').value='';return;}
   const nights=calcNights(ci,co);
   if(nights<=0){document.getElementById('b-total-rent').value='تاريخ غير صحيح';return;}
-  const total=nights*rate;
+  const rateType=v('b-rate-type')||'daily';
+  const tot=computeBookingTotals({checkIn:ci,checkOut:co,dailyRate:rate,rateType,periodRate:rate});
+  const total=tot.total;
   const remaining=total-advance;
-  let display=fmt(total)+' OMR ('+nights+' ليلة)';
+  let display=fmt(total)+' OMR ('+durationLabel(tot,'ar')+')';
   if(advance>0) display+=' — متبقي: '+fmt(remaining)+' OMR';
   document.getElementById('b-total-rent').value=display;
+}
+
+// Picking an apartment in the booking form sets the rent type from that
+// apartment's type (Apartments page). The landlord can still override it.
+function onBookingAptChanged(){
+  const apt=v('b-apt');
+  if(apt && !_multiRateActive){
+    document.getElementById('b-rate-type').value=aptRateType(apt);
+    applyRateTypeUI();
+    calcRent();
+  }
+  checkAptAvailability();
+}
+
+// Rate field label + hint follow the selected rent type.
+function applyRateTypeUI(){
+  const sel=document.getElementById('b-rate-type');
+  const lbl=document.getElementById('lbl-daily');
+  const hint=document.getElementById('rate-type-hint');
+  if(!sel||!lbl) return;
+  const type=sel.value||'daily';
+  lbl.textContent=t(type==='monthly'?'f_monthly':type==='annual'?'f_annual':'f_daily');
+  if(hint){
+    hint.textContent=
+      type==='monthly'?'يُحسب بالأشهر الكاملة، والأيام الزائدة = الإيجار الشهري ÷ 30 لكل يوم · Whole months; extra days pro-rated at monthly ÷ 30':
+      type==='annual'?'يُحسب بالسنوات الكاملة، والأيام الزائدة = الإيجار السنوي ÷ 365 لكل يوم · Whole years; extra days pro-rated at annual ÷ 365':
+      '';
+  }
 }
 
 // ── MULTI-RATE BOOKING UI ────────────────────────────────────────────
@@ -3334,14 +3378,18 @@ function enableMultiRate(){
     showToast('أدخل تاريخ الدخول والخروج أولاً','error');
     return;
   }
+  // Rate periods are always priced per night, so a monthly/annual price
+  // must not be carried into the first period as if it were a daily rate.
+  const wasDaily=(v('b-rate-type')||'daily')==='daily';
   _multiRateActive=true;
   document.getElementById('flat-rate-row').style.display='none';
   document.getElementById('multi-rate-toggle-row').style.display='none';
+  document.getElementById('rate-type-row').style.display='none';
   document.getElementById('multi-rate-section').style.display='block';
   document.getElementById('rate-segments-list').innerHTML='';
   // Seed with one segment spanning the full current check-in/check-out range —
   // the landlord then edits the "to" date to split it (by rate, by apartment, or both).
-  addRateSegmentRow(ci, co, v('b-daily-rate')||'', v('b-apt')||'');
+  addRateSegmentRow(ci, co, wasDaily?(v('b-daily-rate')||''):'', v('b-apt')||'');
 }
 
 function disableMultiRate(){
@@ -3361,6 +3409,8 @@ function disableMultiRateSilent(){
   const list=document.getElementById('rate-segments-list');
   if(flatRow) flatRow.style.display='flex';
   if(toggleRow) toggleRow.style.display='block';
+  const typeRow=document.getElementById('rate-type-row');
+  if(typeRow) typeRow.style.display='block';
   if(section) section.style.display='none';
   if(list) list.innerHTML='';
 }
@@ -3477,6 +3527,14 @@ function recalcMultiRate(){
   }
 }
 
+// YYYY-MM-DD in the user's own timezone. toISOString() is UTC, so in Oman
+// (UTC+4) it returns YESTERDAY between midnight and 4am, and turns a local
+// midnight date like new Date('2026-11-01T00:00:00') into '2026-10-31'.
+function localDateStr(d){
+  d=d||new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 function calcNights(checkIn,checkOut){
   // Check-in at 14:00, check-out at 12:00
   const ci=new Date(checkIn+'T14:00:00');
@@ -3511,8 +3569,76 @@ function computeBookingTotals(b){
     };
   }
   const nights=calcNights(b.checkIn, b.checkOut);
+  const rateType=bookingRateType(b);
+  if(rateType!=='daily'){
+    const p=calcPeriods(b.checkIn, b.checkOut, rateType);
+    const perDay=b.periodRate/(rateType==='annual'?365:30);
+    const total=parseFloat((p.units*b.periodRate + p.extraDays*perDay).toFixed(3));
+    return { nights, total, segments:null, isMultiRate:false,
+             rateType, periodRate:b.periodRate, units:p.units, extraDays:p.extraDays };
+  }
   const total=parseFloat((nights*(b.dailyRate||0)).toFixed(3));
-  return { nights, total, segments:null, isMultiRate:false };
+  return { nights, total, segments:null, isMultiRate:false, rateType:'daily' };
+}
+
+// ── RENT TYPE: daily / monthly / annual ─────────────────────────────
+// An apartment's type (apartmentData[apt].type) decides how a booking
+// made for it is priced. Daily = nights × daily rate (original
+// behaviour). Monthly / annual = whole calendar months/years × the
+// period rent, plus any left-over days pro-rated (monthly ÷ 30,
+// annual ÷ 365). Saved on the booking as rateType + periodRate — new
+// fields, which the mobile apps ignore. dailyRate is still written, as
+// the effective price per night, so the mobile apps keep showing a
+// sensible number and recompute the same total if they edit it.
+function aptRateType(apt){
+  const type=((userProfile&&userProfile.apartmentData)||{})[apt]?.type;
+  return (type==='monthly'||type==='annual')?type:'daily';
+}
+
+// Bookings saved before this existed have no rateType → daily, unchanged.
+function bookingRateType(b){
+  if(!b || (b.rateSegments&&b.rateSegments.length)) return 'daily';
+  return ((b.rateType==='monthly'||b.rateType==='annual') && b.periodRate>0) ? b.rateType : 'daily';
+}
+
+// Calendar months from `d` (UTC date), clamped to month end: Jan 31 + 1 → Feb 28.
+function addMonthsClamped(d, n){
+  const y=d.getUTCFullYear(), m=d.getUTCMonth()+n;
+  const lastDay=new Date(Date.UTC(y, m+1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m, Math.min(d.getUTCDate(), lastDay)));
+}
+
+// Whole months (or years) between two YYYY-MM-DD dates, plus left-over days.
+function calcPeriods(checkIn, checkOut, type){
+  const step=type==='annual'?12:1;
+  const start=new Date(checkIn+'T00:00:00Z'), end=new Date(checkOut+'T00:00:00Z');
+  if(!(end>start)) return {units:0, extraDays:0};
+  let units=0;
+  while(addMonthsClamped(start,(units+1)*step)<=end) units++;
+  const extraDays=Math.round((end-addMonthsClamped(start,units*step))/86400000);
+  return {units, extraDays};
+}
+
+// "3 أشهر + 5 أيام" / "3 months + 5 days" — or "12 ليلة" for daily.
+function durationLabel(tot, lang){
+  const ar=(lang||currentLang)==='ar';
+  if(!tot.rateType || tot.rateType==='daily') return ar?`${tot.nights} ليلة`:`${tot.nights} nights`;
+  const n=tot.units, d=tot.extraDays;
+  const arUnit=tot.rateType==='annual'
+    ? (n===1?'سنة واحدة':n===2?'سنتان':n<=10?`${n} سنوات`:`${n} سنة`)
+    : (n===1?'شهر واحد':n===2?'شهران':n<=10?`${n} أشهر`:`${n} شهراً`);
+  const arDays=d===1?'يوم واحد':d===2?'يومان':d<=10?`${d} أيام`:`${d} يوماً`;
+  const enUnit=`${n} ${tot.rateType==='annual'?(n===1?'year':'years'):(n===1?'month':'months')}`;
+  const enDays=`${d} ${d===1?'day':'days'}`;
+  if(ar) return n&&d?`${arUnit} + ${arDays}`:n?arUnit:arDays;
+  return n&&d?`${enUnit} + ${enDays}`:n?enUnit:enDays;
+}
+
+// "100.000 OMR شهرياً" style label for the period rent.
+function periodRateLabel(tot, lang){
+  const ar=(lang||currentLang)==='ar';
+  const per=tot.rateType==='annual'?(ar?'سنوياً':'/ year'):(ar?'شهرياً':'/ month');
+  return `${fmt(tot.periodRate)} OMR ${per}`;
 }
 
 // Validate a rateSegments array: each segment's dates must be valid,
@@ -3773,16 +3899,20 @@ async function saveBooking(){
     if(!segConflict.valid){ showToast('⚠️ '+segConflict.error,'error'); return; }
   }
   const checkIn=v('b-checkin'), checkOut=v('b-checkout');
-  const dailyRate=_multiRateActive?0:parseFloat(v('b-daily-rate'));
+  // The rate box holds the daily, monthly or annual rent, per the rent type.
+  const rateType=_multiRateActive?'daily':(v('b-rate-type')||'daily');
+  const enteredRate=_multiRateActive?0:parseFloat(v('b-daily-rate'));
+  const periodRate=rateType==='daily'?0:enteredRate;
   const advance=parseFloat(v('b-advance'))||0;
   const advanceMethod=v('b-advance-method');
   if(advance>0 && !advanceMethod){showToast('اختر طريقة الدفعة المقدمة — نقداً أو تحويل','error');return;}
   const notes=v('b-notes'), editId=v('b-edit-id');
   if(!editId && blockNewBookingIfFree()) return;
   if(!apt||!tenantId||!checkIn||!checkOut){showToast('يرجى تعبئة جميع الحقول','error');return;}
-  if(!_multiRateActive && isNaN(dailyRate)){showToast('يرجى تعبئة جميع الحقول','error');return;}
+  if(!_multiRateActive && isNaN(enteredRate)){showToast('يرجى تعبئة جميع الحقول','error');return;}
+  if(rateType!=='daily' && !(periodRate>0)){showToast('أدخل قيمة الإيجار — Enter the rent amount','error');return;}
   // Block past dates — check-in must be today or future
-  const todayStr=new Date().toISOString().slice(0,10);
+  const todayStr=localDateStr();
   if(!editId && checkIn < todayStr){
     showToast('لا يمكن الحجز بتاريخ ماضٍ — Check-in date cannot be in the past','error');
     return;
@@ -3799,9 +3929,11 @@ async function saveBooking(){
   if(new Date(checkOut)<=new Date(checkIn)){showToast('تاريخ الخروج يجب أن يكون بعد الدخول','error');return;}
   // Single source of truth for nights + total — whether flat-rate or
   // multi-rate, this is the ONLY place that computes them for saving.
-  const _totals=computeBookingTotals(_multiRateActive?{rateSegments}:{checkIn,checkOut,dailyRate});
+  const _totals=computeBookingTotals(_multiRateActive?{rateSegments}:{checkIn,checkOut,dailyRate:enteredRate,rateType,periodRate});
   const nights=_totals.nights;
   const totalRent=_totals.total;
+  // Monthly/annual: dailyRate = effective price per night (see bookingRateType).
+  const dailyRate=rateType==='daily'?enteredRate:parseFloat((totalRent/nights).toFixed(3));
   // check duplicate
   // Hard duplicate/conflict check — block BOTH same apt in same dates AND exact duplicate.
   // Skipped for multi-rate/multi-apartment bookings: checkSegmentApartmentConflicts()
@@ -3841,13 +3973,22 @@ async function saveBooking(){
     if(old.apartment!==apt) changes.push(`الشقة: ${old.apartment}→${apt}`);
     if(old.checkIn!==checkIn) changes.push(`الدخول: ${fmtDate(old.checkIn)}→${fmtDate(checkIn)}`);
     if(old.checkOut!==checkOut) changes.push(`الخروج: ${fmtDate(old.checkOut)}→${fmtDate(checkOut)}`);
-    if((old.dailyRate||0)!==dailyRate) changes.push(`السعر اليومي: ${fmt(old.dailyRate||0)}→${fmt(dailyRate)}`);
+    const _typeAr={daily:'يومي',monthly:'شهري',annual:'سنوي'};
+    const oldType=bookingRateType(old);
+    if(oldType!==rateType) changes.push(`نوع الإيجار: ${_typeAr[oldType]}→${_typeAr[rateType]}`);
+    if(rateType==='daily'){
+      if((old.dailyRate||0)!==dailyRate) changes.push(`السعر اليومي: ${fmt(old.dailyRate||0)}→${fmt(dailyRate)}`);
+    } else if((old.periodRate||0)!==periodRate){
+      changes.push(`الإيجار ال${_typeAr[rateType]}: ${fmt(old.periodRate||0)}→${fmt(periodRate)}`);
+    }
     historyEntry.note=changes.join(' | ')||'تعديل بدون تغييرات';
     await updateDoc(doc(db,'bookings',editId),{
       apartment:apt,tenantId,tenantName:tenant?.name||'',tenantIdNumber:tenant?.idNumber||'',
       checkIn,checkOut,dailyRate,totalRent,advance,remaining:parseFloat((totalRent-advance).toFixed(3)),
       advancePaid:advance>0, advancePaidMethod:advance>0?advanceMethod:'',
       rateSegments: rateSegments || deleteField(),
+      rateType: rateType==='daily' ? deleteField() : rateType,
+      periodRate: rateType==='daily' ? deleteField() : periodRate,
       notes,history:arrayUnion(historyEntry),updatedAt:serverTimestamp()
     });
     showToast('تم تعديل الحجز ✓','success');
@@ -3865,6 +4006,7 @@ async function saveBooking(){
       history:[historyEntry],createdAt:serverTimestamp()
     };
     if(rateSegments) _newBookingData.rateSegments=rateSegments;
+    if(rateType!=='daily'){ _newBookingData.rateType=rateType; _newBookingData.periodRate=periodRate; }
     await addDoc(collection(db,'bookings'), _newBookingData);
     showToast('تم حفظ الحجز ✓','success');
   }
@@ -3878,6 +4020,7 @@ async function saveBooking(){
   document.getElementById('b-total-rent').value='';
   document.getElementById('b-tenant').value='';
   document.getElementById('apt-availability-hint').textContent='';
+  document.getElementById('b-rate-type').value='daily'; applyRateTypeUI();
   document.getElementById('booking-modal-title').textContent=t('m_new_booking');
   await loadLandlordData();
 }
@@ -4098,7 +4241,9 @@ function viewBooking(id){
       <div class="stat-card" style="padding:14px"><div class="stat-label">المستأجر</div><div style="font-size:1rem;font-weight:700;margin-top:4px">${escapeHtml(b.tenantName)}</div></div>
       <div class="stat-card" style="padding:14px"><div class="stat-label">الدخول (2:00 م)</div><div style="font-size:.9rem;font-weight:600;margin-top:4px">${fmtDate(b.checkIn)}</div></div>
       <div class="stat-card" style="padding:14px"><div class="stat-label">الخروج (12:00 م)</div><div style="font-size:.9rem;font-weight:600;margin-top:4px">${fmtDate(b.checkOut)}</div></div>
-      <div class="stat-card" style="padding:14px"><div class="stat-label">عدد الليالي</div><div class="stat-value">${nights}</div></div>
+      ${(()=>{const tt=computeBookingTotals(b);return tt.rateType==='daily'
+        ? `<div class="stat-card" style="padding:14px"><div class="stat-label">عدد الليالي</div><div class="stat-value">${nights}</div></div>`
+        : `<div class="stat-card" style="padding:14px"><div class="stat-label">مدة العقد · ${tt.rateType==='annual'?'سنوي':'شهري'}</div><div style="font-size:.95rem;font-weight:700;margin-top:4px">${durationLabel(tt,'ar')}</div><div style="font-size:.75rem;color:var(--muted)" dir="ltr">${periodRateLabel(tt,'ar')}</div></div>`;})()}
       <div class="stat-card" style="padding:14px"><div class="stat-label">الإجمالي</div><div class="stat-value income">${fmt(b.totalRent||b.rent||0)} OMR</div></div>
     </div>
     ${b.rateSegments && b.rateSegments.length ? `
@@ -4164,11 +4309,18 @@ function editBookingFromDetail(){
       _multiRateActive=true;
       document.getElementById('flat-rate-row').style.display='none';
       document.getElementById('multi-rate-toggle-row').style.display='none';
+      document.getElementById('rate-type-row').style.display='none';
       document.getElementById('multi-rate-section').style.display='block';
       document.getElementById('rate-segments-list').innerHTML='';
       b.rateSegments.forEach(seg=>addRateSegmentRow(seg.from, seg.to, seg.rate, seg.apartment||b.apartment));
     } else {
-      document.getElementById('b-daily-rate').value=b.dailyRate||'';
+      // Keep the booking's own saved rent type — an old daily booking stays
+      // daily even if its apartment was switched to monthly later. The
+      // landlord can change it in the Rent Type box.
+      const rt=bookingRateType(b);
+      document.getElementById('b-rate-type').value=rt;
+      applyRateTypeUI();
+      document.getElementById('b-daily-rate').value=(rt==='daily'?b.dailyRate:b.periodRate)||'';
       calcRent();
     }
     openModal('modal-booking');
@@ -4207,6 +4359,8 @@ function printContract(){
   const b=allBookings.find(x=>x.id===activeBookingId);
   if(!b) return;
   const nights=calcNights(b.checkIn,b.checkOut);
+  const _tot=computeBookingTotals(b);
+  const _isPeriod=_tot.rateType==='monthly'||_tot.rateType==='annual';
   const _contractLogo = userProfile.logoBase64
     ? `<img src="${userProfile.logoBase64}" style="max-height:68px;max-width:200px;object-fit:contain;display:block" alt="logo">`
     : '';
@@ -4234,8 +4388,13 @@ function printContract(){
       <h3>${t('ct_details')}</h3>
       <div class="doc-row"><span class="doc-label">${t('ct_checkin')}</span><span class="doc-value" dir="ltr">${fmtDateFull(b.checkIn,'14:00')}</span></div>
       <div class="doc-row"><span class="doc-label">${t('ct_checkout')}</span><span class="doc-value" dir="ltr">${fmtDateFull(b.checkOut,'12:00')}</span></div>
+      ${_isPeriod ? `
+      <div class="doc-row"><span class="doc-label">${t('ct_duration')}</span><span class="doc-value">${durationLabel(_tot)}</span></div>
+      <div class="doc-row"><span class="doc-label">${t(_tot.rateType==='annual'?'ct_annual':'ct_monthly')}</span><span class="doc-value" dir="ltr">${fmt(_tot.periodRate)} OMR</span></div>
+      ` : `
       <div class="doc-row"><span class="doc-label">${t('ct_nights')}</span><span class="doc-value">${nights}</span></div>
-      ${b.rateSegments && b.rateSegments.length ? `
+      `}
+      ${_isPeriod ? '' : b.rateSegments && b.rateSegments.length ? `
       <div class="doc-row"><span class="doc-label">السعر:</span><span class="doc-value">أسعار متعددة الفترات — انظر الجدول أدناه</span></div>
       ` : `
       <div class="doc-row"><span class="doc-label">${t('ct_daily')}</span><span class="doc-value" dir="ltr">${fmt(b.dailyRate||0)} OMR</span></div>
@@ -4350,7 +4509,9 @@ function printInvoice(id){
               <td dir="ltr">${fmt(segTotal)}</td></tr>`;
         }).join('') : `
         <tr><td>${currentLang==='ar'?'إيجار شقة':'Unit Rent'} ${b.apartment}</td>
-            <td>${nights} ${currentLang==='ar'?'ليلة':'nights'} × ${fmt(b.dailyRate||0)} OMR</td>
+            <td>${(()=>{const tt=computeBookingTotals(b);return tt.rateType==='daily'
+              ? `${nights} ${currentLang==='ar'?'ليلة':'nights'} × ${fmt(b.dailyRate||0)} OMR`
+              : `${durationLabel(tt)} · ${periodRateLabel(tt)}`;})()}</td>
             <td dir="ltr">${fmt(total)}</td></tr>
         `}
         ${paymentLines}
@@ -4401,8 +4562,11 @@ function printReport(){
       <div class="doc-row"><span class="doc-label">رقم الهوية:</span><span class="doc-value" dir="ltr">${escapeHtml(b.tenantIdNumber)}</span></div>
       <div class="doc-row"><span class="doc-label">الدخول:</span><span class="doc-value">${fmtDateFull(b.checkIn,'2:00 م')}</span></div>
       <div class="doc-row"><span class="doc-label">الخروج:</span><span class="doc-value">${fmtDateFull(b.checkOut,'12:00 م')}</span></div>
+      ${(()=>{const tt=computeBookingTotals(b);return tt.rateType==='daily'?`
       <div class="doc-row"><span class="doc-label">عدد الليالي:</span><span class="doc-value">${nights}</span></div>
-      <div class="doc-row"><span class="doc-label">السعر اليومي:</span><span class="doc-value" dir="ltr">${fmt(b.dailyRate||0)} OMR</span></div>
+      <div class="doc-row"><span class="doc-label">السعر اليومي:</span><span class="doc-value" dir="ltr">${fmt(b.dailyRate||0)} OMR</span></div>`:`
+      <div class="doc-row"><span class="doc-label">مدة العقد:</span><span class="doc-value">${durationLabel(tt,'ar')}</span></div>
+      <div class="doc-row"><span class="doc-label">${tt.rateType==='annual'?'الإيجار السنوي:':'الإيجار الشهري:'}</span><span class="doc-value" dir="ltr">${fmt(tt.periodRate)} OMR</span></div>`;})()}
       <div class="doc-row"><span class="doc-label">إجمالي الإيجار:</span><span class="doc-value" dir="ltr"><b>${fmt(b.totalRent||b.rent||0)} OMR</b></span></div>
       ${b.advance>0?`<div class="doc-row"><span class="doc-label">دفعة مقدمة:</span><span class="doc-value" dir="ltr" style="color:green">- ${fmt(b.advance)} OMR</span></div>
       <div class="doc-row"><span class="doc-label">المبلغ المتبقي:</span><span class="doc-value" dir="ltr"><b>${fmt(b.remaining||0)} OMR</b></span></div>`:''}
@@ -4506,7 +4670,7 @@ function renderApartmentsPage(){
   if(!apts.length){el.innerHTML='<div class="empty-state"><div class="icon"></div><p>لا توجد شقق مسجّلة</p></div>';return;}
   const aptData=userProfile.apartmentData||{};
   // Determine which apartments are currently occupied (checked-in, not checked-out)
-  const _todayStr=new Date().toISOString().slice(0,10);
+  const _todayStr=localDateStr();
   const occupiedApts=new Set(
     allBookings
       .filter(b=>b.checkedIn&&!b.checkedOut)
@@ -5047,7 +5211,10 @@ function shareContractWhatsApp(){
     D,
     `${isEn?'Check-in':'الدخول'}: *${fmtDate(b.checkIn)}* ${isEn?'2:00 PM':'2:00 م'}`,
     `${isEn?'Check-out':'الخروج'}: *${fmtDate(b.checkOut)}* ${isEn?'12:00 PM':'12:00 م'}`,
-    `${isEn?'Nights':'الليالي'}: *${nights}*`,
+    ...(()=>{const tt=computeBookingTotals(b);return tt.rateType==='daily'
+      ? [`${isEn?'Nights':'الليالي'}: *${nights}*`]
+      : [`${isEn?'Term':'المدة'}: *${durationLabel(tt,isEn?'en':'ar')}*`,
+         `${isEn?'Rent':'الإيجار'}: ${periodRateLabel(tt,isEn?'en':'ar')}`];})(),
     D,
     `${isEn?'Total':'الإجمالي'}: *${fmt(b.totalRent||0)} OMR*`,
     ...(b.advance>0?[`✅ ${isEn?'Advance':'المقدم'}: ${fmt(b.advance)} OMR`,`${isEn?'Balance':'المتبقي'}: *${fmt(b.remaining||0)} OMR*`]:[]),
@@ -5210,7 +5377,7 @@ function renderFullReportPage(){
                 <td dir="ltr">${fmtDate(b.checkIn)}</td>
                 <td dir="ltr">${fmtDate(b.checkOut)}</td>
                 <td>${nights}</td>
-                <td dir="ltr">${fmt(b.dailyRate||0)}</td>
+                <td dir="ltr">${(()=>{const tt=computeBookingTotals(b);return tt.rateType==='daily'?fmt(b.dailyRate||0):periodRateLabel(tt,'ar');})()}</td>
                 <td dir="ltr">${b.advance>0?fmt(b.advance):'—'}</td>
                 <td dir="ltr">${b.remaining>0?'<span style="color:var(--danger)">'+fmt(b.remaining)+'</span>':'—'}</td>
                 <td dir="ltr"><b>${fmt(b.totalRent||0)}</b></td>
@@ -5294,7 +5461,7 @@ function runVacancySearch(){
     let cur=new Date(from+'T00:00:00');
     const end=new Date(to+'T00:00:00');
     while(cur<=end){
-      const dateStr=cur.toISOString().slice(0,10);
+      const dateStr=localDateStr(cur);
       const vacantOnDay=apts.filter(a=>!allBookings.some(b=>
         bookingStatus(b)!=='ended' && bookingOccupiesAptOnDate(b, a, dateStr)
       ));
@@ -5359,7 +5526,7 @@ function runVacancySearch(){
       </div>`;
     }),
     ...(needed===0?allBusyApts.map(a=>{
-      const active=allBookings.find(b=>b.checkedIn&&!b.checkedOut&&aptForBookingOnDate(b,new Date().toISOString().slice(0,10))===a);
+      const active=allBookings.find(b=>b.checkedIn&&!b.checkedOut&&aptForBookingOnDate(b,localDateStr())===a);
       return `<div style="border:2px solid rgba(224,60,60,.3);border-radius:12px;padding:14px;text-align:center;background:rgba(224,60,60,.04);opacity:.7">
         <div style="font-size:1.4rem;font-weight:900;color:var(--muted)">${a}</div>
         <div style="font-size:.76rem;font-weight:700;color:var(--danger)">مشغولة ✗</div>
